@@ -578,12 +578,19 @@ export function FormDemanda({
 
   useEffect(() => {
     if (demanda) {
-      setD({ ...demanda, agente_id: demanda.agente?.id ?? null, genero: persona.genero, telefono: persona.telefono });
+      setD({
+        ...demanda,
+        agente_id: demanda.agente?.id ?? null,
+        receptor_id: demanda.receptor?.id ?? null,
+        receptor_nombre: demanda.receptor && !demanda.receptor.id ? demanda.receptor.nombre_completo : "",
+        genero: persona.genero,
+        telefono: persona.telefono,
+      });
       return;
     }
     api
       .get<Record<string, any>>(`/casos/${caso.id}/demanda-sugerida`)
-      .then((s) => setD({ ...s, telefono: persona.telefono }))
+      .then((s) => setD({ ...s, telefono: persona.telefono, cargado_desde_papel: true, receptor_id: null, receptor_nombre: "" }))
       .catch(setError);
   }, [caso.id, demanda, persona, setError]);
 
@@ -599,10 +606,12 @@ export function FormDemanda({
     for (const k of [
       "trabajo_informal", "cud", "tipo_vivienda", "estado_civil", "tiene_hijos", "vinculo_con_hijos", "tiene_autonomia",
       "estado_funcional", "tipo_ingreso", "tipo_ingreso_detalle", "derivado_por", "agente_id", "genero",
+      "receptor_id", "cargado_desde_papel",
     ])
       cuerpo[k] = d[k] ?? null;
     cuerpo.cantidad_hijos = d.tiene_hijos && d.cantidad_hijos !== "" && d.cantidad_hijos !== null ? Number(d.cantidad_hijos) : null;
     cuerpo.fecha = d.fecha || null;
+    cuerpo.receptor_nombre = d.receptor_id ? null : d.receptor_nombre || null;
     cuerpo.actualizar_legajo = actualizarLegajo;
     const r = await ejecutar(() =>
       demanda ? api.patch<Demanda>(`/demandas/${demanda.id}`, cuerpo) : api.post<Demanda>(`/casos/${caso.id}/demandas`, cuerpo),
@@ -615,6 +624,36 @@ export function FormDemanda({
       <p className="tenue">
         Precargado con la carátula del caso {caso.numero} y los datos del legajo. Revise y complete.
       </p>
+
+      <section className="origen-papel">
+        <h3>Origen del registro</h3>
+        <label className="casilla">
+          <input type="checkbox" checked={!!d.cargado_desde_papel} onChange={(e) => set({ cargado_desde_papel: e.target.checked })} />
+          Se transcribe de un formulario completado y firmado en papel
+        </label>
+        <div className="grilla">
+          <Campo etiqueta="Fecha del formulario">
+            <input type="date" value={d.fecha ?? ""} onChange={(e) => set({ fecha: e.target.value })} />
+          </Campo>
+          <Campo etiqueta="Recibió la demanda (receptor que firma)" ayuda={d.cargado_desde_papel ? undefined : "Si se deja vacío, el receptor es quien lo carga."}>
+            <select value={d.receptor_id ?? (d.receptor_nombre ? "__otro" : "")} onChange={(e) => set({ receptor_id: e.target.value && e.target.value !== "__otro" ? e.target.value : null, receptor_nombre: e.target.value === "__otro" ? d.receptor_nombre || " " : "" })}>
+              <option value="">—</option>
+              {catalogos.usuarios_asignables.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.nombre_completo}
+                </option>
+              ))}
+              <option value="__otro">Otra persona (sin usuario en SULAM)</option>
+            </select>
+          </Campo>
+          {!d.receptor_id && d.receptor_nombre !== "" && (
+            <Campo etiqueta="Nombre del receptor">
+              <input value={(d.receptor_nombre ?? "").trimStart()} onChange={(e) => set({ receptor_nombre: e.target.value || " " })} />
+            </Campo>
+          )}
+        </div>
+        {d.cargado_desde_papel && <p className="tenue">Después de guardar, adjunte el escaneo del original firmado desde la lista de registros.</p>}
+      </section>
 
       <section>
         <h3>1. Datos del solicitante</h3>
@@ -771,9 +810,6 @@ export function FormDemanda({
           <Campo etiqueta="Lugar">
             <input {...txt("lugar")} />
           </Campo>
-          <Campo etiqueta="Fecha">
-            <input type="date" value={d.fecha ?? ""} onChange={(e) => set({ fecha: e.target.value })} />
-          </Campo>
         </div>
       </section>
 
@@ -804,11 +840,22 @@ export function SeccionEvolucion({
   puedeAgregar: boolean;
   alAgregar: () => void;
 }) {
+  const { yo, catalogos } = useSesion();
   const [texto, setTexto] = useState("");
+  const [fechaEv, setFechaEv] = useState(hoy());
+  const [autor, setAutor] = useState(yo.id);
+  const [autorNombre, setAutorNombre] = useState("");
   const { enviando, error, ejecutar } = useEnvio();
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
-    const r = await ejecutar(() => api.post(`/casos/${casoId}/evolucion`, { texto }));
+    const r = await ejecutar(() =>
+      api.post(`/casos/${casoId}/evolucion`, {
+        texto,
+        fecha: fechaEv,
+        autor_id: autor && autor !== "__otro" ? autor : null,
+        autor_nombre: autor === "__otro" ? autorNombre : null,
+      }),
+    );
     if (r) {
       setTexto("");
       alAgregar();
@@ -822,14 +869,40 @@ export function SeccionEvolucion({
         <ol className="linea-tiempo">
           {evoluciones.map((x) => (
             <li key={x.id}>
-              <time>{fechaHora(x.en)}</time> <strong>{x.usuario?.nombre_completo}</strong>
+              <time>{fecha(x.fecha)}</time> <strong>{x.autor?.nombre_completo ?? "—"}</strong>
               <div className="texto-largo">{x.texto}</div>
+              {(x.usuario?.id !== x.autor?.id || x.en.slice(0, 10) !== x.fecha) && (
+                <div className="tenue">
+                  Cargado por {x.usuario?.nombre_completo} el {fechaHora(x.en)}
+                </div>
+              )}
             </li>
           ))}
         </ol>
       )}
       {puedeAgregar && (
         <form onSubmit={enviar} className="formulario evolucion-nueva">
+          <div className="grilla">
+            <Campo etiqueta="Fecha de la intervención">
+              <input type="date" value={fechaEv} max={hoy()} onChange={(e) => setFechaEv(e.target.value)} required />
+            </Campo>
+            <Campo etiqueta="Realizada por">
+              <select value={autor} onChange={(e) => setAutor(e.target.value)}>
+                {catalogos.usuarios_asignables.length === 0 && <option value={yo.id}>{yo.nombre_completo}</option>}
+                {catalogos.usuarios_asignables.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nombre_completo}
+                  </option>
+                ))}
+                <option value="__otro">Otra persona (sin usuario en SULAM)</option>
+              </select>
+            </Campo>
+            {autor === "__otro" && (
+              <Campo etiqueta="Nombre">
+                <input value={autorNombre} onChange={(e) => setAutorNombre(e.target.value)} required />
+              </Campo>
+            )}
+          </div>
           <Campo etiqueta="Nueva entrada">
             <textarea rows={3} value={texto} onChange={(e) => setTexto(e.target.value)} required minLength={2} placeholder="Intervención realizada, novedades, próximos pasos…" />
           </Campo>

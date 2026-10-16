@@ -81,13 +81,14 @@ interface CasoDetalle extends Omit<Caso, "persona"> {
   permisos: { modificar: boolean; derivar: boolean };
 }
 
-type Dialogo = null | "estado" | "asignar" | "documento" | "editar" | "caratula" | "demanda";
+type Dialogo = null | "estado" | "asignar" | "documento" | "editar" | "caratula" | "demanda" | "escaneo-caratula";
 
 export function PaginaCaso({ id }: { id: string }) {
   const { datos: c, error, recargar } = useDatos(() => api.get<CasoDetalle>(`/casos/${id}`), [id]);
   const { catalogos } = useSesion();
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [demandaEditada, setDemandaEditada] = useState<Demanda | null>(null);
+  const [escaneoDemanda, setEscaneoDemanda] = useState<Demanda | null>(null);
   const finalizar = useEnvio();
 
   if (error) return <Aviso error={error} />;
@@ -97,6 +98,7 @@ export function PaginaCaso({ id }: { id: string }) {
     recargar();
   };
   const restringido = c.contenido_restringido;
+  const escaneosCaratula = c.documentos.filter((d) => !d.contenido_restringido && d.tipo_documental.nombre === "Carátula");
 
   return (
     <>
@@ -146,6 +148,11 @@ export function PaginaCaso({ id }: { id: string }) {
                 Editar carátula
               </button>
             )}
+            {c.permisos.modificar && !restringido && (
+              <button className="boton" onClick={() => setDialogo("escaneo-caratula")}>
+                Adjuntar escaneo
+              </button>
+            )}
             <a className="boton" href={`#/imprimir/caratula/${c.id}`} target="_blank" rel="noreferrer">
               Imprimir
             </a>
@@ -153,6 +160,17 @@ export function PaginaCaso({ id }: { id: string }) {
         }
       >
         <ResumenCaratula caso={c as unknown as Caso} />
+        {escaneosCaratula.length > 0 && (
+          <p>
+            Original escaneado:{" "}
+            {escaneosCaratula.map((d, i) => (
+              <a key={d.id} href={`/api/documentos/${d.id}/archivo?en_linea=true`} target="_blank" rel="noreferrer">
+                {i > 0 && ", "}
+                {d.titulo ?? "ver"}
+              </a>
+            ))}
+          </p>
+        )}
         <h3>Motivo de ingreso</h3>
         <p className="texto-largo">{restringido ? "Reservado" : c.motivo || "—"}</p>
         {c.antecedentes_sistema.tiene && c.caratula.antecedentes === false && (
@@ -182,8 +200,9 @@ export function PaginaCaso({ id }: { id: string }) {
               <tr>
                 <th>Fecha</th>
                 <th>Solicitante</th>
-                <th>Receptor</th>
-                <th>Agente a cargo</th>
+                <th>Recibió</th>
+                <th>Cargó</th>
+                <th>Original</th>
                 <th></th>
               </tr>
             </thead>
@@ -192,7 +211,7 @@ export function PaginaCaso({ id }: { id: string }) {
                 d.contenido_restringido ? (
                   <tr key={d.id} className="fila-restringida">
                     <td>{fecha(d.fecha)}</td>
-                    <td colSpan={4}>
+                    <td colSpan={5}>
                       <Reservado texto="Contenido reservado" />
                     </td>
                   </tr>
@@ -203,8 +222,30 @@ export function PaginaCaso({ id }: { id: string }) {
                       {d.solicitante_nombre ?? "—"}
                       {d.solicitante_vinculo && <div className="tenue">{d.solicitante_vinculo}</div>}
                     </td>
-                    <td>{d.receptor?.nombre_completo}</td>
-                    <td>{d.agente?.nombre_completo ?? "—"}</td>
+                    <td>{d.receptor?.nombre_completo ?? <span className="texto-alerta">Sin indicar</span>}</td>
+                    <td>
+                      {d.cargado_por?.nombre_completo}
+                      <div className="tenue">{fechaHora(d.creado_en)}</div>
+                    </td>
+                    <td>
+                      {d.escaneos.length > 0 ? (
+                        d.escaneos.map((id, i) => (
+                          <a key={id} href={`/api/documentos/${id}/archivo?en_linea=true`} target="_blank" rel="noreferrer">
+                            {i > 0 && ", "}Ver escaneo
+                          </a>
+                        ))
+                      ) : d.cargado_desde_papel ? (
+                        c.permisos.modificar ? (
+                          <button className="boton boton-chico" onClick={() => setEscaneoDemanda(d)}>
+                            Adjuntar escaneo
+                          </button>
+                        ) : (
+                          <span className="texto-alerta">Falta escaneo</span>
+                        )
+                      ) : (
+                        <span className="tenue">Cargado en el sistema</span>
+                      )}
+                    </td>
                     <td className="acciones-fila">
                       <a className="boton boton-chico" href={`#/imprimir/demanda/${d.id}`} target="_blank" rel="noreferrer">
                         Ver / imprimir
@@ -314,6 +355,25 @@ export function PaginaCaso({ id }: { id: string }) {
         </ol>
       </Seccion>
 
+      {dialogo === "escaneo-caratula" && (
+        <Modal titulo="Escaneo de la carátula firmada" alCerrar={() => setDialogo(null)}>
+          <FormDocumento personaId={c.persona.id} casoFijo={c.id} tipoInicial="Carátula" alGuardar={listo} />
+        </Modal>
+      )}
+      {escaneoDemanda && (
+        <Modal titulo="Escaneo del registro de demanda firmado" alCerrar={() => setEscaneoDemanda(null)}>
+          <FormDocumento
+            personaId={c.persona.id}
+            casoFijo={c.id}
+            registroDemandaId={escaneoDemanda.id}
+            tipoInicial="Registro de demanda"
+            alGuardar={() => {
+              setEscaneoDemanda(null);
+              listo();
+            }}
+          />
+        </Modal>
+      )}
       {dialogo === "caratula" && (
         <Modal titulo={`Carátula · ${c.numero}`} alCerrar={() => setDialogo(null)} ancho>
           <FormCaratula personaId={c.persona.id} caso={c as unknown as Caso} alGuardar={listo} />

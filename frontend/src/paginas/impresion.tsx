@@ -360,7 +360,7 @@ function ImprimirDemanda({ demandaId }: { demandaId: string }) {
       </p>
       <div className="firma-imp">
         <div className="linea-firma" />
-        Firma del receptor · {d.receptor?.nombre_completo}
+        Firma del receptor · {d.receptor?.nombre_completo ?? ""}
       </div>
 
       <h2>Evolución del caso</h2>
@@ -370,12 +370,15 @@ function ImprimirDemanda({ demandaId }: { demandaId: string }) {
         <ol className="evolucion-imp">
           {c.evoluciones.map((e) => (
             <li key={e.id}>
-              <strong>{fechaHora(e.en)} · {e.usuario?.nombre_completo}:</strong> <span className="texto-largo">{e.texto}</span>
+              <strong>{fecha(e.fecha)} · {e.autor?.nombre_completo ?? ""}:</strong> <span className="texto-largo">{e.texto}</span>
             </li>
           ))}
         </ol>
       )}
-      <footer className="pie-imp">Generado por SULAM el {fechaHora(new Date().toISOString())}</footer>
+      <footer className="pie-imp">
+        {d.cargado_desde_papel ? "Transcripción del original en papel. " : ""}
+        Cargado en SULAM por {d.cargado_por?.nombre_completo} el {fechaHora(d.creado_en)} · impreso el {fechaHora(new Date().toISOString())}
+      </footer>
     </article>
   );
 }

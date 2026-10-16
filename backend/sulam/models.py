@@ -325,10 +325,16 @@ class CasoEvolucion(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     caso_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("casos.id"), index=True)
     texto: Mapped[str] = mapped_column(Text)
+    # Fecha y autor de la intervención (puede haberse escrito en papel)...
+    fecha: Mapped[date | None] = mapped_column(Date)
+    autor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    autor_nombre: Mapped[str | None] = mapped_column(String(200))
+    # ...y quién la cargó en el sistema y cuándo.
     usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
     en: Mapped[datetime] = _ts()
 
-    usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+    usuario: Mapped[Usuario | None] = relationship(foreign_keys=[usuario_id], lazy="joined")
+    autor: Mapped[Usuario | None] = relationship(foreign_keys=[autor_id], lazy="joined")
 
 
 class RegistroDemanda(Base):
@@ -386,16 +392,21 @@ class RegistroDemanda(Base):
     # Cierre
     observaciones: Mapped[str | None] = mapped_column(Text)
     lugar: Mapped[str | None] = mapped_column(String(200))
-    fecha: Mapped[date] = mapped_column(Date)
+    fecha: Mapped[date] = mapped_column(Date)  # fecha del formulario
+    # Quien recibió la demanda y firma el original (no necesariamente quien lo carga).
+    receptor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    receptor_nombre: Mapped[str | None] = mapped_column(String(200))
+    cargado_desde_papel: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
 
-    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))  # receptor
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))  # quien lo cargó
     creado_en: Mapped[datetime] = _ts()
     actualizado_en: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     agente: Mapped[Usuario | None] = relationship(foreign_keys=[agente_id], lazy="joined")
-    receptor: Mapped[Usuario | None] = relationship(foreign_keys=[creado_por], lazy="joined")
+    receptor: Mapped[Usuario | None] = relationship(foreign_keys=[receptor_id], lazy="joined")
+    cargador: Mapped[Usuario | None] = relationship(foreign_keys=[creado_por], lazy="joined")
 
 
 class CasoAsignacion(Base):
@@ -483,6 +494,8 @@ class Documento(Base):
     caso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("casos.id"), index=True)
     expediente_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("expedientes.id"))
     ingreso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("ingresos.id"))
+    # Escaneo del original en papel de un registro de demanda.
+    registro_demanda_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("registros_demanda.id"))
     tipo_documental_id: Mapped[int] = mapped_column(ForeignKey("tipos_documentales.id"))
     titulo: Mapped[str] = mapped_column(String(300))
     descripcion: Mapped[str | None] = mapped_column(Text)

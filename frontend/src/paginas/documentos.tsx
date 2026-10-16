@@ -120,10 +120,14 @@ export function FormDocumento({
   casos = [],
   expedientes = [],
   casoFijo,
+  registroDemandaId,
+  tipoInicial,
   alGuardar,
 }: {
   personaId?: string;
   ingresoId?: string;
+  registroDemandaId?: string;
+  tipoInicial?: string;
   casos?: Caso[];
   expedientes?: Expediente[];
   casoFijo?: string;
@@ -132,7 +136,9 @@ export function FormDocumento({
   const { catalogos } = useSesion();
   const [archivo, setArchivo] = useState<File | null>(null);
   const [titulo, setTitulo] = useState("");
-  const [tipo, setTipo] = useState("");
+  const [tipo, setTipo] = useState(
+    String(catalogos.tipos_documentales.find((t) => t.nombre === tipoInicial)?.id ?? ""),
+  );
   const [descripcion, setDescripcion] = useState("");
   const [casoId, setCasoId] = useState(casoFijo ?? "");
   const [expedienteId, setExpedienteId] = useState("");
@@ -150,6 +156,7 @@ export function FormDocumento({
     if (descripcion) fd.append("descripcion", descripcion);
     if (personaId) fd.append("persona_id", personaId);
     if (ingresoId) fd.append("ingreso_id", ingresoId);
+    if (registroDemandaId) fd.append("registro_demanda_id", registroDemandaId);
     if (casoId) fd.append("caso_id", casoId);
     if (expedienteId) fd.append("expediente_id", expedienteId);
     fd.append("reservado", String(reservado));

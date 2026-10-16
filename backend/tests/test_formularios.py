@@ -72,11 +72,24 @@ def test_registro_de_demanda_sobre_caratula(admin):
         "estado_civil": "viudo", "tiene_hijos": True, "cantidad_hijos": 2, "vinculo_con_hijos": False,
         "convive_con": "Sola", "estado_funcional": "semidependiente", "tiene_autonomia": False,
         "barrio": "Villa 9 de Julio", "diagnosticos": "Hipertensión (ficticio)",
+        # Formulario completado en papel por la técnica y cargado después por otra persona.
+        "fecha": "2026-10-07", "receptor_id": ids["Tec"],
     })
     r = admin.post(f"/api/casos/{caso['id']}/demandas", json=demanda)
     assert r.status_code == 201, r.text
     d = r.json()
-    assert d["receptor"]["usuario"] == "admin" and d["agente"]["usuario"] == "tec"
+    assert d["receptor"]["usuario"] == "tec" and d["cargado_por"]["usuario"] == "admin"
+    assert d["cargado_desde_papel"] is True and d["fecha"] == "2026-10-07"
+    assert d["agente"]["usuario"] == "tec"
+
+    # Se adjunta el escaneo del original firmado.
+    from conftest import PDF
+    r = admin.post("/api/documentos", data={"tipo_documental_id": "2", "titulo": "Registro firmado",
+                                            "registro_demanda_id": d["id"]},
+                   files={"archivo": ("registro.pdf", PDF, "application/pdf")})
+    assert r.status_code == 201, r.text
+    escaneo = r.json()
+    assert escaneo["caso_id"] == caso["id"] and escaneo["registro_demanda_id"] == d["id"]
     assert d["datos_persona"]["numero_legajo"] == p["numero_legajo"]
 
     # Lo que corresponde al legajo se actualiza en el legajo.
@@ -89,6 +102,7 @@ def test_registro_de_demanda_sobre_caratula(admin):
 
     detalle = admin.get(f"/api/casos/{caso['id']}").json()
     assert [x["id"] for x in detalle["demandas"]] == [d["id"]]
+    assert detalle["demandas"][0]["escaneos"] == [escaneo["id"]]
 
 
 def test_evolucion_y_reserva(admin):
@@ -99,10 +113,18 @@ def test_evolucion_y_reserva(admin):
     caso = nuevo_caso(admin, p["id"], reservado=True, responsable_id=ids["Tec1"], **CARATULA)
     tec1, tec2 = Cliente("tec1"), Cliente("tec2")
     assert tec1.post(f"/api/casos/{caso['id']}/evolucion", json={"texto": "Visita domiciliaria realizada"}).status_code == 201
+    # Evolución escrita en papel por otra persona y cargada después.
+    r = tec1.post(f"/api/casos/{caso['id']}/evolucion",
+                  json={"texto": "Llamado a la hija", "fecha": "2026-10-01", "autor_nombre": "Lic. Ejemplo"})
+    assert r.status_code == 201
+    e = r.json()
+    assert e["fecha"] == "2026-10-01" and e["autor"]["nombre_completo"] == "Lic. Ejemplo" and e["usuario"]["usuario"] == "tec1"
     assert tec1.post(f"/api/casos/{caso['id']}/demandas", json={"solicitante_nombre": "X"}).status_code == 201
 
     visto = tec1.get(f"/api/casos/{caso['id']}").json()
-    assert visto["evoluciones"][0]["texto"] == "Visita domiciliaria realizada"
+    # Ordenadas por fecha de la intervención, no de carga.
+    assert [x["texto"] for x in visto["evoluciones"]] == ["Llamado a la hija", "Visita domiciliaria realizada"]
+    assert visto["evoluciones"][1]["autor"]["usuario"] == "tec1"
 
     ajeno = tec2.get(f"/api/casos/{caso['id']}").json()
     assert ajeno["evoluciones"] == [] and ajeno["caratula"]["indicadores"] == []

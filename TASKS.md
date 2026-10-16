@@ -41,6 +41,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Vistas imprimibles de carátula y registro de demanda | ✅ |
 | Datos del legajo ampliados (género, barrio, departamento, coberturas, CUD, discapacidad) | ✅ |
 | Actuación N° automática por año, con continuidad de la numeración en papel | ✅ |
+| Carga desde papel: receptor ≠ quien carga, fecha y autor de cada evolución, escaneo del original | ✅ |
 
 ## Próximos pasos
 

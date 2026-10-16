@@ -5,18 +5,19 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
 from ..formularios import catalogo_formularios, validar_demanda
-from ..models import Caso, Persona, RegistroDemanda, Usuario
+from ..models import Caso, Documento, Persona, RegistroDemanda, Usuario
 from ..permissions import Contexto, requerir_caso, ve_caso_reservado
 from ..schemas import DemandaIn
 from ..security import ahora
 from ..serializers import demanda_out
-from ._comun import no_encontrado, obtener_caso, registrar_actividad_caso
+from ._comun import no_encontrado, obtener_caso, registrar_actividad_caso, ve_documento
 
 router = APIRouter(tags=["registro de demanda"])
 
@@ -74,11 +75,14 @@ def demanda_sugerida(caso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: 
 
 def _aplicar(db: Session, ctx: Contexto, reg: RegistroDemanda, persona: Persona, datos: dict) -> dict:
     actualizar_legajo = datos.pop("actualizar_legajo", True)
+    if datos.get("cargado_desde_papel") is None:
+        datos.pop("cargado_desde_papel", None)
     validar_demanda(datos)
-    if datos.get("agente_id") is not None:
-        agente = db.get(Usuario, datos["agente_id"])
-        if agente is None:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Agente a cargo inexistente.")
+    for campo, nombre in (("agente_id", "Agente a cargo"), ("receptor_id", "Receptor")):
+        if datos.get(campo) is not None and db.get(Usuario, datos[campo]) is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, f"{nombre} inexistente.")
+    if datos.get("receptor_id") is not None:
+        datos["receptor_nombre"] = None
     genero = datos.pop("genero", None) if "genero" in datos else None
     telefono = datos.pop("telefono", None) if "telefono" in datos else None
     diff = audit.cambios(reg, datos)
@@ -117,6 +121,9 @@ def crear_demanda(
         creado_por=ctx.id,
     )
     db.add(reg)
+    if valores.get("cargado_desde_papel") is False and not valores.get("receptor_id") and not valores.get("receptor_nombre"):
+        # Registro tomado directamente en el sistema: el receptor es quien lo carga.
+        valores["receptor_id"] = ctx.id
     _aplicar(db, ctx, reg, persona, valores)
     registrar_actividad_caso(caso)
     db.flush()
@@ -142,7 +149,7 @@ def ver_demanda(demanda_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Se
     reg, caso = _obtener(db, ctx, demanda_id, "consultar")
     audit.registrar(db, ctx, "consultar_demanda", "registro_demanda", reg.id, reg.persona_id)
     db.commit()
-    return {**demanda_out(reg), "caso_numero": caso.numero}
+    return {**demanda_out(reg, True, escaneos_de(db, ctx, [reg.id]).get(reg.id)), "caso_numero": caso.numero}
 
 
 @router.patch("/demandas/{demanda_id}")
@@ -161,3 +168,15 @@ def modificar_demanda(
     db.commit()
     db.refresh(reg)
     return demanda_out(reg)
+
+
+def escaneos_de(db: Session, ctx: Contexto, ids: list) -> dict:
+    """Documentos (escaneos del original) asociados a cada registro, visibles para el usuario."""
+    resultado: dict = {}
+    if not ids or not ctx.tiene("documentos", "consultar"):
+        return resultado
+    q = select(Documento).where(Documento.registro_demanda_id.in_(ids), Documento.eliminado_en.is_(None))
+    for doc in db.execute(q).scalars():
+        if ve_documento(db, ctx, doc):
+            resultado.setdefault(doc.registro_demanda_id, []).append(str(doc.id))
+    return resultado

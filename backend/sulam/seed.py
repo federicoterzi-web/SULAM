@@ -71,7 +71,8 @@ ROLES: dict[str, dict] = {
         "descripcion": "Acceso transversal a los legajos y herramientas de incorporación y actualización de información.",
         "permisos": [
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
-            ("casos", "consultar", T), ("casos", "crear", T),
+            # "modificar" permite transcribir carátulas, registros de demanda y evoluciones en papel.
+            ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", T),
             ("expedientes", "consultar", T), ("expedientes", "crear", T), ("expedientes", "modificar", T),
             ("mesa_entrada", "consultar", T),
             ("documentos", "consultar", T), ("documentos", "crear", T), ("documentos", "descargar", T),

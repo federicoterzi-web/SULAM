@@ -166,6 +166,9 @@ export interface Demanda {
   persona_id: string;
   fecha: string;
   receptor: UsuarioBreve | null;
+  cargado_por: UsuarioBreve | null;
+  cargado_desde_papel: boolean;
+  escaneos: string[];
   creado_en: string;
   contenido_restringido: boolean;
   caso_numero?: string;
@@ -177,6 +180,8 @@ export interface Demanda {
 export interface Evolucion {
   id: number;
   texto: string;
+  fecha: string;
+  autor: UsuarioBreve | null;
   usuario: UsuarioBreve | null;
   en: string;
 }
@@ -242,6 +247,7 @@ export interface Documento {
   caso_id: string | null;
   expediente_id: string | null;
   ingreso_id: string | null;
+  registro_demanda_id?: string | null;
   tipo_documental: { id: number; nombre: string };
   reservado: boolean;
   contenido_restringido: boolean;

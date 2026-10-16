@@ -79,7 +79,13 @@ Implementados según los modelos institucionales («Modelo de carátula de legaj
    - Los datos que también pertenecen al legajo lo actualizan (se puede desmarcar).
    - Guarda una copia de los datos de identificación de la persona al momento del registro.
    - Un caso puede tener más de un registro.
-3. **Evolución del caso**: entradas fechadas y firmadas por usuario; no se editan ni se borran.
+3. **Evolución del caso**: cada entrada tiene la **fecha de la intervención** y **quién la realizó** (usuario de SULAM u otra persona), y por separado quién la cargó y cuándo. Se ordenan por fecha de intervención. No se editan ni se borran.
+
+**Carga desde papel.** Lo habitual es que los formularios se completen y firmen en papel y otra persona los transcriba:
+- El registro de demanda distingue el **receptor** (quien recibió la demanda y firma; usuario de SULAM u otra persona) de **quien lo cargó**. La fecha es la del formulario.
+- Se adjunta el **escaneo del original firmado** al registro de demanda y a la carátula; la lista de registros señala los que tienen escaneo pendiente.
+- La impresión aclara que es una transcripción del original en papel y quién la cargó.
+- El rol Carga de Datos puede transcribir carátulas, registros y evoluciones.
 
 **Reserva**: en un caso reservado, quien no tiene acceso ve que existe un registro de demanda (fecha y receptor) pero no su contenido; tampoco ve indicadores, intervenciones ni la evolución.
 

@@ -211,6 +211,11 @@ class CasoPatch(Entrada):
 
 class EvolucionIn(Entrada):
     texto: str = Field(min_length=2, max_length=10000)
+    fecha: date | None = None
+    autor_id: uuid.UUID | None = None
+    autor_nombre: str | None = Field(default=None, max_length=200)
+
+    _limpiar = field_validator("autor_nombre", mode="before")(_vacio_a_none)
 
 
 class DemandaIn(Entrada):
@@ -252,6 +257,9 @@ class DemandaIn(Entrada):
     observaciones: str | None = Field(default=None, max_length=10000)
     lugar: str | None = Field(default=None, max_length=200)
     fecha: date | None = None
+    receptor_id: uuid.UUID | None = None
+    receptor_nombre: str | None = Field(default=None, max_length=200)
+    cargado_desde_papel: bool | None = None
     # Persona mayor: género y teléfono (los demás datos de identidad se editan en el legajo)
     genero: str | None = None
     telefono: str | None = Field(default=None, max_length=100)
@@ -263,7 +271,7 @@ class DemandaIn(Entrada):
         "tipo_vivienda", "vivienda_institucional", "estado_civil", "convive_con", "referente_nombre",
         "referente_vinculo", "referente_telefono", "diagnosticos", "estado_funcional", "tipo_ingreso",
         "tipo_ingreso_detalle", "derivado_por", "derivado_por_detalle", "observaciones", "lugar",
-        "genero", "telefono", mode="before",
+        "genero", "telefono", "receptor_nombre", mode="before",
     )(_vacio_a_none)
 
 

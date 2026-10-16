@@ -12,7 +12,7 @@ from .. import audit
 from ..config import get_settings
 from ..db import get_db
 from ..deps import contexto
-from ..models import Documento, Ingreso, Persona, TipoDocumental, Usuario
+from ..models import Documento, Ingreso, Persona, RegistroDemanda, TipoDocumental, Usuario
 from ..permissions import Contexto, requerir_persona
 from ..schemas import DocumentoPatch, EliminarDocumentoIn
 from ..security import ahora
@@ -58,6 +58,7 @@ def cargar_documento(
     caso_id: str | None = Form(None),
     expediente_id: str | None = Form(None),
     ingreso_id: str | None = Form(None),
+    registro_demanda_id: str | None = Form(None),
     reservado: bool = Form(False),
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
@@ -67,6 +68,15 @@ def cargar_documento(
     cid = _uuid_opcional(caso_id, "caso_id")
     eid = _uuid_opcional(expediente_id, "expediente_id")
     iid = _uuid_opcional(ingreso_id, "ingreso_id")
+    rid = _uuid_opcional(registro_demanda_id, "registro_demanda_id")
+    if rid is not None:
+        reg = db.get(RegistroDemanda, rid)
+        if reg is None:
+            raise no_encontrado("Registro de demanda")
+        if pid is not None and str(reg.persona_id) != str(pid):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "El registro no pertenece a este legajo.")
+        pid = reg.persona_id
+        cid = cid or reg.caso_id
 
     ingreso = None
     if iid is not None:
@@ -128,6 +138,7 @@ def cargar_documento(
         caso_id=cid,
         expediente_id=eid,
         ingreso_id=iid,
+        registro_demanda_id=rid,
         tipo_documental_id=tipo.id,
         titulo=titulo.strip(),
         descripcion=(descripcion or "").strip() or None,

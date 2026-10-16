@@ -46,6 +46,7 @@ from ..serializers import (
     caso_out,
     demanda_out,
     documento_out,
+    evolucion_out,
     expediente_out,
     ingreso_out,
     persona_detalle,
@@ -53,6 +54,7 @@ from ..serializers import (
 )
 from ..textutil import escapar_like, normalizar
 from ._caratula import antecedentes_sistema, aplicar_caratula
+from .demandas import escaneos_de
 from ._comun import no_encontrado, obtener_caso, obtener_persona, registrar_actividad_caso
 
 router = APIRouter(tags=["casos"])
@@ -216,17 +218,20 @@ def ver_caso(caso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session 
     r["demandas"] = []
     if visible:
         r["evoluciones"] = [
-            {"id": e.id, "texto": e.texto, "usuario": usuario_breve(e.usuario), "en": e.en.isoformat()}
+            evolucion_out(e)
             for e in db.execute(
-                select(CasoEvolucion).where(CasoEvolucion.caso_id == caso.id).order_by(CasoEvolucion.en)
+                select(CasoEvolucion)
+                .where(CasoEvolucion.caso_id == caso.id)
+                .order_by(CasoEvolucion.fecha, CasoEvolucion.en)
             ).scalars()
         ]
-    r["demandas"] = [
-        demanda_out(d, visible)
-        for d in db.execute(
-            select(RegistroDemanda).where(RegistroDemanda.caso_id == caso.id).order_by(RegistroDemanda.creado_en)
+    demandas = list(
+        db.execute(
+            select(RegistroDemanda).where(RegistroDemanda.caso_id == caso.id).order_by(RegistroDemanda.fecha)
         ).scalars()
-    ]
+    )
+    escaneos = escaneos_de(db, ctx, [d.id for d in demandas]) if visible else {}
+    r["demandas"] = [demanda_out(d, visible, escaneos.get(d.id)) for d in demandas]
 
     r["expedientes"] = []
     if ctx.tiene("expedientes", "consultar"):
@@ -320,14 +325,23 @@ def agregar_evolucion(
     requerir_caso(db, ctx, caso, "casos", "modificar")
     if not ve_caso_reservado(db, ctx, caso):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
-    e = CasoEvolucion(caso_id=caso.id, texto=datos.texto, usuario_id=ctx.id)
+    if datos.autor_id is not None and db.get(Usuario, datos.autor_id) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Autor inexistente.")
+    e = CasoEvolucion(
+        caso_id=caso.id,
+        texto=datos.texto,
+        fecha=datos.fecha or ahora().astimezone().date(),
+        autor_id=datos.autor_id or (None if datos.autor_nombre else ctx.id),
+        autor_nombre=None if datos.autor_id else datos.autor_nombre,
+        usuario_id=ctx.id,
+    )
     db.add(e)
     registrar_actividad_caso(caso)
     db.flush()
     audit.registrar(db, ctx, "evolucion", "caso", caso.id, caso.persona_id, {"evolucion_id": e.id})
     db.commit()
     db.refresh(e)
-    return {"id": e.id, "texto": e.texto, "usuario": usuario_breve(e.usuario), "en": e.en.isoformat()}
+    return evolucion_out(e)
 
 
 @router.post("/casos/{caso_id}/estado")

@@ -87,7 +87,7 @@ def caratula_out(c: Caso, visible: bool) -> dict:
     return d
 
 
-def demanda_out(r, visible: bool = True) -> dict:
+def demanda_out(r, visible: bool = True, escaneos: list[str] | None = None) -> dict:
     from .models import RegistroDemanda
 
     base = {
@@ -95,13 +95,20 @@ def demanda_out(r, visible: bool = True) -> dict:
         "caso_id": str(r.caso_id),
         "persona_id": str(r.persona_id),
         "fecha": r.fecha.isoformat(),
-        "receptor": usuario_breve(r.receptor),
+        "receptor": usuario_breve(r.receptor)
+        or ({"id": None, "usuario": None, "nombre_completo": r.receptor_nombre} if r.receptor_nombre else None),
+        "cargado_por": usuario_breve(r.cargador),
+        "cargado_desde_papel": r.cargado_desde_papel,
+        "escaneos": escaneos or [],
         "creado_en": r.creado_en.isoformat(),
         "contenido_restringido": not visible,
     }
     if not visible:
         return base
-    excluir = {"id", "caso_id", "persona_id", "fecha", "creado_por", "creado_en", "actualizado_en", "agente_id"}
+    excluir = {
+        "id", "caso_id", "persona_id", "fecha", "creado_por", "creado_en", "actualizado_en", "agente_id",
+        "receptor_id", "receptor_nombre", "cargado_desde_papel",
+    }
     for col in RegistroDemanda.__table__.columns.keys():
         if col not in excluir:
             base[col] = getattr(r, col)
@@ -218,6 +225,7 @@ def documento_out(d: Documento, visible: bool, cargado_por: Usuario | None = Non
         "caso_id": str(d.caso_id) if d.caso_id else None,
         "expediente_id": str(d.expediente_id) if d.expediente_id else None,
         "ingreso_id": str(d.ingreso_id) if d.ingreso_id else None,
+        "registro_demanda_id": str(d.registro_demanda_id) if d.registro_demanda_id else None,
         "tipo_documental": {"id": d.tipo_documental.id, "nombre": d.tipo_documental.nombre},
         "reservado": d.reservado or d.tipo_documental.reservado,
         "contenido_restringido": not visible,
@@ -237,3 +245,15 @@ def documento_out(d: Documento, visible: bool, cargado_por: Usuario | None = Non
             }
         )
     return base
+
+
+def evolucion_out(e) -> dict:
+    return {
+        "id": e.id,
+        "texto": e.texto,
+        "fecha": (e.fecha or e.en.date()).isoformat(),
+        "autor": usuario_breve(e.autor)
+        or ({"id": None, "usuario": None, "nombre_completo": e.autor_nombre} if e.autor_nombre else None),
+        "usuario": usuario_breve(e.usuario),
+        "en": e.en.isoformat(),
+    }
