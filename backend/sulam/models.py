@@ -516,6 +516,53 @@ class Documento(Base):
 
 
 # ---------------------------------------------------------------------------
+# Captura desde el celular (QR) y bandeja de digitalización
+# ---------------------------------------------------------------------------
+
+
+class SesionCaptura(Base):
+    """Sesión de captura abierta desde la computadora y usada desde un celular mediante QR.
+
+    modo "documento": las fotos forman un PDF que se adjunta a un caso / registro.
+    modo "lote": las fotos quedan en la bandeja de digitalización (fichas históricas).
+    """
+
+    __tablename__ = "sesiones_captura"
+    __table_args__ = (CheckConstraint("modo IN ('documento','lote')", name="ck_captura_modo"),)
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    modo: Mapped[str] = mapped_column(String(20))
+    usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"))
+    caso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("casos.id"))
+    registro_demanda_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("registros_demanda.id"))
+    tipo_documental_id: Mapped[int | None] = mapped_column(ForeignKey("tipos_documentales.id"))
+    titulo: Mapped[str | None] = mapped_column(String(300))
+    creada_en: Mapped[datetime] = _ts()
+    expira_en: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    cerrada_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    documento_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documentos.id"))
+
+    usuario: Mapped[Usuario] = relationship(lazy="joined")
+
+
+class PaginaCaptura(Base):
+    __tablename__ = "paginas_captura"
+    __table_args__ = (
+        CheckConstraint("estado IN ('pendiente','procesada','descartada')", name="ck_pagina_estado"),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    sesion_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("sesiones_captura.id"), index=True)
+    orden: Mapped[int] = mapped_column(Integer)
+    mime: Mapped[str] = mapped_column(String(50))
+    tamano: Mapped[int] = mapped_column(BigInteger)
+    sha256: Mapped[str] = mapped_column(String(64))
+    almacenamiento: Mapped[str] = mapped_column(String(30))
+    clave_almacenamiento: Mapped[str] = mapped_column(String(300))
+    estado: Mapped[str] = mapped_column(String(20), default="pendiente")
+    creada_en: Mapped[datetime] = _ts()
+
+
+# ---------------------------------------------------------------------------
 # Auditoría (solo agregado)
 # ---------------------------------------------------------------------------
 
