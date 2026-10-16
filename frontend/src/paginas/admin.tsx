@@ -401,6 +401,7 @@ const CATALOGOS: { clave: string; titulo: string; reservable?: boolean }[] = [
 function Catalogos() {
   return (
     <>
+      <Numeracion />
       {CATALOGOS.map((c) => (
         <Catalogo key={c.clave} {...c} />
       ))}
@@ -488,6 +489,49 @@ function Catalogo({ clave, titulo, reservable }: { clave: string; titulo: string
       >
         <input value={nuevo} onChange={(e) => setNuevo(e.target.value)} placeholder="Agregar…" aria-label={`Agregar a ${titulo}`} />
         <button className="boton">Agregar</button>
+      </form>
+      <Aviso error={envio.error} />
+    </Seccion>
+  );
+}
+
+function Numeracion() {
+  const [anio, setAnio] = useState(new Date().getFullYear());
+  const { datos, error, recargar } = useDatos(
+    () => api.get<{ anio: number; proximo: number; mayor_registrado: number | null }>(`/admin/numeracion/${anio}`),
+    [anio],
+  );
+  const [proximo, setProximo] = useState("");
+  const envio = useEnvio();
+  const guardar = async (e: FormEvent) => {
+    e.preventDefault();
+    const r = await envio.ejecutar(() => api.put("/admin/numeracion", { anio, proximo: Number(proximo) }));
+    if (r) {
+      setProximo("");
+      recargar();
+    }
+  };
+  return (
+    <Seccion titulo="Numeración de actuaciones (carátulas)">
+      <p className="tenue">
+        La Actuación N° es correlativa por año y coincide con el número de caso. Para continuar la numeración que se
+        llevaba en papel, indique el próximo número a asignar. No puede ser menor o igual al mayor ya registrado.
+      </p>
+      <Aviso error={error} />
+      <form className="filtros" onSubmit={guardar}>
+        <label>
+          Año <input type="number" value={anio} min={1990} max={2100} onChange={(e) => setAnio(Number(e.target.value))} style={{ width: "6rem" }} />
+        </label>
+        {datos && (
+          <span>
+            Próximo número: <strong>{datos.proximo}</strong>
+            {datos.mayor_registrado !== null && <span className="tenue"> (mayor registrado: {datos.mayor_registrado})</span>}
+          </span>
+        )}
+        <input type="number" min={1} value={proximo} onChange={(e) => setProximo(e.target.value)} placeholder="Nuevo próximo número" aria-label="Nuevo próximo número" />
+        <button className="boton" disabled={!proximo || envio.enviando}>
+          Fijar
+        </button>
       </form>
       <Aviso error={envio.error} />
     </Seccion>

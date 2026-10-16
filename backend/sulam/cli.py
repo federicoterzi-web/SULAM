@@ -111,7 +111,7 @@ def cmd_datos_demo(_args) -> None:
         TipoVinculo,
         Usuario,
     )
-    from .numbering import numero_caso, numero_ingreso, numero_legajo
+    from .numbering import nueva_actuacion, numero_ingreso, numero_legajo
     from .security import hash_password
     from .seed import PASSWORD_DEMO, PERSONAS_DEMO, USUARIOS_DEMO, inicializar_catalogos
     from .storage import almacenamiento_actual
@@ -174,8 +174,10 @@ def cmd_datos_demo(_args) -> None:
         ]
         casos = []
         for idx, area, estado, tecnico, reservado, motivo in casos_def:
+            anio, n, numero = nueva_actuacion(db)
             c = Caso(
-                numero=numero_caso(db), persona_id=personas[idx].id, area_id=area.id,
+                numero=numero, numero_actuacion=n, anio_actuacion=anio,
+                persona_id=personas[idx].id, area_id=area.id,
                 estado=estado, reservado=reservado, motivo=motivo, creado_por=usuarios["carga"].id,
             )
             db.add(c)

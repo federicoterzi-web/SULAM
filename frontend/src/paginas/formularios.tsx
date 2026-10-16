@@ -278,8 +278,8 @@ export function FormCaratula({
         setPersona(p);
         const c = caso?.caratula;
         setD({
-          numero_actuacion: c?.numero_actuacion ?? "",
-          anio_actuacion: String(c?.anio_actuacion ?? new Date().getFullYear()),
+          numero_actuacion: c?.numero_actuacion ? String(c.numero_actuacion) : "",
+          anio_actuacion: c?.anio_actuacion ? String(c.anio_actuacion) : "",
           fecha_ingreso: c?.fecha_ingreso ?? hoy(),
           antecedentes: c ? c.antecedentes : null,
           fecha_ultimo_ingreso: c?.fecha_ultimo_ingreso ?? "",
@@ -312,8 +312,6 @@ export function FormCaratula({
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     const caratula: Record<string, unknown> = {
-      numero_actuacion: d.numero_actuacion,
-      anio_actuacion: d.anio_actuacion ? Number(d.anio_actuacion) : null,
       fecha_ingreso: d.fecha_ingreso || null,
       motivo: d.motivo,
       tipo_ingreso: d.tipo_ingreso,
@@ -335,6 +333,10 @@ export function FormCaratula({
         obra_social: d.cobertura_salud.includes("obra_social") ? d.obra_social : persona.obra_social,
       },
     };
+    if (!caso && d.numero_actuacion) {
+      caratula.numero_actuacion = Number(d.numero_actuacion);
+      caratula.anio_actuacion = d.anio_actuacion ? Number(d.anio_actuacion) : Number(d.fecha_ingreso.slice(0, 4));
+    }
     if (d.antecedentes !== null) {
       caratula.antecedentes = d.antecedentes;
       caratula.fecha_ultimo_ingreso = d.antecedentes ? d.fecha_ultimo_ingreso || null : null;
@@ -362,12 +364,22 @@ export function FormCaratula({
           <Campo etiqueta="Legajo N°">
             <input value={persona.numero_legajo} readOnly />
           </Campo>
-          <Campo etiqueta="Actuación N°">
-            <input value={d.numero_actuacion} onChange={(e) => set({ numero_actuacion: e.target.value })} />
-          </Campo>
-          <Campo etiqueta="Año">
-            <input type="number" min={1990} max={2100} value={d.anio_actuacion} onChange={(e) => set({ anio_actuacion: e.target.value })} />
-          </Campo>
+          {caso ? (
+            <Campo etiqueta="Actuación N° / año">
+              <input value={`${d.numero_actuacion} / ${d.anio_actuacion}`} readOnly />
+            </Campo>
+          ) : (
+            <>
+              <Campo etiqueta="Actuación N°" ayuda="Se asigna sola. Complételo solo al cargar una carátula anterior con su número original.">
+                <input type="number" min={1} placeholder="Automático" value={d.numero_actuacion} onChange={(e) => set({ numero_actuacion: e.target.value })} />
+              </Campo>
+              {d.numero_actuacion && (
+                <Campo etiqueta="Año de la actuación">
+                  <input type="number" min={1990} max={2100} placeholder={d.fecha_ingreso.slice(0, 4)} value={d.anio_actuacion} onChange={(e) => set({ anio_actuacion: e.target.value })} />
+                </Campo>
+              )}
+            </>
+          )}
         </div>
       </section>
 

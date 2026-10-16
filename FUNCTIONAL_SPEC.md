@@ -67,7 +67,10 @@ Implementados según los modelos institucionales («Modelo de carátula de legaj
 **Orden de carga** (como en la práctica de la Dirección):
 
 1. **Carátula**: se completa al crear el caso. Contiene:
-   - Legajo N° (automático), Actuación N° y año.
+   - Legajo N° (automático) y **Actuación N° / año**: número correlativo de carátula por año, igual al número de caso (Actuación 351/2026 = caso C-2026-00351). Se asigna solo.
+     - Para continuar la numeración que se llevaba en papel, Administración fija el próximo número del año (no puede ser menor o igual al mayor registrado).
+     - Una carátula anterior puede cargarse con su número original; el sistema impide repetirlo y la numeración automática saltea los números ya usados.
+     - Una vez creada, la Actuación N° no se modifica.
    - Datos de la persona: género, obra social / cobertura de salud, CUD, domicilio, localidad, departamento y teléfono. **Estos datos actualizan el legajo** (con auditoría).
    - Información administrativa: fecha de ingreso, antecedentes y fecha del último ingreso, motivo de ingreso, tipo de ingreso (Espontáneo presencial/no presencial, Mesa de Entrada/Amparo, Portal SAE, Derivada), indicadores y tipo de intervención (con texto para «Derivación» y «Otro»).
    - **Antecedentes**: si no se indican, se completan con los ingresos previos registrados en SULAM. Si la carátula dice «No» y el sistema encuentra un ingreso anterior, se muestra un aviso.

@@ -145,7 +145,7 @@ export interface Formularios {
 }
 
 export interface Caratula {
-  numero_actuacion: string | null;
+  numero_actuacion: number | null;
   anio_actuacion: number | null;
   fecha_ingreso: string;
   antecedentes: boolean | null;

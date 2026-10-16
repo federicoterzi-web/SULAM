@@ -27,7 +27,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | + | Auditoría inmutable a nivel de base de datos | ✅ |
 
 ### Verificación realizada
-- 24 pruebas automatizadas contra PostgreSQL 16, todas aprobadas (incluye los 8 criterios de aceptación y los formularios institucionales).
+- 25 pruebas automatizadas contra PostgreSQL 16, todas aprobadas (incluye los 8 criterios de aceptación y los formularios institucionales).
 - Recorrido completo de la interfaz en navegador con cada rol de demostración (alta con duplicado, carga de documento, ingreso vinculado, caso reservado visto por otro técnico, matriz de roles, vista móvil).
 - Pendiente de verificar en una máquina con acceso normal a internet: `docker compose up --build` y `npm install` (el entorno de desarrollo no tenía acceso a los registros de paquetes; el código se probó con las mismas bibliotecas obtenidas de sus repositorios oficiales).
 
@@ -40,7 +40,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Evolución del caso | ✅ |
 | Vistas imprimibles de carátula y registro de demanda | ✅ |
 | Datos del legajo ampliados (género, barrio, departamento, coberturas, CUD, discapacidad) | ✅ |
-| Definir el origen de la Actuación N° (P-012) | ⏳ |
+| Actuación N° automática por año, con continuidad de la numeración en papel | ✅ |
 
 ## Próximos pasos
 

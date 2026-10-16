@@ -12,9 +12,10 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
-from ..models import Area, Rol, RolPermiso, TipoDocumental, TipoVinculo, Usuario
+from ..models import Area, Caso, Rol, RolPermiso, TipoDocumental, TipoVinculo, Usuario
 from ..permissions import ALCANCES, CATALOGO, DESCRIPCION_ACCIONES, Contexto, permiso_valido, permisos_efectivos
-from ..schemas import CatalogoIn, ResetPasswordIn, RolIn, UsuarioIn, UsuarioPatch
+from ..numbering import fijar_proximo, proximo
+from ..schemas import CatalogoIn, NumeracionIn, ResetPasswordIn, RolIn, UsuarioIn, UsuarioPatch
 from ..security import hash_password, revocar_sesiones_usuario, validar_password_nueva
 
 router = APIRouter(prefix="/admin", tags=["administración"])
@@ -306,3 +307,35 @@ def modificar_item(
         audit.registrar(db, ctx, "modificar", entidad, obj.id, detalle={"cambios": diff})
         db.commit()
     return _catalogo_out(obj)
+
+
+# ---------------------------------------------------------------- numeración de actuaciones
+
+
+@router.get("/numeracion/{anio}")
+def ver_numeracion(anio: int, ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
+    ultimo = db.execute(
+        select(func.max(Caso.numero_actuacion)).where(Caso.anio_actuacion == anio)
+    ).scalar_one()
+    return {"anio": anio, "proximo": proximo(db, f"caso-{anio}"), "mayor_registrado": ultimo}
+
+
+@router.put("/numeracion")
+def fijar_numeracion(datos: NumeracionIn, ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
+    """Define el próximo N° de actuación del año (por ejemplo, para continuar la numeración en papel)."""
+    ultimo = db.execute(
+        select(func.max(Caso.numero_actuacion)).where(Caso.anio_actuacion == datos.anio)
+    ).scalar_one()
+    if ultimo is not None and datos.proximo <= ultimo:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Ya hay actuaciones registradas hasta el N° {ultimo}/{datos.anio}: el próximo debe ser mayor.",
+        )
+    anterior = proximo(db, f"caso-{datos.anio}")
+    fijar_proximo(db, f"caso-{datos.anio}", datos.proximo)
+    audit.registrar(
+        db, ctx, "fijar_numeracion", "actuacion", datos.anio,
+        detalle={"anio": datos.anio, "proximo_anterior": anterior, "proximo": datos.proximo},
+    )
+    db.commit()
+    return {"anio": datos.anio, "proximo": datos.proximo, "mayor_registrado": ultimo}

@@ -5,8 +5,6 @@ from __future__ import annotations
 from conftest import AREA_ADMISION, Cliente, crear_usuario, nueva_persona, nuevo_caso
 
 CARATULA = {
-    "numero_actuacion": "123",
-    "anio_actuacion": 2026,
     "fecha_ingreso": "2026-10-05",
     "motivo": "Vecina refiere que vive sola y sin recursos",
     "tipo_ingreso": "espontaneo",
@@ -23,7 +21,8 @@ def test_caratula_al_crear_el_caso(admin):
     p = nueva_persona(admin, fecha_nacimiento="1945-02-01")
     caso = nuevo_caso(admin, p["id"], **CARATULA)
     car = caso["caratula"]
-    assert car["numero_actuacion"] == "123" and car["fecha_ingreso"] == "2026-10-05"
+    assert car["numero_actuacion"] == 1 and car["anio_actuacion"] == 2026 and caso["numero"] == "C-2026-00001"
+    assert car["fecha_ingreso"] == "2026-10-05"
     # Al marcar una subopción se guarda también el grupo.
     assert car["indicadores"] == ["maltrato", "maltrato.economico", "vulnerabilidad", "vulnerabilidad.habitacional"]
     assert car["antecedentes"] is False and car["fecha_ultimo_ingreso"] is None
@@ -110,3 +109,28 @@ def test_evolucion_y_reserva(admin):
     assert ajeno["demandas"][0]["contenido_restringido"] is True and "solicitante_nombre" not in ajeno["demandas"][0]
     assert tec2.get(f"/api/demandas/{ajeno['demandas'][0]['id']}").status_code == 403
     assert tec2.post(f"/api/casos/{caso['id']}/evolucion", json={"texto": "x x"}).status_code == 403
+
+
+def test_numeracion_de_actuaciones(admin):
+    p = nueva_persona(admin)
+    # Se continúa la numeración que se llevaba en papel.
+    assert admin.put("/api/admin/numeracion", json={"anio": 2026, "proximo": 351}).status_code == 200
+    c1 = nuevo_caso(admin, p["id"], fecha_ingreso="2026-10-16")
+    assert (c1["caratula"]["numero_actuacion"], c1["numero"]) == (351, "C-2026-00351")
+
+    # Carátula vieja cargada con su número original; no puede repetirse.
+    viejo = nuevo_caso(admin, p["id"], fecha_ingreso="2025-03-02", numero_actuacion=87)
+    assert viejo["caratula"]["anio_actuacion"] == 2025 and viejo["numero"] == "C-2025-00087"
+    r = admin.post("/api/casos", json={"persona_id": p["id"], "fecha_ingreso": "2025-05-01", "numero_actuacion": 87})
+    assert r.status_code == 409
+
+    # El automático saltea un número ya usado manualmente.
+    nuevo_caso(admin, p["id"], numero_actuacion=352, anio_actuacion=2026)
+    c3 = nuevo_caso(admin, p["id"], fecha_ingreso="2026-10-17")
+    assert c3["caratula"]["numero_actuacion"] == 353
+
+    # No se puede retroceder la numeración ni cambiar el número de una carátula.
+    assert admin.put("/api/admin/numeracion", json={"anio": 2026, "proximo": 300}).status_code == 409
+    r = admin.patch(f"/api/casos/{c1['id']}/caratula", json={"numero_actuacion": 999})
+    assert r.status_code == 400
+    assert admin.get("/api/admin/numeracion/2026").json()["proximo"] == 354

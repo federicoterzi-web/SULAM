@@ -173,7 +173,7 @@ class PersonaCaratula(Entrada):
 class CaratulaCampos(Entrada):
     """Información administrativa del modelo de carátula de legajo."""
 
-    numero_actuacion: str | None = Field(default=None, max_length=50)
+    numero_actuacion: int | None = Field(default=None, ge=1, le=9999999)
     anio_actuacion: int | None = Field(default=None, ge=1990, le=2100)
     fecha_ingreso: date | None = None
     antecedentes: bool | None = None
@@ -190,7 +190,7 @@ class CaratulaCampos(Entrada):
     persona: PersonaCaratula | None = None
 
     _limpiar = field_validator(
-        "numero_actuacion", "motivo", "tipo_ingreso", "tipo_ingreso_detalle", "derivado_por",
+        "motivo", "tipo_ingreso", "tipo_ingreso_detalle", "derivado_por",
         "derivado_por_detalle", "intervencion_derivacion", "intervencion_otro", mode="before",
     )(_vacio_a_none)
 
@@ -377,6 +377,11 @@ class UsuarioPatch(Entrada):
 
 class ResetPasswordIn(Entrada):
     password_temporal: str = Field(max_length=200)
+
+
+class NumeracionIn(Entrada):
+    anio: int = Field(ge=1990, le=2100)
+    proximo: int = Field(ge=1, le=9999999)
 
 
 class CatalogoIn(Entrada):

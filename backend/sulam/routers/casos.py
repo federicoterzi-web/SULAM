@@ -23,7 +23,7 @@ from ..models import (
     Persona,
     Usuario,
 )
-from ..numbering import numero_caso
+from ..numbering import formato_caso, nueva_actuacion
 from ..permissions import (
     Contexto,
     filtro_casos,
@@ -137,8 +137,20 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
     if alcance == "area" and area_id != ctx.usuario.area_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo puede crear casos de su área.")
 
+    fecha_ingreso = datos.fecha_ingreso or ahora().astimezone().date()
+    if datos.numero_actuacion is not None:
+        # Carátula cargada con su número original (por ejemplo, de papel).
+        anio = datos.anio_actuacion or fecha_ingreso.year
+        n = datos.numero_actuacion
+        numero = formato_caso(anio, n)
+        if db.execute(select(Caso.id).where(Caso.numero == numero)).first() is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, f"Ya existe la actuación N° {n}/{anio}.")
+    else:
+        anio, n, numero = nueva_actuacion(db, datos.anio_actuacion or fecha_ingreso.year)
     caso = Caso(
-        numero=numero_caso(db),
+        numero=numero,
+        numero_actuacion=n,
+        anio_actuacion=anio,
         persona_id=persona.id,
         area_id=area_id,
         estado="abierto",
@@ -147,7 +159,8 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
     )
     db.add(caso)
     caratula = datos.model_dump(
-        exclude_unset=True, exclude={"persona_id", "area_id", "reservado", "responsable_id", "ingreso_id"}
+        exclude_unset=True,
+        exclude={"persona_id", "area_id", "reservado", "responsable_id", "ingreso_id", "numero_actuacion", "anio_actuacion"},
     )
     if caratula.get("persona") is not None:
         caratula["persona"] = datos.persona.model_dump(exclude_unset=True)
@@ -285,6 +298,9 @@ def modificar_caratula(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
     persona = db.get(Persona, caso.persona_id)
     cambios_pedidos = datos.model_dump(exclude_unset=True)
+    for campo in ("numero_actuacion", "anio_actuacion"):
+        if campo in cambios_pedidos and cambios_pedidos.pop(campo) != getattr(caso, campo):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "El número de actuación no se modifica.")
     if datos.persona is not None:
         cambios_pedidos["persona"] = datos.persona.model_dump(exclude_unset=True)
     diff = aplicar_caratula(db, ctx, caso, persona, cambios_pedidos)

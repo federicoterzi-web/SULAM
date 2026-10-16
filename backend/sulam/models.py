@@ -259,6 +259,13 @@ class Caso(Base):
         CheckConstraint(
             "estado IN ('abierto','en_seguimiento','pausado','cerrado')", name="ck_casos_estado"
         ),
+        Index(
+            "uq_casos_actuacion",
+            "anio_actuacion",
+            "numero_actuacion",
+            unique=True,
+            postgresql_where=text("numero_actuacion IS NOT NULL"),
+        ),
     )
     id: Mapped[uuid.UUID] = _uuid_pk()
     numero: Mapped[str] = mapped_column(String(30), unique=True)
@@ -269,7 +276,8 @@ class Caso(Base):
     motivo: Mapped[str | None] = mapped_column(Text)  # "Motivo de ingreso" de la carátula
 
     # Carátula (modelo institucional)
-    numero_actuacion: Mapped[str | None] = mapped_column(String(50))
+    # Actuación N° / año: número correlativo de carátula por año (= número del caso).
+    numero_actuacion: Mapped[int | None] = mapped_column(Integer)
     anio_actuacion: Mapped[int | None] = mapped_column(Integer)
     fecha_ingreso: Mapped[date | None] = mapped_column(Date)
     antecedentes: Mapped[bool | None] = mapped_column(Boolean)
