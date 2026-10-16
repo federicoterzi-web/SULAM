@@ -1,0 +1,40 @@
+# SULAM con Docker:  docker compose up -d   ->  http://localhost:8000
+# Configuración en el archivo .env (copiar desde .env.example).
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sulam
+      POSTGRES_USER: sulam
+      POSTGRES_PASSWORD: ${SULAM_DB_PASSWORD:?Definir SULAM_DB_PASSWORD en .env}
+      TZ: America/Argentina/Tucuman
+      PGTZ: America/Argentina/Tucuman
+    volumes:
+      - base:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sulam -d sulam"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SULAM_DATABASE_URL: postgresql+psycopg://sulam:${SULAM_DB_PASSWORD}@db:5432/sulam
+      SULAM_ADMIN_PASSWORD: ${SULAM_ADMIN_PASSWORD:?Definir SULAM_ADMIN_PASSWORD en .env}
+      SULAM_DATOS_DEMO: ${SULAM_DATOS_DEMO:-0}
+      SULAM_ENV: ${SULAM_ENV:-desarrollo}
+      SULAM_COOKIE_SECURE: ${SULAM_COOKIE_SECURE:-0}
+      TZ: America/Argentina/Tucuman
+    volumes:
+      - archivos:/datos
+    ports:
+      - "127.0.0.1:8000:8000"
+
+volumes:
+  base:
+  archivos:

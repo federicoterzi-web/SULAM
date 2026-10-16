@@ -1,0 +1,14 @@
+.env
+datos/
+backend/datos/
+*.tar.gz
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+node_modules/
+frontend/dist/
+.DS_Store
+Thumbs.db

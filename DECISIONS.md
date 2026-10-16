@@ -1,0 +1,78 @@
+# Decisiones de diseño · SULAM
+
+Cada decisión indica su estado: **Vigente**, **Provisoria** (a revisar con el relevamiento o con el área informática) o **Pendiente**.
+
+---
+
+## Decisiones tomadas
+
+### D-001 · Monolito modular — *Vigente*
+Una aplicación, una base, módulos con responsabilidades separadas. Más simple de instalar, respaldar y mantener que microservicios para el tamaño de la institución.
+
+### D-002 · Stack: React + FastAPI + PostgreSQL — *Provisoria*
+Elegido por madurez, costo cero de licencias y facilidad para encontrar quien lo mantenga. **Queda sujeto a la evaluación del área informática** (ver D-012), en particular hosting, versión de PostgreSQL y política de actualizaciones.
+
+### D-003 · Identificador interno independiente del documento — *Vigente*
+UUID interno + número de legajo visible. Permite personas sin documento, correcciones de DNI y unificación sin perder historial.
+
+### D-004 · Persona, caso y expediente como entidades distintas — *Vigente*
+Según el documento de diseño (§3.3).
+
+### D-005 · Nada se borra físicamente — *Vigente*
+Casos se cierran, documentos se dan de baja lógica, vínculos se desactivan, legajos se unifican. La eliminación definitiva queda sujeta a la política de conservación documental (pendiente P-007).
+
+### D-006 · Auditoría de solo agregado, incluidas las consultas — *Vigente*
+Se registran también aperturas de legajos, búsquedas y descargas. Motivo: los legajos contienen **datos sensibles** en los términos de la Ley 25.326 (art. 2, por ejemplo información referente a la salud) e información sobre situaciones de violencia, y la institución debe poder responder *quién vio qué*. La inmutabilidad se garantiza en la base con triggers, no solo en la aplicación.
+
+### D-007 · Información reservada — *Vigente*
+Además del alcance por rol, existe una marca de **reserva** para casos, tipos documentales, documentos y personas vinculadas. Un caso reservado muestra su existencia (para evitar intervenciones duplicadas) pero no su contenido. Acceso: responsables asignados, quien lo creó y el permiso *Información reservada › Consultar*.
+
+### D-008 · Almacenamiento local en la 0.1; Google Drive postergado — *Provisoria*
+El documento de diseño preveía Google Drive gratuito para pruebas. Se implementó primero el almacenamiento **local**, detrás de la misma interfaz, porque:
+- las cuentas de servicio de Google no tienen cuota propia en cuentas gratuitas, de modo que la integración debería usar OAuth de una persona: los archivos quedarían atados a una cuenta personal;
+- el almacenamiento local permite probar desde el primer día el procedimiento de migración entre proveedores (`sulam migrar-archivos`), que es lo que realmente importa.
+Agregar Google Drive u otro proveedor es una clase nueva en `storage.py`. **Decidir con informática** el destino definitivo (servidor institucional, almacenamiento S3 compatible, etc.).
+
+### D-009 · Datos reales — *Vigente*
+**No se cargan datos reales** hasta que se verifiquen: autorización institucional; normativa de protección de datos; condiciones del alojamiento; acceso por HTTPS (`SULAM_COOKIE_SECURE=1`); respaldos programados y probados; responsable de seguridad designado (P-008).
+
+### D-010 · Sesiones por cookie HttpOnly + CSRF — *Vigente*
+Sesiones revocables desde el servidor (al desactivar un usuario o restablecer su contraseña). No se usan tokens JWT de larga vida.
+
+### D-011 · Detección de duplicados con criterios explícitos — *Vigente*
+Criterios documentados en FUNCTIONAL_SPEC §3.1. Mismo documento bloquea; el resto avisa y exige confirmación auditada. Los umbrales pueden ajustarse con la experiencia de uso.
+
+### D-012 · Participación del área informática — *Vigente*
+Para dar al área informática un rol real sin reabrir decisiones funcionales, se separan:
+- **Propuestas sujetas a su evaluación**: hosting, almacenamiento definitivo, copias de seguridad programadas, monitoreo, certificados HTTPS, integración con cuentas institucionales, endurecimiento del servidor.
+- **Principios no negociables** (definidos por la Dirección): legajo único, permisos verificados en el servidor, auditoría inmutable, información reservada, nada se borra, sin datos reales sin las condiciones de D-009.
+
+### D-013 · Catálogos iniciales — *Provisoria*
+- **Áreas**: organigrama vigente (2011). La propuesta de modificación no está aprobada y no se usa.
+- **Tipos documentales**: los del documento de diseño §6.2.
+- **Tipos de vínculo**: propuesta inicial (Familiar, Referente afectivo, Conviviente, Denunciante, Representante legal o apoyo, Institución, Otro). A validar en el relevamiento.
+Todos son editables desde *Administración › Catálogos*.
+
+### D-014 · Roles iniciales — *Provisoria*
+Los cinco roles del documento de diseño §5.3, con una matriz de permisos propuesta (FUNCTIONAL_SPEC §9). La matriz definitiva es institucional (P-003).
+
+### D-015 · Dependencias mínimas — *Vigente*
+Contraseñas con scrypt (biblioteca estándar), enrutamiento propio en el frontend y compilación con esbuild: menos paquetes externos que actualizar y auditar.
+
+---
+
+## Pendientes (no se inventan)
+
+| Id | Tema | Depende de |
+|---|---|---|
+| P-001 | Campos exactos de **carátula** y **registro de demanda** | Relevamiento (octubre) |
+| P-002 | Formularios y modelos documentales (informes, plantillas) | Relevamiento |
+| P-003 | Matriz definitiva de roles y permisos | Dirección |
+| P-004 | Reglas de asignación y derivación automática | Relevamiento de circuitos |
+| P-005 | Estados y circuitos específicos de expedientes | Relevamiento |
+| P-006 | Organización del archivo físico | Relevamiento |
+| P-007 | Conservación y eliminación documental | Normativa y Dirección |
+| P-008 | Responsables institucionales de seguridad y respaldo | Dirección / informática |
+| P-009 | Alojamiento definitivo y almacenamiento de archivos | Informática (D-008, D-012) |
+| P-010 | Procedimiento de recuperación ante incidentes | Informática |
+| P-011 | Umbral de "sin actividad" del tablero (hoy 30 días) | Equipo técnico |

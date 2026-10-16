@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sulam"
+version = "0.1.0"
+description = "SULAM - Sistema Único de Legajos de Adultos Mayores (Dirección de Adultos Mayores de Tucumán)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0,<2.1",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.13",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+sulam = "sulam.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["sulam*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
