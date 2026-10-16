@@ -200,6 +200,17 @@ class Persona(Base):
     telefono: Mapped[str | None] = mapped_column(String(100))
     observaciones: Mapped[str | None] = mapped_column(Text)
 
+    # Datos de la carátula y del registro de demanda (ver formularios.py).
+    genero: Mapped[str | None] = mapped_column(String(10))
+    barrio: Mapped[str | None] = mapped_column(String(200))
+    departamento: Mapped[str | None] = mapped_column(String(100))
+    cud: Mapped[str | None] = mapped_column(String(20))
+    cobertura_salud: Mapped[list | None] = mapped_column(JSONB)
+    obra_social: Mapped[str | None] = mapped_column(String(200))
+    cobertura_previsional: Mapped[list | None] = mapped_column(JSONB)
+    trabajo_informal: Mapped[bool | None] = mapped_column(Boolean)
+    discapacidades: Mapped[list | None] = mapped_column(JSONB)
+
     unificada_en_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("personas.id"))
     unificada_fecha: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -255,7 +266,23 @@ class Caso(Base):
     area_id: Mapped[int | None] = mapped_column(ForeignKey("areas.id"))
     estado: Mapped[str] = mapped_column(String(20), default="abierto")
     reservado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
-    motivo: Mapped[str | None] = mapped_column(Text)
+    motivo: Mapped[str | None] = mapped_column(Text)  # "Motivo de ingreso" de la carátula
+
+    # Carátula (modelo institucional)
+    numero_actuacion: Mapped[str | None] = mapped_column(String(50))
+    anio_actuacion: Mapped[int | None] = mapped_column(Integer)
+    fecha_ingreso: Mapped[date | None] = mapped_column(Date)
+    antecedentes: Mapped[bool | None] = mapped_column(Boolean)
+    fecha_ultimo_ingreso: Mapped[date | None] = mapped_column(Date)
+    tipo_ingreso: Mapped[str | None] = mapped_column(String(30))
+    tipo_ingreso_detalle: Mapped[str | None] = mapped_column(String(30))
+    derivado_por: Mapped[str | None] = mapped_column(String(30))
+    derivado_por_detalle: Mapped[str | None] = mapped_column(String(300))
+    indicadores: Mapped[list | None] = mapped_column(JSONB)
+    intervenciones: Mapped[list | None] = mapped_column(JSONB)
+    intervencion_derivacion: Mapped[str | None] = mapped_column(String(300))
+    intervencion_otro: Mapped[str | None] = mapped_column(String(300))
+
     abierto_en: Mapped[datetime] = _ts()
     cerrado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ultima_actividad: Mapped[datetime] = _ts()
@@ -281,6 +308,86 @@ class CasoEstadoHistorial(Base):
     en: Mapped[datetime] = _ts()
 
     usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
+class CasoEvolucion(Base):
+    """Notas de "Evolución del caso" (registro de demanda)."""
+
+    __tablename__ = "casos_evoluciones"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    caso_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("casos.id"), index=True)
+    texto: Mapped[str] = mapped_column(Text)
+    usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    en: Mapped[datetime] = _ts()
+
+    usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
+class RegistroDemanda(Base):
+    """Registro de demanda: se carga después de la carátula, sobre un caso existente."""
+
+    __tablename__ = "registros_demanda"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    caso_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("casos.id"), index=True)
+    persona_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("personas.id"), index=True)
+
+    # 1. Datos del solicitante
+    solicitante_nombre: Mapped[str | None] = mapped_column(String(300))
+    solicitante_vinculo: Mapped[str | None] = mapped_column(String(200))
+    solicitante_telefono: Mapped[str | None] = mapped_column(String(100))
+    # 2. Datos de la persona mayor: se toman del legajo (y se guarda una copia, ver datos_persona)
+    datos_persona: Mapped[dict | None] = mapped_column(JSONB)
+    # 3. Motivo de consulta
+    solicitud_expresa: Mapped[str | None] = mapped_column(Text)
+    indicadores: Mapped[list | None] = mapped_column(JSONB)
+    intervenciones: Mapped[list | None] = mapped_column(JSONB)
+    intervencion_otro: Mapped[str | None] = mapped_column(String(300))
+    # 4. Cobertura social y previsional
+    cobertura_previsional: Mapped[list | None] = mapped_column(JSONB)
+    trabajo_informal: Mapped[bool | None] = mapped_column(Boolean)
+    cobertura_salud: Mapped[list | None] = mapped_column(JSONB)
+    obra_social: Mapped[str | None] = mapped_column(String(200))
+    cud: Mapped[str | None] = mapped_column(String(20))
+    discapacidades: Mapped[list | None] = mapped_column(JSONB)
+    # 5. Situación habitacional
+    domicilio: Mapped[str | None] = mapped_column(Text)
+    barrio: Mapped[str | None] = mapped_column(String(200))
+    localidad: Mapped[str | None] = mapped_column(String(200))
+    departamento: Mapped[str | None] = mapped_column(String(100))
+    tipo_vivienda: Mapped[str | None] = mapped_column(String(30))
+    vivienda_institucional: Mapped[str | None] = mapped_column(String(300))
+    # 6. Situación familiar
+    estado_civil: Mapped[str | None] = mapped_column(String(30))
+    tiene_hijos: Mapped[bool | None] = mapped_column(Boolean)
+    cantidad_hijos: Mapped[int | None] = mapped_column(Integer)
+    vinculo_con_hijos: Mapped[bool | None] = mapped_column(Boolean)
+    convive_con: Mapped[str | None] = mapped_column(String(300))
+    referente_nombre: Mapped[str | None] = mapped_column(String(300))
+    referente_vinculo: Mapped[str | None] = mapped_column(String(200))
+    referente_telefono: Mapped[str | None] = mapped_column(String(100))
+    # 7. Situación de salud
+    diagnosticos: Mapped[str | None] = mapped_column(Text)
+    tiene_autonomia: Mapped[bool | None] = mapped_column(Boolean)
+    estado_funcional: Mapped[str | None] = mapped_column(String(30))
+    # 8. Ingreso al sistema
+    tipo_ingreso: Mapped[str | None] = mapped_column(String(30))
+    tipo_ingreso_detalle: Mapped[str | None] = mapped_column(String(30))
+    derivado_por: Mapped[str | None] = mapped_column(String(30))
+    derivado_por_detalle: Mapped[str | None] = mapped_column(String(300))
+    agente_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    # Cierre
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    lugar: Mapped[str | None] = mapped_column(String(200))
+    fecha: Mapped[date] = mapped_column(Date)
+
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))  # receptor
+    creado_en: Mapped[datetime] = _ts()
+    actualizado_en: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    agente: Mapped[Usuario | None] = relationship(foreign_keys=[agente_id], lazy="joined")
+    receptor: Mapped[Usuario | None] = relationship(foreign_keys=[creado_por], lazy="joined")
 
 
 class CasoAsignacion(Base):

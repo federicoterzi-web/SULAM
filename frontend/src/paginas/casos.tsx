@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { api, type Caso, type Documento, type Expediente, type Ingreso } from "../api";
+import { api, type Caso, type Demanda, type Documento, type Evolucion, type Expediente, type Ingreso, type PersonaDetalle } from "../api";
 import {
   Aviso,
   Campo,
@@ -21,6 +21,7 @@ import {
 } from "../comun";
 import { FormDocumento, TablaDocumentos } from "./documentos";
 import { TablaCasos, TablaExpedientes } from "./legajo";
+import { FormCaratula, FormDemanda, ResumenCaratula, SeccionEvolucion } from "./formularios";
 
 function parametro(nombre: string): string {
   const q = window.location.hash.split("?")[1] ?? "";
@@ -69,19 +70,24 @@ export function PaginaCasos() {
   );
 }
 
-interface CasoDetalle extends Caso {
+interface CasoDetalle extends Omit<Caso, "persona"> {
+  persona: PersonaDetalle;
+  demandas: Demanda[];
+  evoluciones: Evolucion[];
+  antecedentes_sistema: { tiene: boolean; fecha_ultimo_ingreso: string | null };
   expedientes: Expediente[];
   documentos: Documento[];
   ingresos: Ingreso[];
   permisos: { modificar: boolean; derivar: boolean };
 }
 
-type Dialogo = null | "estado" | "asignar" | "documento" | "editar";
+type Dialogo = null | "estado" | "asignar" | "documento" | "editar" | "caratula" | "demanda";
 
 export function PaginaCaso({ id }: { id: string }) {
   const { datos: c, error, recargar } = useDatos(() => api.get<CasoDetalle>(`/casos/${id}`), [id]);
   const { catalogos } = useSesion();
   const [dialogo, setDialogo] = useState<Dialogo>(null);
+  const [demandaEditada, setDemandaEditada] = useState<Demanda | null>(null);
   const finalizar = useEnvio();
 
   if (error) return <Aviso error={error} />;
@@ -131,9 +137,95 @@ export function PaginaCaso({ id }: { id: string }) {
         </div>
       )}
 
-      <Seccion titulo="Descripción">
-        <p className="texto-largo">{restringido ? "—" : c.motivo || "Sin descripción."}</p>
+      <Seccion
+        titulo="Carátula de legajo"
+        acciones={
+          <>
+            {c.permisos.modificar && !restringido && (
+              <button className="boton" onClick={() => setDialogo("caratula")}>
+                Editar carátula
+              </button>
+            )}
+            <a className="boton" href={`#/imprimir/caratula/${c.id}`} target="_blank" rel="noreferrer">
+              Imprimir
+            </a>
+          </>
+        }
+      >
+        <ResumenCaratula caso={c as unknown as Caso} />
+        <h3>Motivo de ingreso</h3>
+        <p className="texto-largo">{restringido ? "Reservado" : c.motivo || "—"}</p>
+        {c.antecedentes_sistema.tiene && c.caratula.antecedentes === false && (
+          <div className="aviso aviso-advertencia">
+            La carátula indica que no tiene antecedentes, pero SULAM registra un ingreso anterior
+            {c.antecedentes_sistema.fecha_ultimo_ingreso && ` (${fecha(c.antecedentes_sistema.fecha_ultimo_ingreso)})`}.
+          </div>
+        )}
       </Seccion>
+
+      <Seccion
+        titulo="Registro de demanda"
+        acciones={
+          c.permisos.modificar &&
+          !restringido && (
+            <button className="boton boton-primario" onClick={() => setDialogo("demanda")}>
+              {c.demandas.length ? "Nuevo registro" : "Cargar registro de demanda"}
+            </button>
+          )
+        }
+      >
+        {c.demandas.length === 0 ? (
+          <Vacio>Todavía no se cargó el registro de demanda. Se completa después de la primera verificación del caso.</Vacio>
+        ) : (
+          <table className="tabla">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Solicitante</th>
+                <th>Receptor</th>
+                <th>Agente a cargo</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {c.demandas.map((d) =>
+                d.contenido_restringido ? (
+                  <tr key={d.id} className="fila-restringida">
+                    <td>{fecha(d.fecha)}</td>
+                    <td colSpan={4}>
+                      <Reservado texto="Contenido reservado" />
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={d.id}>
+                    <td>{fecha(d.fecha)}</td>
+                    <td>
+                      {d.solicitante_nombre ?? "—"}
+                      {d.solicitante_vinculo && <div className="tenue">{d.solicitante_vinculo}</div>}
+                    </td>
+                    <td>{d.receptor?.nombre_completo}</td>
+                    <td>{d.agente?.nombre_completo ?? "—"}</td>
+                    <td className="acciones-fila">
+                      <a className="boton boton-chico" href={`#/imprimir/demanda/${d.id}`} target="_blank" rel="noreferrer">
+                        Ver / imprimir
+                      </a>
+                      {c.permisos.modificar && (
+                        <button className="boton boton-chico" onClick={() => setDemandaEditada(d)}>
+                          Editar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+        )}
+      </Seccion>
+
+      {!restringido && (
+        <SeccionEvolucion casoId={c.id} evoluciones={c.evoluciones} puedeAgregar={c.permisos.modificar} alAgregar={recargar} />
+      )}
 
       <Seccion titulo="Responsables">
         {c.asignaciones && c.asignaciones.length > 0 ? (
@@ -222,6 +314,31 @@ export function PaginaCaso({ id }: { id: string }) {
         </ol>
       </Seccion>
 
+      {dialogo === "caratula" && (
+        <Modal titulo={`Carátula · ${c.numero}`} alCerrar={() => setDialogo(null)} ancho>
+          <FormCaratula personaId={c.persona.id} caso={c as unknown as Caso} alGuardar={listo} />
+        </Modal>
+      )}
+      {(dialogo === "demanda" || demandaEditada) && (
+        <Modal
+          titulo={`Registro de demanda · ${c.numero}`}
+          alCerrar={() => {
+            setDialogo(null);
+            setDemandaEditada(null);
+          }}
+          ancho
+        >
+          <FormDemanda
+            caso={c as unknown as Caso}
+            persona={c.persona}
+            demanda={demandaEditada ?? undefined}
+            alGuardar={() => {
+              setDemandaEditada(null);
+              listo();
+            }}
+          />
+        </Modal>
+      )}
       {dialogo === "estado" && (
         <Modal titulo="Cambiar estado del caso" alCerrar={() => setDialogo(null)}>
           <FormEstado caso={c} alGuardar={listo} />

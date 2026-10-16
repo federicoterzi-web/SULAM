@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ApiError, api, configurarSesion, type Catalogos, type Yo } from "./api";
+import { ApiError, api, configurarSesion, type Catalogos, type Formularios, type Yo } from "./api";
 import { Aviso, Cargando, Campo, Enlace, SesionCtx, navegar, useEnvio, useRuta } from "./comun";
 import { PaginaAdmin } from "./paginas/admin";
 import { PaginaAuditoria } from "./paginas/auditoria";
@@ -10,6 +10,7 @@ import { PaginaLegajo } from "./paginas/legajo";
 import { PaginaLegajos } from "./paginas/legajos";
 import { PaginaIngreso, PaginaMesa } from "./paginas/mesa";
 import { PaginaTablero } from "./paginas/tablero";
+import { Impresion } from "./paginas/impresion";
 
 export function App() {
   const [yo, setYo] = useState<Yo | null>(null);
@@ -156,6 +157,7 @@ const MENU: { ruta: string; texto: string; permiso?: [string, string] }[] = [
 function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void; alActualizar: (y: Yo) => void }) {
   const ruta = useRuta();
   const [catalogos, setCatalogos] = useState<Catalogos | null>(null);
+  const [formularios, setFormularios] = useState<Formularios | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [busqueda, setBusqueda] = useState("");
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -165,6 +167,9 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
     api.get<Catalogos>("/catalogos").then(setCatalogos).catch(setError);
   }, []);
   useEffect(recargarCatalogos, [recargarCatalogos]);
+  useEffect(() => {
+    api.get<Formularios>("/formularios").then(setFormularios).catch(setError);
+  }, []);
   useEffect(() => setMenuAbierto(false), [ruta]);
 
   const puede = useCallback((m: string, a: string) => `${m}.${a}` in yo.permisos, [yo]);
@@ -179,7 +184,7 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
   };
 
   if (error) return <Aviso error={error} />;
-  if (!catalogos) return <Cargando />;
+  if (!catalogos || !formularios) return <Cargando />;
 
   const buscar = (e: FormEvent) => {
     e.preventDefault();
@@ -189,7 +194,11 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
   const seccion = "/" + (ruta.split("?")[0].split("/")[1] ?? "");
 
   return (
-    <SesionCtx.Provider value={{ yo, catalogos, puede, recargarCatalogos }}>
+    <SesionCtx.Provider value={{ yo, catalogos, formularios, puede, recargarCatalogos }}>
+      {ruta.startsWith("/imprimir/") ? (
+        <Impresion ruta={ruta} />
+      ) : (
+      <>
       <a className="saltar" href="#contenido" onClick={(e) => { e.preventDefault(); document.getElementById("contenido")?.focus(); }}>
         Ir al contenido
       </a>
@@ -248,6 +257,8 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
             alCancelar={() => setCambiarPw(false)}
           />
         </div>
+      )}
+      </>
       )}
     </SesionCtx.Provider>
   );

@@ -50,10 +50,19 @@ class PersonaBase(Entrada):
     localidad: str | None = Field(default=None, max_length=200)
     telefono: str | None = Field(default=None, max_length=100)
     observaciones: str | None = Field(default=None, max_length=5000)
+    genero: str | None = None
+    barrio: str | None = Field(default=None, max_length=200)
+    departamento: str | None = Field(default=None, max_length=100)
+    cud: str | None = None
+    cobertura_salud: list[str] | None = None
+    obra_social: str | None = Field(default=None, max_length=200)
+    cobertura_previsional: list[str] | None = None
+    trabajo_informal: bool | None = None
+    discapacidades: list[str] | None = None
 
     _limpiar = field_validator(
         "numero_documento", "motivo_sin_documento", "domicilio", "localidad", "telefono",
-        "observaciones", mode="before",
+        "observaciones", "genero", "barrio", "departamento", "cud", "obra_social", mode="before",
     )(_vacio_a_none)
 
 
@@ -75,12 +84,22 @@ class PersonaPatch(Entrada):
     localidad: str | None = Field(default=None, max_length=200)
     telefono: str | None = Field(default=None, max_length=100)
     observaciones: str | None = Field(default=None, max_length=5000)
+    genero: str | None = None
+    barrio: str | None = Field(default=None, max_length=200)
+    departamento: str | None = Field(default=None, max_length=100)
+    cud: str | None = None
+    cobertura_salud: list[str] | None = None
+    obra_social: str | None = Field(default=None, max_length=200)
+    cobertura_previsional: list[str] | None = None
+    trabajo_informal: bool | None = None
+    discapacidades: list[str] | None = None
     motivo_cambio: str | None = Field(default=None, max_length=1000)
     confirmar_posible_duplicado: bool = False
 
     _limpiar = field_validator(
         "numero_documento", "motivo_sin_documento", "domicilio", "localidad", "telefono",
-        "observaciones", "motivo_cambio", mode="before",
+        "observaciones", "motivo_cambio", "genero", "barrio", "departamento", "cud", "obra_social",
+        mode="before",
     )(_vacio_a_none)
 
 
@@ -133,10 +152,52 @@ class VinculadoPatch(Entrada):
 # ---------------------------------------------------------------- casos
 
 
-class CasoIn(Entrada):
+class PersonaCaratula(Entrada):
+    """Datos de la persona que figuran en la carátula; actualizan el legajo."""
+
+    genero: str | None = None
+    domicilio: str | None = Field(default=None, max_length=2000)
+    localidad: str | None = Field(default=None, max_length=200)
+    departamento: str | None = Field(default=None, max_length=100)
+    telefono: str | None = Field(default=None, max_length=100)
+    cud: str | None = None
+    cobertura_salud: list[str] | None = None
+    obra_social: str | None = Field(default=None, max_length=200)
+
+    _limpiar = field_validator(
+        "genero", "domicilio", "localidad", "departamento", "telefono", "cud", "obra_social",
+        mode="before",
+    )(_vacio_a_none)
+
+
+class CaratulaCampos(Entrada):
+    """Información administrativa del modelo de carátula de legajo."""
+
+    numero_actuacion: str | None = Field(default=None, max_length=50)
+    anio_actuacion: int | None = Field(default=None, ge=1990, le=2100)
+    fecha_ingreso: date | None = None
+    antecedentes: bool | None = None
+    fecha_ultimo_ingreso: date | None = None
+    motivo: str | None = Field(default=None, max_length=5000)
+    tipo_ingreso: str | None = None
+    tipo_ingreso_detalle: str | None = None
+    derivado_por: str | None = None
+    derivado_por_detalle: str | None = Field(default=None, max_length=300)
+    indicadores: list[str] | None = None
+    intervenciones: list[str] | None = None
+    intervencion_derivacion: str | None = Field(default=None, max_length=300)
+    intervencion_otro: str | None = Field(default=None, max_length=300)
+    persona: PersonaCaratula | None = None
+
+    _limpiar = field_validator(
+        "numero_actuacion", "motivo", "tipo_ingreso", "tipo_ingreso_detalle", "derivado_por",
+        "derivado_por_detalle", "intervencion_derivacion", "intervencion_otro", mode="before",
+    )(_vacio_a_none)
+
+
+class CasoIn(CaratulaCampos):
     persona_id: uuid.UUID
     area_id: int | None = None
-    motivo: str | None = Field(default=None, max_length=5000)
     reservado: bool = False
     responsable_id: uuid.UUID | None = None
     ingreso_id: uuid.UUID | None = None
@@ -146,6 +207,64 @@ class CasoPatch(Entrada):
     area_id: int | None = None
     motivo: str | None = Field(default=None, max_length=5000)
     reservado: bool | None = None
+
+
+class EvolucionIn(Entrada):
+    texto: str = Field(min_length=2, max_length=10000)
+
+
+class DemandaIn(Entrada):
+    solicitante_nombre: str | None = Field(default=None, max_length=300)
+    solicitante_vinculo: str | None = Field(default=None, max_length=200)
+    solicitante_telefono: str | None = Field(default=None, max_length=100)
+    solicitud_expresa: str | None = Field(default=None, max_length=10000)
+    indicadores: list[str] | None = None
+    intervenciones: list[str] | None = None
+    intervencion_otro: str | None = Field(default=None, max_length=300)
+    cobertura_previsional: list[str] | None = None
+    trabajo_informal: bool | None = None
+    cobertura_salud: list[str] | None = None
+    obra_social: str | None = Field(default=None, max_length=200)
+    cud: str | None = None
+    discapacidades: list[str] | None = None
+    domicilio: str | None = Field(default=None, max_length=2000)
+    barrio: str | None = Field(default=None, max_length=200)
+    localidad: str | None = Field(default=None, max_length=200)
+    departamento: str | None = Field(default=None, max_length=100)
+    tipo_vivienda: str | None = None
+    vivienda_institucional: str | None = Field(default=None, max_length=300)
+    estado_civil: str | None = None
+    tiene_hijos: bool | None = None
+    cantidad_hijos: int | None = Field(default=None, ge=0, le=50)
+    vinculo_con_hijos: bool | None = None
+    convive_con: str | None = Field(default=None, max_length=300)
+    referente_nombre: str | None = Field(default=None, max_length=300)
+    referente_vinculo: str | None = Field(default=None, max_length=200)
+    referente_telefono: str | None = Field(default=None, max_length=100)
+    diagnosticos: str | None = Field(default=None, max_length=10000)
+    tiene_autonomia: bool | None = None
+    estado_funcional: str | None = None
+    tipo_ingreso: str | None = None
+    tipo_ingreso_detalle: str | None = None
+    derivado_por: str | None = None
+    derivado_por_detalle: str | None = Field(default=None, max_length=300)
+    agente_id: uuid.UUID | None = None
+    observaciones: str | None = Field(default=None, max_length=10000)
+    lugar: str | None = Field(default=None, max_length=200)
+    fecha: date | None = None
+    # Persona mayor: género y teléfono (los demás datos de identidad se editan en el legajo)
+    genero: str | None = None
+    telefono: str | None = Field(default=None, max_length=100)
+    actualizar_legajo: bool = True
+
+    _limpiar = field_validator(
+        "solicitante_nombre", "solicitante_vinculo", "solicitante_telefono", "solicitud_expresa",
+        "intervencion_otro", "obra_social", "cud", "domicilio", "barrio", "localidad", "departamento",
+        "tipo_vivienda", "vivienda_institucional", "estado_civil", "convive_con", "referente_nombre",
+        "referente_vinculo", "referente_telefono", "diagnosticos", "estado_funcional", "tipo_ingreso",
+        "tipo_ingreso_detalle", "derivado_por", "derivado_por_detalle", "observaciones", "lugar",
+        "genero", "telefono", mode="before",
+    )(_vacio_a_none)
 
 
 class CambioEstadoIn(Entrada):

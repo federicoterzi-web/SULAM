@@ -982,3 +982,211 @@ a.indicador:hover {
     break-inside: avoid;
   }
 }
+
+/* ---------------------------------------------------------------- formularios institucionales */
+
+.formulario-carga section {
+  border-top: 1px solid var(--borde);
+  padding-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.formulario-carga section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.formulario-carga h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primario);
+}
+
+.opciones {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.opciones legend {
+  font-weight: 600;
+  font-size: 0.92rem;
+  margin-bottom: 0.35rem;
+  padding: 0;
+}
+
+.opciones-linea {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  align-items: center;
+}
+
+.opciones-linea legend {
+  width: 100%;
+}
+
+.opcion-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.subopciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.1rem;
+  padding-left: 1.7rem;
+}
+
+.subopciones input:not([type]) ,
+.subopciones input[type="text"] {
+  min-width: 260px;
+}
+
+.boton-enlace {
+  background: none;
+  border: none;
+  color: var(--primario);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0;
+}
+
+.evolucion-nueva {
+  margin-top: 1rem;
+}
+
+/* ---------------------------------------------------------------- impresión */
+
+.impresion {
+  background: #e9ecf1;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.barra-impresion {
+  max-width: 210mm;
+  margin: 0 auto 1rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.hoja {
+  background: #fff;
+  color: #000;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 16mm 15mm;
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 11.5pt;
+  line-height: 1.45;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 15%);
+}
+
+.encabezado-imp {
+  text-align: center;
+  border-bottom: 2px solid #000;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.4rem;
+  font-size: 10pt;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.encabezado-imp h1 {
+  font-size: 15pt;
+  margin: 0.2rem 0 0;
+}
+
+.hoja h2 {
+  font-size: 11.5pt;
+  text-transform: uppercase;
+  margin: 1rem 0 0.35rem;
+  border-bottom: 1px solid #666;
+}
+
+.fila-imp,
+.bloque-imp {
+  margin: 0.25rem 0;
+}
+
+.fila-imp {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1.6rem;
+}
+
+.etiqueta-imp {
+  font-weight: bold;
+}
+
+.dato-imp {
+  border-bottom: 1px dotted #444;
+}
+
+.casilla-imp {
+  white-space: nowrap;
+  margin-right: 0.55rem;
+}
+
+.grupo-imp-item {
+  margin-right: 0.4rem;
+}
+
+.firma-imp {
+  margin: 2.5rem 0 0 auto;
+  width: 60%;
+  text-align: center;
+  font-size: 10pt;
+}
+
+.linea-firma {
+  border-bottom: 1px solid #000;
+  height: 2.2rem;
+  margin-bottom: 0.2rem;
+}
+
+.evolucion-imp {
+  padding-left: 1.2rem;
+  margin: 0;
+}
+
+.pie-imp {
+  margin-top: 1.5rem;
+  font-size: 8.5pt;
+  color: #555;
+  text-align: right;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  .no-imprimir {
+    display: none !important;
+  }
+
+  .impresion {
+    background: none;
+    padding: 0;
+  }
+
+  .hoja {
+    box-shadow: none;
+    padding: 0;
+    max-width: none;
+  }
+}

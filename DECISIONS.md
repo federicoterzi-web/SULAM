@@ -59,13 +59,17 @@ Los cinco roles del documento de diseño §5.3, con una matriz de permisos propu
 ### D-015 · Dependencias mínimas — *Vigente*
 Contraseñas con scrypt (biblioteca estándar), enrutamiento propio en el frontend y compilación con esbuild: menos paquetes externos que actualizar y auditar.
 
+### D-016 · Carátula y registro de demanda según los modelos institucionales — *Vigente*
+Se incorporaron los campos exactos de los dos modelos (resuelve P-001). La carátula vive en el caso; el registro de demanda es una entidad propia ligada al caso, cargada después de la carátula y precargada con ella. Los datos estables de la persona (género, coberturas, CUD, discapacidad, barrio, departamento) se guardan en el legajo y se reutilizan, para no cargarlos dos veces. Las opciones se guardan como códigos estables con los textos del modelo, pensando en las estadísticas.
+
 ---
 
 ## Pendientes (no se inventan)
 
 | Id | Tema | Depende de |
 |---|---|---|
-| P-001 | Campos exactos de **carátula** y **registro de demanda** | Relevamiento (octubre) |
+| ~~P-001~~ | ~~Campos de carátula y registro de demanda~~ — resuelto en D-016 | — |
+| P-012 | Qué es exactamente la **Actuación N°** (¿numeración manual existente, de Mesa de Entrada, del expediente?) y si debe generarse automáticamente | Equipo |
 | P-002 | Formularios y modelos documentales (informes, plantillas) | Relevamiento |
 | P-003 | Matriz definitiva de roles y permisos | Dirección |
 | P-004 | Reglas de asignación y derivación automática | Relevamiento de circuitos |

@@ -15,6 +15,8 @@ from ..models import (
     Caso,
     CasoAsignacion,
     CasoEstadoHistorial,
+    CasoEvolucion,
+    RegistroDemanda,
     Documento,
     Expediente,
     Ingreso,
@@ -30,10 +32,27 @@ from ..permissions import (
     ve_caso_reservado,
     ve_reservado_de_persona,
 )
-from ..schemas import AsignacionIn, CambioEstadoIn, CasoIn, CasoPatch, FinAsignacionIn
+from ..schemas import (
+    AsignacionIn,
+    CambioEstadoIn,
+    CaratulaCampos,
+    CasoIn,
+    CasoPatch,
+    EvolucionIn,
+    FinAsignacionIn,
+)
 from ..security import ahora
-from ..serializers import caso_out, documento_out, expediente_out, ingreso_out
+from ..serializers import (
+    caso_out,
+    demanda_out,
+    documento_out,
+    expediente_out,
+    ingreso_out,
+    persona_detalle,
+    usuario_breve,
+)
 from ..textutil import escapar_like, normalizar
+from ._caratula import antecedentes_sistema, aplicar_caratula
 from ._comun import no_encontrado, obtener_caso, obtener_persona, registrar_actividad_caso
 
 router = APIRouter(tags=["casos"])
@@ -123,16 +142,29 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
         persona_id=persona.id,
         area_id=area_id,
         estado="abierto",
-        motivo=datos.motivo,
         reservado=datos.reservado,
         creado_por=ctx.id,
     )
     db.add(caso)
+    caratula = datos.model_dump(
+        exclude_unset=True, exclude={"persona_id", "area_id", "reservado", "responsable_id", "ingreso_id"}
+    )
+    if caratula.get("persona") is not None:
+        caratula["persona"] = datos.persona.model_dump(exclude_unset=True)
+    caratula.setdefault("fecha_ingreso", ahora().astimezone().date())
+    if "antecedentes" not in caratula or "fecha_ultimo_ingreso" not in caratula:
+        tiene, ultima = antecedentes_sistema(db, persona.id, antes_de=caratula["fecha_ingreso"])
+        caratula.setdefault("antecedentes", tiene)
+        caratula.setdefault("fecha_ultimo_ingreso", ultima)
+    aplicar_caratula(db, ctx, caso, persona, caratula)
     db.flush()
     db.add(CasoEstadoHistorial(caso_id=caso.id, estado_anterior=None, estado_nuevo="abierto", usuario_id=ctx.id))
     audit.registrar(
         db, ctx, "crear", "caso", caso.id, persona.id,
-        {"numero": caso.numero, "reservado": caso.reservado, "area_id": area_id},
+        {
+            "numero": caso.numero, "reservado": caso.reservado, "area_id": area_id,
+            "tipo_ingreso": caso.tipo_ingreso, "indicadores": caso.indicadores,
+        },
     )
 
     if datos.responsable_id is not None:
@@ -163,6 +195,25 @@ def ver_caso(caso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session 
     visible = ve_caso_reservado(db, ctx, caso)
     persona = db.get(Persona, caso.persona_id)
     r = caso_out(caso, visible, persona, detalle=True)
+    r["persona"] = persona_detalle(persona)
+    tiene, ultima = antecedentes_sistema(db, persona.id, excluir_caso_id=caso.id,
+                                         antes_de=caso.fecha_ingreso or caso.abierto_en.date())
+    r["antecedentes_sistema"] = {"tiene": tiene, "fecha_ultimo_ingreso": ultima.isoformat() if ultima else None}
+    r["evoluciones"] = []
+    r["demandas"] = []
+    if visible:
+        r["evoluciones"] = [
+            {"id": e.id, "texto": e.texto, "usuario": usuario_breve(e.usuario), "en": e.en.isoformat()}
+            for e in db.execute(
+                select(CasoEvolucion).where(CasoEvolucion.caso_id == caso.id).order_by(CasoEvolucion.en)
+            ).scalars()
+        ]
+    r["demandas"] = [
+        demanda_out(d, visible)
+        for d in db.execute(
+            select(RegistroDemanda).where(RegistroDemanda.caso_id == caso.id).order_by(RegistroDemanda.creado_en)
+        ).scalars()
+    ]
 
     r["expedientes"] = []
     if ctx.tiene("expedientes", "consultar"):
@@ -222,6 +273,45 @@ def modificar_caso(
         db.commit()
         db.refresh(caso)
     return caso_out(caso, True, db.get(Persona, caso.persona_id), detalle=True)
+
+
+@router.patch("/casos/{caso_id}/caratula")
+def modificar_caratula(
+    caso_id: uuid.UUID, datos: CaratulaCampos, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)
+):
+    caso = obtener_caso(db, caso_id)
+    requerir_caso(db, ctx, caso, "casos", "modificar")
+    if not ve_caso_reservado(db, ctx, caso):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
+    persona = db.get(Persona, caso.persona_id)
+    cambios_pedidos = datos.model_dump(exclude_unset=True)
+    if datos.persona is not None:
+        cambios_pedidos["persona"] = datos.persona.model_dump(exclude_unset=True)
+    diff = aplicar_caratula(db, ctx, caso, persona, cambios_pedidos)
+    if diff:
+        registrar_actividad_caso(caso)
+        audit.registrar(db, ctx, "modificar_caratula", "caso", caso.id, caso.persona_id, {"cambios": diff})
+    db.commit()
+    db.refresh(caso)
+    return caso_out(caso, True, persona, detalle=True)
+
+
+@router.post("/casos/{caso_id}/evolucion", status_code=201)
+def agregar_evolucion(
+    caso_id: uuid.UUID, datos: EvolucionIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)
+):
+    caso = obtener_caso(db, caso_id)
+    requerir_caso(db, ctx, caso, "casos", "modificar")
+    if not ve_caso_reservado(db, ctx, caso):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
+    e = CasoEvolucion(caso_id=caso.id, texto=datos.texto, usuario_id=ctx.id)
+    db.add(e)
+    registrar_actividad_caso(caso)
+    db.flush()
+    audit.registrar(db, ctx, "evolucion", "caso", caso.id, caso.persona_id, {"evolucion_id": e.id})
+    db.commit()
+    db.refresh(e)
+    return {"id": e.id, "texto": e.texto, "usuario": usuario_breve(e.usuario), "en": e.en.isoformat()}
 
 
 @router.post("/casos/{caso_id}/estado")

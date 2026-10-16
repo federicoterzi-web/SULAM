@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { ApiError, type Catalogos, type PersonaResumen, type Yo } from "./api";
+import { ApiError, type Catalogos, type Formularios, type PersonaResumen, type Yo } from "./api";
 
 // ---------------------------------------------------------------- navegación (hash)
 
@@ -37,6 +37,7 @@ export function Enlace({ a, children, className }: { a: string; children: ReactN
 interface Sesion {
   yo: Yo;
   catalogos: Catalogos;
+  formularios: Formularios;
   puede: (modulo: string, accion: string) => boolean;
   recargarCatalogos: () => void;
 }

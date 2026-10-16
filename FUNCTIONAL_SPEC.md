@@ -60,6 +60,30 @@ Reglas que el sistema **implementa hoy**. Lo que falta definir está en [DECISIO
 5. **Casos reservados** (por ejemplo, denuncias de maltrato): cualquiera con acceso al legajo ve que el caso existe, su número, estado, área y responsables —para evitar intervenciones duplicadas— pero **no** su descripción, documentos, motivos de cambios de estado ni la carátula de sus expedientes. El contenido lo ven los responsables asignados, quien lo creó y quienes tienen el permiso *Información reservada › Consultar*.
 6. El tablero de cada usuario muestra sus casos activos asignados y señala los que llevan **más de 30 días sin movimientos**.
 
+## 5 bis. Carátula de legajo y registro de demanda
+
+Implementados según los modelos institucionales («Modelo de carátula de legajo» y «Registro de demanda», octubre 2026). Los textos de las opciones son los de los modelos (`backend/sulam/formularios.py`).
+
+**Orden de carga** (como en la práctica de la Dirección):
+
+1. **Carátula**: se completa al crear el caso. Contiene:
+   - Legajo N° (automático), Actuación N° y año.
+   - Datos de la persona: género, obra social / cobertura de salud, CUD, domicilio, localidad, departamento y teléfono. **Estos datos actualizan el legajo** (con auditoría).
+   - Información administrativa: fecha de ingreso, antecedentes y fecha del último ingreso, motivo de ingreso, tipo de ingreso (Espontáneo presencial/no presencial, Mesa de Entrada/Amparo, Portal SAE, Derivada), indicadores y tipo de intervención (con texto para «Derivación» y «Otro»).
+   - **Antecedentes**: si no se indican, se completan con los ingresos previos registrados en SULAM. Si la carátula dice «No» y el sistema encuentra un ingreso anterior, se muestra un aviso.
+   - Si se marca un indicador de **maltrato**, el sistema sugiere registrar el caso como reservado.
+2. **Registro de demanda**: se carga después, sobre el caso, y llega **precargado** con la carátula (indicadores, intervenciones, tipo de ingreso, motivo como solicitud expresa) y con el legajo (género, teléfono, domicilio, coberturas, CUD, discapacidad). Secciones 1 a 8 del modelo, observaciones, lugar y fecha. El **receptor** es el usuario que lo carga.
+   - Los datos que también pertenecen al legajo lo actualizan (se puede desmarcar).
+   - Guarda una copia de los datos de identificación de la persona al momento del registro.
+   - Un caso puede tener más de un registro.
+3. **Evolución del caso**: entradas fechadas y firmadas por usuario; no se editan ni se borran.
+
+**Reserva**: en un caso reservado, quien no tiene acceso ve que existe un registro de demanda (fecha y receptor) pero no su contenido; tampoco ve indicadores, intervenciones ni la evolución.
+
+**Impresión**: la carátula y el registro de demanda (con la evolución) tienen una vista imprimible en A4 con la estructura de los modelos y las casillas marcadas (☒/☐).
+
+Al marcar una subopción (por ejemplo «Maltrato › Económico/Patrimonial») se guarda también el grupo, para poder contar después por grupo o por subtipo.
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.

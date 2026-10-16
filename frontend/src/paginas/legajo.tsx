@@ -21,11 +21,13 @@ import {
   useSesion,
 } from "../comun";
 import { FormDocumento, TablaDocumentos } from "./documentos";
+import { FormCaratula, textoDe, textoLista } from "./formularios";
 import { FormPersona, SelectorPersona } from "./legajos";
 
 type Dialogo = null | "editar" | "caso" | "expediente" | "vinculado" | "documento" | "unificar";
 
 export function PaginaLegajo({ id }: { id: string }) {
+  const { formularios } = useSesion();
   const { datos: l, error, recargar } = useDatos(() => api.get<Legajo>(`/personas/${id}`), [id]);
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [vinculadoEditado, setVinculadoEditado] = useState<Vinculado | null>(null);
@@ -100,6 +102,24 @@ export function PaginaLegajo({ id }: { id: string }) {
               <dd>{l.motivo_sin_documento || "—"}</dd>
             </>
           )}
+          <dt>Género</dt>
+          <dd>{textoDe(formularios.generos, l.genero) || "—"}</dd>
+          <dt>Barrio / departamento</dt>
+          <dd>{[l.barrio, l.departamento].filter(Boolean).join(" · ") || "—"}</dd>
+          <dt>Cobertura de salud</dt>
+          <dd>
+            {textoLista(formularios.cobertura_salud, l.cobertura_salud) || "—"}
+            {l.obra_social && ` (${l.obra_social})`}
+          </dd>
+          <dt>Cobertura previsional</dt>
+          <dd>
+            {textoLista(formularios.cobertura_previsional, l.cobertura_previsional) || "—"}
+            {l.trabajo_informal && " · trabajo informal"}
+          </dd>
+          <dt>CUD</dt>
+          <dd>{textoDe(formularios.cud, l.cud) || "—"}</dd>
+          <dt>Discapacidad</dt>
+          <dd>{textoLista(formularios.discapacidad, l.discapacidades) || "—"}</dd>
           <dt>Observaciones</dt>
           <dd className="texto-largo">{l.observaciones || "—"}</dd>
           <dt>Legajo creado</dt>
@@ -230,7 +250,7 @@ export function PaginaLegajo({ id }: { id: string }) {
         </Modal>
       )}
       {dialogo === "caso" && (
-        <Modal titulo="Nuevo caso" alCerrar={cerrar}>
+        <Modal titulo="Nuevo caso · Carátula de legajo" alCerrar={cerrar} ancho>
           <FormCaso personaId={l.id} alGuardar={(c) => navegar(`/casos/${c.id}`)} />
         </Modal>
       )}
@@ -325,69 +345,7 @@ export function TablaExpedientes({ expedientes, casos = [] }: { expedientes: Exp
 }
 
 export function FormCaso({ personaId, ingresoId, alGuardar }: { personaId: string; ingresoId?: string; alGuardar: (c: Caso) => void }) {
-  const { yo, catalogos, puede } = useSesion();
-  const [areaId, setAreaId] = useState(String(yo.area?.id ?? ""));
-  const [motivo, setMotivo] = useState("");
-  const [reservado, setReservado] = useState(false);
-  const [responsable, setResponsable] = useState("");
-  const { enviando, error, ejecutar } = useEnvio();
-
-  const enviar = async (e: FormEvent) => {
-    e.preventDefault();
-    const c = await ejecutar(() =>
-      api.post<Caso>("/casos", {
-        persona_id: personaId,
-        area_id: areaId ? Number(areaId) : null,
-        motivo: motivo || null,
-        reservado,
-        responsable_id: responsable || null,
-        ingreso_id: ingresoId ?? null,
-      }),
-    );
-    if (c) alGuardar(c);
-  };
-
-  return (
-    <form onSubmit={enviar} className="formulario">
-      <Campo etiqueta="Área">
-        <select value={areaId} onChange={(e) => setAreaId(e.target.value)}>
-          <option value="">Sin área</option>
-          {catalogos.areas.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nombre}
-            </option>
-          ))}
-        </select>
-      </Campo>
-      <Campo etiqueta="Motivo o descripción breve" ayuda="Los datos de carátula y registro de demanda se definirán con el relevamiento.">
-        <textarea rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-      </Campo>
-      {puede("casos", "derivar") && (
-        <Campo etiqueta="Responsable">
-          <select value={responsable} onChange={(e) => setResponsable(e.target.value)}>
-            <option value="">Asignar más tarde</option>
-            {catalogos.usuarios_asignables.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nombre_completo}
-                {u.area ? ` — ${u.area}` : ""}
-              </option>
-            ))}
-          </select>
-        </Campo>
-      )}
-      <label className="casilla">
-        <input type="checkbox" checked={reservado} onChange={(e) => setReservado(e.target.checked)} />
-        Caso reservado (por ejemplo, denuncias): su contenido solo lo ven los responsables asignados y quienes tienen
-        acceso a información reservada
-      </label>
-      <Aviso error={error} />
-      <div className="fila-botones">
-        <button className="boton boton-primario" disabled={enviando}>
-          Crear caso
-        </button>
-      </div>
-    </form>
-  );
+  return <FormCaratula personaId={personaId} ingresoId={ingresoId} alGuardar={alGuardar} />;
 }
 
 function FormExpediente({ personaId, casos, alGuardar }: { personaId: string; casos: Caso[]; alGuardar: () => void }) {

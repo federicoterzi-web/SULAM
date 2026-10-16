@@ -110,7 +110,75 @@ export interface PersonaDetalle extends PersonaResumen {
   domicilio: string | null;
   telefono: string | null;
   observaciones: string | null;
+  genero: string | null;
+  barrio: string | null;
+  departamento: string | null;
+  cud: string | null;
+  cobertura_salud: string[];
+  obra_social: string | null;
+  cobertura_previsional: string[];
+  trabajo_informal: boolean | null;
+  discapacidades: string[];
   creado_en: string;
+}
+
+export interface Opcion {
+  codigo: string;
+  texto: string;
+  subopciones?: Opcion[];
+}
+
+export interface Formularios {
+  generos: Opcion[];
+  cud: Opcion[];
+  indicadores: Opcion[];
+  intervenciones: Opcion[];
+  tipos_ingreso: Opcion[];
+  derivado_por: Opcion[];
+  cobertura_previsional: Opcion[];
+  cobertura_salud: Opcion[];
+  discapacidad: Opcion[];
+  tipo_vivienda: Opcion[];
+  estado_civil: Opcion[];
+  estado_funcional: Opcion[];
+  departamentos: string[];
+}
+
+export interface Caratula {
+  numero_actuacion: string | null;
+  anio_actuacion: number | null;
+  fecha_ingreso: string;
+  antecedentes: boolean | null;
+  fecha_ultimo_ingreso: string | null;
+  tipo_ingreso: string | null;
+  tipo_ingreso_detalle: string | null;
+  derivado_por: string | null;
+  derivado_por_detalle: string | null;
+  indicadores: string[];
+  intervenciones: string[];
+  intervencion_derivacion: string | null;
+  intervencion_otro: string | null;
+}
+
+export interface Demanda {
+  id: string;
+  caso_id: string;
+  persona_id: string;
+  fecha: string;
+  receptor: UsuarioBreve | null;
+  creado_en: string;
+  contenido_restringido: boolean;
+  caso_numero?: string;
+  agente?: UsuarioBreve | null;
+  datos_persona?: Record<string, string | null>;
+  [campo: string]: any;
+}
+
+export interface Evolucion {
+  id: number;
+  texto: string;
+  usuario: UsuarioBreve | null;
+  en: string;
 }
 
 export interface Caso {
@@ -125,6 +193,7 @@ export interface Caso {
   cerrado_en: string | null;
   ultima_actividad: string | null;
   motivo: string | null;
+  caratula: Caratula;
   responsables: UsuarioBreve[];
   persona?: PersonaResumen;
   historial_estados?: {

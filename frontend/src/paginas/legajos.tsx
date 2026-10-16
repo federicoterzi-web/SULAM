@@ -127,6 +127,9 @@ interface DatosPersona {
   localidad: string;
   telefono: string;
   observaciones: string;
+  genero: string;
+  barrio: string;
+  departamento: string;
 }
 
 function inicial(p?: PersonaDetalle, sugerido?: Partial<DatosPersona>): DatosPersona {
@@ -155,6 +158,9 @@ function desdePersona(p?: PersonaDetalle): DatosPersona {
     localidad: p?.localidad ?? "",
     telefono: p?.telefono ?? "",
     observaciones: p?.observaciones ?? "",
+    genero: p?.genero ?? "",
+    barrio: p?.barrio ?? "",
+    departamento: p?.departamento ?? "",
   };
 }
 
@@ -169,6 +175,7 @@ export function FormPersona({
   alGuardar: (p: PersonaDetalle) => void;
   alCancelar: () => void;
 }) {
+  const { formularios } = useSesion();
   const [d, setD] = useState<DatosPersona>(inicial(persona, sugerido));
   const [coincidencias, setCoincidencias] = useState<Coincidencia[]>([]);
   const [confirmado, setConfirmado] = useState(false);
@@ -217,6 +224,9 @@ export function FormPersona({
       localidad: d.localidad,
       telefono: d.telefono,
       observaciones: d.observaciones,
+      genero: d.genero || null,
+      barrio: d.barrio,
+      departamento: d.departamento,
       confirmar_posible_duplicado: confirmado,
     };
     if (persona) cuerpo.motivo_cambio = motivoCambio || null;
@@ -289,8 +299,29 @@ export function FormPersona({
         <Campo etiqueta="Domicilio" ancho="completo">
           <input value={d.domicilio} onChange={cambia("domicilio")} />
         </Campo>
+        <Campo etiqueta="Género">
+          <select value={d.genero} onChange={cambia("genero")}>
+            <option value="">—</option>
+            {formularios.generos.map((g) => (
+              <option key={g.codigo} value={g.codigo}>
+                {g.texto}
+              </option>
+            ))}
+          </select>
+        </Campo>
+        <Campo etiqueta="Barrio">
+          <input value={d.barrio} onChange={cambia("barrio")} />
+        </Campo>
         <Campo etiqueta="Localidad">
           <input value={d.localidad} onChange={cambia("localidad")} />
+        </Campo>
+        <Campo etiqueta="Departamento">
+          <input list="departamentos-p" value={d.departamento} onChange={cambia("departamento")} />
+          <datalist id="departamentos-p">
+            {formularios.departamentos.map((x) => (
+              <option key={x} value={x} />
+            ))}
+          </datalist>
         </Campo>
         <Campo etiqueta="Teléfono">
           <input value={d.telefono} onChange={cambia("telefono")} />

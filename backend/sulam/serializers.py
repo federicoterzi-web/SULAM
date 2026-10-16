@@ -44,6 +44,15 @@ def persona_detalle(p: Persona) -> dict:
             "domicilio": p.domicilio,
             "telefono": p.telefono,
             "observaciones": p.observaciones,
+            "genero": p.genero,
+            "barrio": p.barrio,
+            "departamento": p.departamento,
+            "cud": p.cud,
+            "cobertura_salud": p.cobertura_salud or [],
+            "obra_social": p.obra_social,
+            "cobertura_previsional": p.cobertura_previsional or [],
+            "trabajo_informal": p.trabajo_informal,
+            "discapacidades": p.discapacidades or [],
             "creado_en": p.creado_en.isoformat(),
             "actualizado_en": p.actualizado_en.isoformat() if p.actualizado_en else None,
         }
@@ -61,6 +70,46 @@ def asignacion_out(a: CasoAsignacion) -> dict:
     }
 
 
+CAMPOS_CARATULA = (
+    "numero_actuacion", "anio_actuacion", "antecedentes", "tipo_ingreso", "tipo_ingreso_detalle",
+    "derivado_por", "derivado_por_detalle", "intervencion_derivacion", "intervencion_otro",
+)
+
+
+def caratula_out(c: Caso, visible: bool) -> dict:
+    d = {k: getattr(c, k) for k in CAMPOS_CARATULA}
+    d["fecha_ingreso"] = (c.fecha_ingreso or c.abierto_en.date()).isoformat()
+    d["fecha_ultimo_ingreso"] = c.fecha_ultimo_ingreso.isoformat() if c.fecha_ultimo_ingreso else None
+    d["indicadores"] = (c.indicadores or []) if visible else []
+    d["intervenciones"] = (c.intervenciones or []) if visible else []
+    if not visible:
+        d["intervencion_derivacion"] = d["intervencion_otro"] = None
+    return d
+
+
+def demanda_out(r, visible: bool = True) -> dict:
+    from .models import RegistroDemanda
+
+    base = {
+        "id": str(r.id),
+        "caso_id": str(r.caso_id),
+        "persona_id": str(r.persona_id),
+        "fecha": r.fecha.isoformat(),
+        "receptor": usuario_breve(r.receptor),
+        "creado_en": r.creado_en.isoformat(),
+        "contenido_restringido": not visible,
+    }
+    if not visible:
+        return base
+    excluir = {"id", "caso_id", "persona_id", "fecha", "creado_por", "creado_en", "actualizado_en", "agente_id"}
+    for col in RegistroDemanda.__table__.columns.keys():
+        if col not in excluir:
+            base[col] = getattr(r, col)
+    base["agente"] = usuario_breve(r.agente)
+    base["actualizado_en"] = r.actualizado_en.isoformat() if r.actualizado_en else None
+    return base
+
+
 def caso_out(c: Caso, visible: bool, persona: Persona | None = None, detalle: bool = False) -> dict:
     d = {
         "id": str(c.id),
@@ -74,6 +123,7 @@ def caso_out(c: Caso, visible: bool, persona: Persona | None = None, detalle: bo
         "cerrado_en": c.cerrado_en.isoformat() if c.cerrado_en else None,
         "ultima_actividad": c.ultima_actividad.isoformat() if c.ultima_actividad else None,
         "motivo": c.motivo if visible else None,
+        "caratula": caratula_out(c, visible),
         "responsables": [
             usuario_breve(a.usuario) for a in c.asignaciones if a.hasta is None
         ],

@@ -27,9 +27,20 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | + | Auditoría inmutable a nivel de base de datos | ✅ |
 
 ### Verificación realizada
-- 20 pruebas automatizadas contra PostgreSQL 16, todas aprobadas (incluye los 8 criterios de aceptación).
+- 24 pruebas automatizadas contra PostgreSQL 16, todas aprobadas (incluye los 8 criterios de aceptación y los formularios institucionales).
 - Recorrido completo de la interfaz en navegador con cada rol de demostración (alta con duplicado, carga de documento, ingreso vinculado, caso reservado visto por otro técnico, matriz de roles, vista móvil).
 - Pendiente de verificar en una máquina con acceso normal a internet: `docker compose up --build` y `npm install` (el entorno de desarrollo no tenía acceso a los registros de paquetes; el código se probó con las mismas bibliotecas obtenidas de sus repositorios oficiales).
+
+## Versión 0.2 — en curso
+
+| Funcionalidad | Estado |
+|---|---|
+| Carátula de legajo con los campos del modelo institucional, al crear el caso | ✅ |
+| Registro de demanda (secciones 1 a 8) precargado desde la carátula y el legajo | ✅ |
+| Evolución del caso | ✅ |
+| Vistas imprimibles de carátula y registro de demanda | ✅ |
+| Datos del legajo ampliados (género, barrio, departamento, coberturas, CUD, discapacidad) | ✅ |
+| Definir el origen de la Actuación N° (P-012) | ⏳ |
 
 ## Próximos pasos
 
@@ -38,7 +49,6 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 - [ ] Revisar con Ivana, Cristina y Nancy los roles propuestos y el texto de las pantallas.
 
 ### Con el relevamiento (octubre–noviembre)
-- [ ] P-001: incorporar campos de carátula y registro de demanda (nuevas tablas o campos + migración).
 - [ ] P-003: cargar la matriz definitiva de permisos.
 - [ ] P-004: reglas de derivación automática.
 - [ ] Validar catálogos (tipos de vínculo, tipos documentales).

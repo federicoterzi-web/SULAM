@@ -10,6 +10,7 @@ from .. import audit
 from ..db import get_db
 from ..deps import contexto
 from ..duplicates import Coincidencia, buscar_posibles_duplicados
+from ..formularios import validar_datos_persona
 from ..models import (
     Auditoria,
     Caso,
@@ -18,6 +19,7 @@ from ..models import (
     Ingreso,
     Persona,
     PersonaVinculada,
+    RegistroDemanda,
     TipoVinculo,
     Usuario,
 )
@@ -197,6 +199,7 @@ def crear_persona(datos: PersonaIn, ctx: Contexto = Depends(contexto), db: Sessi
     )
     valores = datos.model_dump(exclude={"confirmar_posible_duplicado", "motivo_confirmacion"})
     valores.update(tipo_documento=tipo, numero_documento=numero)
+    validar_datos_persona(valores)
     persona = Persona(
         **valores,
         numero_legajo=numero_legajo(db),
@@ -302,6 +305,7 @@ def modificar_persona(
     cambios_pedidos = datos.model_dump(
         exclude_unset=True, exclude={"motivo_cambio", "confirmar_posible_duplicado"}
     )
+    validar_datos_persona(cambios_pedidos)
     for obligatorio in ("apellidos", "nombres"):
         if obligatorio in cambios_pedidos and not cambios_pedidos[obligatorio]:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"El campo {obligatorio} es obligatorio.")
@@ -373,6 +377,7 @@ def unificar(
         (Ingreso, "ingresos"),
         (Documento, "documentos"),
         (PersonaVinculada, "vinculados"),
+        (RegistroDemanda, "registros_demanda"),
     ):
         r = db.execute(
             update(modelo).where(modelo.persona_id == origen.id).values(persona_id=destino.id)
