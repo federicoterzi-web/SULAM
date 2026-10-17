@@ -52,7 +52,7 @@ export function App() {
         alEntrar={(y) => {
           entrar(y);
           const r = rutaActual();
-          if (esCelular() && !r.startsWith("/m") && !r.startsWith("/imprimir/")) navegar("/m");
+          if (esCelular() && !r.startsWith("/m") && !r.startsWith("/imprimir/") && !r.startsWith("/c/")) navegar("/m");
         }}
       />
     );
@@ -239,6 +239,13 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
   };
 
   const seccion = "/" + (ruta.split("?")[0].split("/")[1] ?? "");
+
+  // Enlace del QR de la carátula: abre el caso en la versión que corresponde al dispositivo.
+  if (ruta.startsWith("/c/")) {
+    const id = ruta.split("/")[2] ?? "";
+    location.replace("#" + (esCelular() ? `/m/caso/${id}` : `/casos/${id}`));
+    return <Cargando />;
+  }
 
   const cambioPw = cambiarPw && (
     <div className="modal-fondo">
