@@ -43,6 +43,18 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Actuación N° automática por año, con continuidad de la numeración en papel | ✅ |
 | Carga desde papel: receptor ≠ quien carga, fecha y autor de cada evolución, escaneo del original | ✅ |
 
+## Digitalización de fichas — en curso
+
+| Funcionalidad | Estado |
+|---|---|
+| Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
+| Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` |
+| Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
+| Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
+| Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |
+| Calibrar con fotos reales de las fichas nuevas completadas | ⏳ |
+
 ## Próximos pasos
 
 ### Antes de mostrar al equipo

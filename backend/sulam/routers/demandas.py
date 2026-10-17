@@ -53,6 +53,31 @@ def formularios(ctx: Contexto = Depends(contexto)):
     return catalogo_formularios()
 
 
+@router.get("/formularios/papel/{codigo}.pdf")
+def ficha_en_blanco(codigo: str, ctx: Contexto = Depends(contexto)):
+    """Ficha en blanco para imprimir (con marcas y QR para la lectura automática)."""
+    from fastapi.responses import Response
+
+    from ..papel.fichas import FICHAS, NOMBRES_ARCHIVO, ficha
+
+    codigo = codigo.upper()
+    if codigo not in FICHAS:
+        raise no_encontrado("Ficha")
+    pdf, plantilla = ficha(codigo)
+    nombre = f"SULAM-{NOMBRES_ARCHIVO[codigo]}-v{plantilla['version']}.pdf"
+    return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{nombre}"'})
+
+
+@router.get("/formularios/papel")
+def fichas_disponibles(ctx: Contexto = Depends(contexto)):
+    from ..papel.fichas import FICHAS, VERSION
+
+    return [
+        {"codigo": c, "titulo": t, "hojas": len(h), "version": VERSION, "url": f"/api/formularios/papel/{c}.pdf"}
+        for c, (t, h) in FICHAS.items()
+    ]
+
+
 @router.get("/casos/{caso_id}/demanda-sugerida")
 def demanda_sugerida(caso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
     """Valores iniciales del registro, tomados del legajo y de la carátula."""

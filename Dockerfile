@@ -29,7 +29,7 @@ COPY backend/pyproject.toml ./
 COPY backend/sulam ./sulam
 COPY backend/alembic ./alembic
 COPY backend/alembic.ini ./
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -e ".[lectura]"
 
 COPY --from=frontend /app/frontend/dist /app/frontend/dist
 COPY docker-entrypoint.sh /usr/local/bin/

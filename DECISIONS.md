@@ -65,6 +65,12 @@ Se incorporaron los campos exactos de los dos modelos (resuelve P-001). La cará
 ### D-017 · Actuación N° = número de caso por año — *Vigente*
 Según la Dirección, la Actuación N° es el número de caso iniciado / carátula generada en el año. Se unificó con el número de caso (`C-AAAA-NNNNN`), se asigna automáticamente, es única por año, admite cargar carátulas anteriores con su número y se puede fijar el próximo número para continuar la numeración en papel.
 
+### D-018 · Fichas nuevas con marcas; lectura local con revisión humana — *Vigente*
+- Desde la implementación se usan las fichas impresas por SULAM (versión 1), con marcas de esquina, QR y cuadrículas, porque permiten ubicar cada campo con precisión en una foto.
+- Las fichas anteriores (unos seis meses de registros en los modelos previos) también deben poder digitalizarse: se ubicarán los campos por los textos impresos del formulario. Requiere muestras reales para calibrar.
+- La lectura de texto manuscrito es **solo local** (sin servicios externos), por tratarse de datos sensibles. Toda lectura automática pasa por revisión humana, campo por campo, mostrando el recorte.
+- Si en el futuro cambia una ficha, se crea una versión nueva (el QR indica la versión) y el lector mantiene las anteriores.
+
 ---
 
 ## Pendientes (no se inventan)

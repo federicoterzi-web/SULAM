@@ -10,6 +10,7 @@ Uso:  python -m sulam.cli <comando>   (o simplemente `sulam <comando>` si está 
   restaurar ARCHIVO   Restaura un respaldo (reemplaza los datos actuales).
   verificar-archivos  Comprueba que cada documento exista y no esté alterado.
   migrar-archivos     Copia los documentos a otro almacenamiento y verifica los hashes.
+  fichas              Genera los PDF de las fichas en papel para imprimir.
 """
 
 from __future__ import annotations
@@ -243,6 +244,18 @@ def cmd_datos_demo(_args) -> None:
         db.close()
 
 
+def cmd_fichas(args) -> None:
+    from .papel.fichas import FICHAS, NOMBRES_ARCHIVO, ficha
+
+    destino = Path(args.destino)
+    destino.mkdir(parents=True, exist_ok=True)
+    for codigo in FICHAS:
+        pdf, plantilla = ficha(codigo)
+        ruta = destino / f"SULAM-{NOMBRES_ARCHIVO[codigo]}-v{plantilla['version']}.pdf"
+        ruta.write_bytes(pdf)
+        print(f"Generada: {ruta}")
+
+
 def cmd_servidor(args) -> None:
     import uvicorn
 
@@ -328,6 +341,10 @@ def main(argv: list[str] | None = None) -> None:
     p.set_defaults(func=cmd_inicializar)
 
     sub.add_parser("datos-demo").set_defaults(func=cmd_datos_demo)
+
+    p = sub.add_parser("fichas")
+    p.add_argument("--destino", default="fichas")
+    p.set_defaults(func=cmd_fichas)
 
     p = sub.add_parser("servidor")
     p.add_argument("--host", default="127.0.0.1")

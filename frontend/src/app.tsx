@@ -6,6 +6,7 @@ import { PaginaAuditoria } from "./paginas/auditoria";
 import { PaginaBuscar } from "./paginas/buscar";
 import { PaginaCaso, PaginaCasos } from "./paginas/casos";
 import { PaginaExpedientes } from "./paginas/expedientes";
+import { PaginaFichas } from "./paginas/fichas";
 import { PaginaLegajo } from "./paginas/legajo";
 import { PaginaLegajos } from "./paginas/legajos";
 import { PaginaIngreso, PaginaMesa } from "./paginas/mesa";
@@ -150,6 +151,7 @@ const MENU: { ruta: string; texto: string; permiso?: [string, string] }[] = [
   { ruta: "/casos", texto: "Casos", permiso: ["casos", "consultar"] },
   { ruta: "/mesa", texto: "Mesa de Entrada", permiso: ["mesa_entrada", "consultar"] },
   { ruta: "/expedientes", texto: "Expedientes", permiso: ["expedientes", "consultar"] },
+  { ruta: "/fichas", texto: "Fichas en papel" },
   { ruta: "/auditoria", texto: "Auditoría", permiso: ["auditoria", "consultar"] },
   { ruta: "/admin", texto: "Administración", permiso: ["administracion", "administrar"] },
 ];
@@ -277,6 +279,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return p[1] ? <PaginaIngreso id={p[1]} key={p[1]} /> : <PaginaMesa />;
     case "expedientes":
       return <PaginaExpedientes />;
+    case "fichas":
+      return <PaginaFichas />;
     case "buscar":
       return <PaginaBuscar q={decodeURIComponent(p[1] ?? "")} key={p[1]} />;
     case "auditoria":

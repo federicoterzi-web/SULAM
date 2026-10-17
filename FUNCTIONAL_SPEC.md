@@ -93,6 +93,23 @@ Implementados según los modelos institucionales («Modelo de carátula de legaj
 
 Al marcar una subopción (por ejemplo «Maltrato › Económico/Patrimonial») se guarda también el grupo, para poder contar después por grupo o por subtipo.
 
+## 5 ter. Fichas en papel con lectura automática
+
+SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `sulam fichas`):
+
+| Ficha | Hojas | Uso |
+|---|---|---|
+| Carátula de legajo | 1 | Al ingresar el caso |
+| Registro de demanda | 2 | Después de la primera verificación |
+| Hoja de evolución | 1 (5 intervenciones) | Registro manual de intervenciones; se usan las que hagan falta |
+
+- Mismos campos y textos que los modelos de la Dirección; las opciones se imprimen desde el mismo catálogo que usa la pantalla.
+- Cada hoja lleva **cuatro marcas de esquina**, un **QR** (ficha, versión y hoja), **casillas** para marcar con X y **cuadrículas de un dígito por casilla** para DNI, fechas, teléfonos y números de legajo y actuación.
+- Todas las hojas llevan Legajo N° y Actuación N°/año, para asociarlas al caso.
+- **Lectura** (`sulam/papel/lectura.py`): ubica las marcas, endereza la foto (perspectiva y giro, incluso al revés), identifica la hoja por el QR y mide cada casilla. Las casillas con poca tinta o los grupos de opción única con más de una marca se marcan como **dudosos** para revisión. Recorta cada celda de dígitos y cada recuadro de texto para la revisión humana.
+- Validación con 60 fotos simuladas (perspectiva, giros, sombra, ruido, desenfoque): 60/60 hojas leídas y 0 errores en 1.815 casillas.
+- **Pendiente**: captura con el celular por QR, pantalla de revisión campo por campo, reconocimiento de dígitos y de texto (solo local, D-018), y lectura de las fichas anteriores sin marcas.
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.

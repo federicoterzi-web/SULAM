@@ -14,10 +14,14 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "alembic>=1.13",
     "python-multipart>=0.0.9",
+    "reportlab>=4",
+    "segno>=1.6",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "httpx>=0.27"]
+# Lectura automática de fichas fotografiadas.
+lectura = ["opencv-python-headless>=4.9", "numpy>=1.26"]
+dev = ["pytest>=8", "httpx>=0.27", "pypdfium2>=4"]
 
 [project.scripts]
 sulam = "sulam.cli:main"
