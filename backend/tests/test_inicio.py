@@ -40,7 +40,7 @@ def test_inicio_tecnico_prioriza_maltrato(admin, cliente):
     assert casos[1]["ultima_evolucion"]["texto"] == "Llamado de seguimiento"
 
 
-def test_inicio_jefatura_y_reservados_del_area(admin, cliente):
+def test_inicio_jefatura(admin, cliente):
     areas = _areas(admin)
     crear_usuario("jefa", "Jefe/a de departamento", AREA_ADMISION)
     crear_usuario("tec", "Técnico", AREA_ADMISION)
@@ -48,20 +48,17 @@ def test_inicio_jefatura_y_reservados_del_area(admin, cliente):
     p1 = nueva_persona(admin, apellidos="ADM", numero_documento="3333333")
     p2 = nueva_persona(admin, apellidos="ADMDOS", nombres="Otro", numero_documento="4444444")
     p3 = nueva_persona(admin, apellidos="PROMO", nombres="Otra", numero_documento="5555555")
-    sin_resp = nuevo_caso(admin, p1["id"], area_id=areas[AREA_ADMISION], reservado=True, motivo="reservado del área")
+    sin_resp = nuevo_caso(admin, p1["id"], area_id=areas[AREA_ADMISION], motivo="caso del área")
     nuevo_caso(admin, p2["id"], area_id=areas[AREA_ADMISION], responsable_id=tec)
-    ajeno = nuevo_caso(admin, p3["id"], area_id=areas[AREA_PROMOCION], reservado=True, motivo="reservado de otra área")
+    nuevo_caso(admin, p3["id"], area_id=areas[AREA_PROMOCION], motivo="caso de otra área")
 
     jefa = cliente("jefa")
     d = jefa.get("/api/inicio").json()["datos"]
     assert d["area"]["nombre"] == AREA_ADMISION
     assert [c["id"] for c in d["sin_responsable"]] == [sin_resp["id"]]
-    assert d["sin_responsable"][0]["contenido_restringido"] is False  # reservado de su área: lo ve
     assert {e["nombre_completo"]: e["casos_activos"] for e in d["equipo"]}["Tec"] == 1
     assert d["activos"] == 2 and d["mes"]["nuevas"] == 2
-    # Un reservado de otra área sigue oculto para la jefa.
-    assert jefa.get(f"/api/casos/{ajeno['id']}").json()["contenido_restringido"] is True
-    assert jefa.get(f"/api/casos/{sin_resp['id']}").json()["motivo"] == "reservado del área"
+    assert d["sin_responsable"][0]["motivo"] == "caso del área"
 
 
 def test_inicio_direccion_resumen_por_area(admin):
@@ -100,11 +97,11 @@ def test_jefe_de_division_igual_que_jefe_de_departamento_en_su_area(admin, clien
     cuidados = "División Cuidados y Promoción de Autonomía"
     crear_usuario("jefa_div", "Jefe/a de división", cuidados)
     p = nueva_persona(admin, apellidos="CUIDADOS", numero_documento="9999999")
-    caso = nuevo_caso(admin, p["id"], area_id=areas[cuidados], reservado=True, motivo="reservado de la división")
+    caso = nuevo_caso(admin, p["id"], area_id=areas[cuidados], motivo="caso de la división")
     jefa = cliente("jefa_div")
     r = jefa.get("/api/inicio").json()
     assert r["perfil"] == "jefatura" and r["datos"]["area"]["nombre"] == cuidados
     assert [c["id"] for c in r["datos"]["sin_responsable"]] == [caso["id"]]
-    assert jefa.get(f"/api/casos/{caso['id']}").json()["motivo"] == "reservado de la división"
+    assert jefa.get(f"/api/casos/{caso['id']}").json()["motivo"] == "caso de la división"
     roles = {x["nombre"]: x for x in admin.get("/api/admin/roles").json()}
     assert roles["Jefe/a de división"]["permisos"] == roles["Jefe/a de departamento"]["permisos"]

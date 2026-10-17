@@ -215,7 +215,6 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
   const [d, setD] = useState<Datos | null>(null);
   const [areaId, setAreaId] = useState(String(yo.area?.id ?? ""));
   const [responsable, setResponsable] = useState("");
-  const [reservado, setReservado] = useState(false);
   const [existente, setExistente] = useState<{ id: string; numero: string } | null>(null);
   const { enviando, error, setError, ejecutar } = useEnvio();
   const paso = pasoDeRuta();
@@ -282,7 +281,6 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
         return await api.post<Caso>("/casos", {
           persona_id: personaId,
           area_id: areaId ? Number(areaId) : null,
-          reservado,
           responsable_id: responsable || null,
           fecha_ingreso: d.fecha_ingreso,
           motivo: d.motivo,
@@ -326,7 +324,6 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
     else crear();
   };
 
-  const maltrato = d.indicadores.includes("maltrato");
   let contenido: ReactNode;
   switch (paso) {
     case 0:
@@ -393,7 +390,6 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
       contenido = (
         <>
           <Marcas etiqueta="Indicadores" opciones={f.indicadores} valor={d.indicadores} alCambiar={(v) => set({ indicadores: v })} />
-          {maltrato && <div className="m-alerta">Marcó maltrato: en el último paso considere registrar el caso como reservado.</div>}
         </>
       );
       break;
@@ -457,11 +453,6 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
               </select>
             </label>
           )}
-          <label className="m-casilla">
-            <input type="checkbox" checked={reservado} onChange={(e) => setReservado(e.target.checked)} />
-            <span>Caso reservado (solo lo ven sus responsables y quienes acceden a información reservada)</span>
-          </label>
-          {maltrato && !reservado && <div className="m-alerta">Se marcó un indicador de maltrato: considere registrar el caso como reservado.</div>}
           <p className="m-tenue">El número de actuación se asigna al crear el caso.</p>
         </>
       );

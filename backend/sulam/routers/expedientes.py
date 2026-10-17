@@ -19,7 +19,6 @@ from ._comun import (
     obtener_persona,
     registrar_actividad_caso,
     validar_pertenencia,
-    ve_expediente,
 )
 
 router = APIRouter(tags=["expedientes"])
@@ -42,7 +41,7 @@ def listar_expedientes(
         consulta = consulta.where(Expediente.numero.ilike("%" + escapar_like(q.strip()) + "%"))
     consulta = consulta.order_by(Expediente.creado_en.desc()).limit(limite)
     return [
-        {**expediente_out(e, ve_expediente(db, ctx, e)), "persona": persona_resumen(p)}
+        {**expediente_out(e), "persona": persona_resumen(p)}
         for e, p in db.execute(consulta).all()
     ]
 
@@ -70,7 +69,7 @@ def ver_expediente(expediente_id: uuid.UUID, ctx: Contexto = Depends(contexto), 
     exp = obtener_expediente(db, expediente_id)
     persona = db.get(Persona, exp.persona_id)
     requerir_persona(db, ctx, persona, "expedientes", "consultar")
-    return {**expediente_out(exp, ve_expediente(db, ctx, exp)), "persona": persona_resumen(persona)}
+    return {**expediente_out(exp), "persona": persona_resumen(persona)}
 
 
 @router.patch("/expedientes/{expediente_id}")
@@ -83,8 +82,6 @@ def modificar_expediente(
     exp = obtener_expediente(db, expediente_id)
     persona = db.get(Persona, exp.persona_id)
     requerir_persona(db, ctx, persona, "expedientes", "modificar")
-    if not ve_expediente(db, ctx, exp):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Expediente de un caso reservado.")
     cambios_pedidos = datos.model_dump(exclude_unset=True)
     if "caso_id" in cambios_pedidos:
         validar_pertenencia(db, persona.id, cambios_pedidos["caso_id"], None)

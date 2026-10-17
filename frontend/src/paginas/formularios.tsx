@@ -267,7 +267,6 @@ export function FormCaratula({
   const [persona, setPersona] = useState<PersonaDetalle | null>(null);
   const [d, setD] = useState<DatosCaratula | null>(null);
   const [areaId, setAreaId] = useState(String(yo.area?.id ?? ""));
-  const [reservado, setReservado] = useState(false);
   const [responsable, setResponsable] = useState("");
   const [existente, setExistente] = useState<any>(null);
   const { enviando, error, setError, ejecutar } = useEnvio();
@@ -316,7 +315,6 @@ export function FormCaratula({
 
   if (!d || !persona) return error ? <Aviso error={error} /> : <Cargando />;
   const set = (c: Partial<DatosCaratula>) => setD({ ...d, ...c });
-  const maltrato = d.indicadores.includes("maltrato");
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
@@ -359,7 +357,6 @@ export function FormCaratula({
             ...caratula,
             persona_id: personaId,
             area_id: areaId ? Number(areaId) : null,
-            reservado,
             responsable_id: responsable || null,
             ingreso_id: ingresoId ?? null,
           }));
@@ -527,13 +524,6 @@ export function FormCaratula({
               </Campo>
             )}
           </div>
-          <label className="casilla">
-            <input type="checkbox" checked={reservado} onChange={(e) => setReservado(e.target.checked)} />
-            Caso reservado: su contenido solo lo ven los responsables asignados y quienes tienen acceso a información reservada
-          </label>
-          {maltrato && !reservado && (
-            <div className="aviso aviso-advertencia">Se marcó un indicador de maltrato: considere registrar el caso como reservado.</div>
-          )}
         </section>
       )}
 
@@ -599,9 +589,9 @@ export function ResumenCaratula({ caso }: { caso: Caso }) {
         {c.derivado_por_detalle && ` (${c.derivado_por_detalle})`}
       </dd>
       <dt>Indicadores</dt>
-      <dd>{caso.contenido_restringido ? "Reservado" : textoLista(f.indicadores, c.indicadores) || "—"}</dd>
+      <dd>{textoLista(f.indicadores, c.indicadores) || "—"}</dd>
       <dt>Tipo de intervención</dt>
-      <dd>{caso.contenido_restringido ? "Reservado" : intervenciones || "—"}</dd>
+      <dd>{intervenciones || "—"}</dd>
     </dl>
   );
 }

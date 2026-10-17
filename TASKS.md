@@ -20,7 +20,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | 10 | Buscador general | ✅ |
 | 11 | Historial de actividad por legajo y auditoría general | ✅ |
 | + | Personas e instituciones vinculadas | ✅ |
-| + | Casos, documentos y vinculados reservados | ✅ |
+| + | ~~Casos, documentos y vinculados reservados~~ (quitado por D-021) | — |
 | + | Registro de consultas en la auditoría | ✅ |
 | + | Detección de duplicados con criterios explícitos y unificación de legajos | ✅ |
 | + | Respaldo y restauración verificables | ✅ |
@@ -28,7 +28,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 
 ### Verificación realizada
 - 25 pruebas automatizadas contra PostgreSQL 16, todas aprobadas (incluye los 8 criterios de aceptación y los formularios institucionales).
-- Recorrido completo de la interfaz en navegador con cada rol de demostración (alta con duplicado, carga de documento, ingreso vinculado, caso reservado visto por otro técnico, matriz de roles, vista móvil).
+- Recorrido completo de la interfaz en navegador con cada rol de demostración (alta con duplicado, carga de documento, ingreso vinculado, matriz de roles, vista móvil).
 - Pendiente de verificar en una máquina con acceso normal a internet: `docker compose up --build` y `npm install` (el entorno de desarrollo no tenía acceso a los registros de paquetes; el código se probó con las mismas bibliotecas obtenidas de sus repositorios oficiales).
 
 ## Versión 0.2 — en curso
@@ -68,7 +68,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 |---|---|
 | Mapa de recursos: centros de día, centros de jubilados, residencias, instituciones, cuidadores formados | ✅ |
 | Directorio de contactos (técnicos de gobiernos locales y otras instituciones) | ✅ |
-| Casos en el mapa (todos los técnicos; reservados solo para quien los ve) y salidas de visita con recorrido y hoja imprimible | ✅ |
+| Casos en el mapa (todos los técnicos) y salidas de visita con recorrido y hoja imprimible | ✅ |
 | Recursos cercanos a un caso (p. ej., cuidadores que viven cerca) | ⏳ |
 | Cuidadores de cada caso (vínculo del legajo con un cuidador, formado o no) | ⏳ |
 | Registro de la División de Participación y Sensibilización Ciudadana (talleres, campañas, capacitaciones, centros de jubilados) | ⏳ a relevar con la División |
@@ -80,7 +80,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0012) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0013) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |

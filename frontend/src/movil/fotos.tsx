@@ -57,7 +57,6 @@ export function FotosMovil({ casoId, personaId, demandaId = "" }: { casoId?: str
   const [demanda, setDemanda] = useState(demandaId);
   const [titulo, setTitulo] = useState("");
   const [tituloEditado, setTituloEditado] = useState(false);
-  const [reservado, setReservado] = useState(false);
   const [hojas, setHojas] = useState<Hoja[]>([]);
   const [procesando, setProcesando] = useState(false);
   const [avance, setAvance] = useState<number | null>(null);
@@ -129,7 +128,6 @@ export function FotosMovil({ casoId, personaId, demandaId = "" }: { casoId?: str
     fd.append("persona_id", datos.persona.id);
     if (casoId) fd.append("caso_id", casoId);
     if (demanda) fd.append("registro_demanda_id", demanda);
-    fd.append("reservado", String(reservado));
     setError(null);
     setAvance(0);
     try {
@@ -223,11 +221,6 @@ export function FotosMovil({ casoId, personaId, demandaId = "" }: { casoId?: str
         Apoye la hoja sobre una superficie oscura, con buena luz y sin sombras. Las fotos tomadas desde acá no se guardan en
         la galería.
       </p>
-
-      <label className="m-casilla">
-        <input type="checkbox" checked={reservado} onChange={(e) => setReservado(e.target.checked)} />
-        <span>Documento reservado</span>
-      </label>
 
       <Aviso error={error} />
       {avance !== null && (

@@ -1,7 +1,6 @@
 """Casos en el mapa, para organizar las salidas de visita.
 
-Solo casos activos y a la vista del usuario. Un caso reservado aparece solo para
-quien puede verlo. La ubicación del domicilio se marca a mano o con el GPS en una
+Solo casos activos y dentro del alcance de consulta del usuario. La ubicación del domicilio se marca a mano o con el GPS en una
 visita; nunca se consulta a servicios externos.
 """
 
@@ -17,7 +16,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..deps import contexto
 from ..models import Caso, CasoAsignacion, CasoEvolucion, Persona
-from ..permissions import Contexto, filtro_casos, ve_caso_reservado
+from ..permissions import Contexto, filtro_casos
 from ..security import ahora
 from ..serializers import usuario_breve
 
@@ -54,7 +53,7 @@ def casos_en_el_mapa(
         )
     elif de == "area" and ctx.usuario.area_id:
         consulta = consulta.where(Caso.area_id == ctx.usuario.area_id)
-    filas = [(c, p) for c, p in db.execute(consulta.order_by(Caso.ultima_actividad)).all() if ve_caso_reservado(db, ctx, c)]
+    filas = db.execute(consulta.order_by(Caso.ultima_actividad)).all()
 
     ids = [c.id for c, _ in filas]
     ultima: dict = {}
@@ -73,7 +72,6 @@ def casos_en_el_mapa(
             "numero": c.numero,
             "actuacion": f"{c.numero_actuacion}/{c.anio_actuacion}" if c.numero_actuacion else c.numero,
             "estado": c.estado,
-            "reservado": c.reservado,
             "area": c.area.nombre if c.area else None,
             "responsables": [usuario_breve(a.usuario) for a in c.asignaciones if a.hasta is None],
             "maltrato": any(str(i).startswith("maltrato") for i in c.indicadores or []),

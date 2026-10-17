@@ -30,8 +30,6 @@ from ..permissions import (
     filtro_casos,
     requerir_caso,
     requerir_persona,
-    ve_caso_reservado,
-    ve_reservado_de_persona,
 )
 from ..schemas import (
     CaratulasImpresasIn,
@@ -127,7 +125,7 @@ def listar_casos(
             | Persona.nombres_norm.like("%" + escapar_like(t) + "%")
         )
     consulta = consulta.order_by(Caso.ultima_actividad.desc()).limit(limite)
-    return [caso_out(c, ve_caso_reservado(db, ctx, c), p) for c, p in db.execute(consulta).all()]
+    return [caso_out(c, p) for c, p in db.execute(consulta).all()]
 
 
 @router.post("/casos", status_code=201)
@@ -192,14 +190,13 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
         persona_id=persona.id,
         area_id=area_id,
         estado="abierto",
-        reservado=datos.reservado,
         creado_por=ctx.id,
     )
     db.add(caso)
     caratula = datos.model_dump(
         exclude_unset=True,
         exclude={
-            "persona_id", "area_id", "reservado", "responsable_id", "ingreso_id", "numero_actuacion",
+            "persona_id", "area_id", "responsable_id", "ingreso_id", "numero_actuacion",
             "anio_actuacion", "forzar_otra_actuacion", "motivo_forzado",
         },
     )
@@ -216,7 +213,7 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
     audit.registrar(
         db, ctx, "crear", "caso", caso.id, persona.id,
         {
-            "numero": caso.numero, "reservado": caso.reservado, "area_id": area_id,
+            "numero": caso.numero, "area_id": area_id,
             "tipo_ingreso": caso.tipo_ingreso, "indicadores": caso.indicadores,
             "otra_actuacion_en_el_anio": (
                 {"existente": existente.numero, "motivo": datos.motivo_forzado} if existente is not None else None
@@ -242,7 +239,7 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
 
     db.commit()
     db.refresh(caso)
-    return caso_out(caso, True, persona, detalle=True)
+    return caso_out(caso, persona, detalle=True)
 
 
 @router.get("/casos/{caso_id}/qr.svg", include_in_schema=False)
@@ -268,46 +265,42 @@ def qr_del_caso(caso_id: uuid.UUID, request: Request, ctx: Contexto = Depends(co
 def ver_caso(caso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
     caso = obtener_caso(db, caso_id)
     requerir_caso(db, ctx, caso, "casos", "consultar")
-    visible = ve_caso_reservado(db, ctx, caso)
     persona = db.get(Persona, caso.persona_id)
-    r = caso_out(caso, visible, persona, detalle=True)
+    r = caso_out(caso, persona, detalle=True)
     r["persona"] = persona_detalle(persona)
     tiene, ultima = antecedentes_sistema(db, persona.id, excluir_caso_id=caso.id,
                                          antes_de=caso.fecha_ingreso or caso.abierto_en.date())
     r["antecedentes_sistema"] = {"tiene": tiene, "fecha_ultimo_ingreso": ultima.isoformat() if ultima else None}
-    r["evoluciones"] = []
-    r["demandas"] = []
     r["reiteraciones"] = [
-        reiteracion_out(x) if visible else {"id": x.id, "fecha": x.fecha.isoformat()}
+        reiteracion_out(x)
         for x in db.execute(
             select(Reiteracion).where(Reiteracion.caso_id == caso.id).order_by(Reiteracion.fecha)
         ).scalars()
     ]
-    if visible:
-        r["evoluciones"] = [
-            evolucion_out(e)
-            for e in db.execute(
-                select(CasoEvolucion)
-                .where(CasoEvolucion.caso_id == caso.id)
-                .order_by(CasoEvolucion.fecha, CasoEvolucion.en)
-            ).scalars()
-        ]
+    r["evoluciones"] = [
+        evolucion_out(e)
+        for e in db.execute(
+            select(CasoEvolucion)
+            .where(CasoEvolucion.caso_id == caso.id)
+            .order_by(CasoEvolucion.fecha, CasoEvolucion.en)
+        ).scalars()
+    ]
     demandas = list(
         db.execute(
             select(RegistroDemanda).where(RegistroDemanda.caso_id == caso.id).order_by(RegistroDemanda.fecha)
         ).scalars()
     )
-    escaneos = escaneos_de(db, ctx, [d.id for d in demandas]) if visible else {}
-    r["demandas"] = [demanda_out(d, visible, escaneos.get(d.id)) for d in demandas]
+    escaneos = escaneos_de(db, ctx, [d.id for d in demandas])
+    r["demandas"] = [demanda_out(d, escaneos.get(d.id)) for d in demandas]
 
     r["expedientes"] = []
     if ctx.tiene("expedientes", "consultar"):
         r["expedientes"] = [
-            expediente_out(e, visible)
+            expediente_out(e)
             for e in db.execute(select(Expediente).where(Expediente.caso_id == caso.id)).scalars()
         ]
     r["documentos"] = []
-    if visible and ctx.tiene("documentos", "consultar"):
+    if ctx.tiene("documentos", "consultar"):
         q = (
             select(Documento, Usuario)
             .outerjoin(Usuario, Usuario.id == Documento.cargado_por)
@@ -315,10 +308,7 @@ def ver_caso(caso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session 
             .order_by(Documento.cargado_en.desc())
         )
         for d, u in db.execute(q).all():
-            ve = not (d.reservado or d.tipo_documental.reservado) or ve_reservado_de_persona(
-                db, ctx, caso.persona_id, caso.id
-            )
-            r["documentos"].append(documento_out(d, ve, u))
+            r["documentos"].append(documento_out(d, u))
     r["ingresos"] = [
         ingreso_out(i) for i in db.execute(select(Ingreso).where(Ingreso.caso_id == caso.id)).scalars()
     ]
@@ -345,8 +335,6 @@ def modificar_caso(
 ):
     caso = obtener_caso(db, caso_id)
     requerir_caso(db, ctx, caso, "casos", "modificar")
-    if not ve_caso_reservado(db, ctx, caso):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
     cambios_pedidos = datos.model_dump(exclude_unset=True)
     if "area_id" in cambios_pedidos and cambios_pedidos["area_id"] is not None:
         if db.get(Area, cambios_pedidos["area_id"]) is None:
@@ -357,7 +345,7 @@ def modificar_caso(
         audit.registrar(db, ctx, "modificar", "caso", caso.id, caso.persona_id, {"cambios": diff})
         db.commit()
         db.refresh(caso)
-    return caso_out(caso, True, db.get(Persona, caso.persona_id), detalle=True)
+    return caso_out(caso, db.get(Persona, caso.persona_id), detalle=True)
 
 
 @router.patch("/casos/{caso_id}/caratula")
@@ -366,8 +354,6 @@ def modificar_caratula(
 ):
     caso = obtener_caso(db, caso_id)
     requerir_caso(db, ctx, caso, "casos", "modificar")
-    if not ve_caso_reservado(db, ctx, caso):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
     persona = db.get(Persona, caso.persona_id)
     cambios_pedidos = datos.model_dump(exclude_unset=True)
     for campo in ("numero_actuacion", "anio_actuacion"):
@@ -381,7 +367,7 @@ def modificar_caratula(
         audit.registrar(db, ctx, "modificar_caratula", "caso", caso.id, caso.persona_id, {"cambios": diff})
     db.commit()
     db.refresh(caso)
-    return caso_out(caso, True, persona, detalle=True)
+    return caso_out(caso, persona, detalle=True)
 
 
 def registrar_reiteracion(
@@ -415,8 +401,6 @@ def nueva_reiteracion(
 ):
     caso = obtener_caso(db, caso_id)
     requerir_caso(db, ctx, caso, "casos", "modificar")
-    if not ve_caso_reservado(db, ctx, caso):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
     valores = datos.model_dump(exclude={"fecha", "reabrir", "motivo"})
     r = registrar_reiteracion(
         db, ctx, caso, fecha=datos.fecha or ahora().astimezone().date(), motivo=datos.motivo,
@@ -433,8 +417,6 @@ def agregar_evolucion(
 ):
     caso = obtener_caso(db, caso_id)
     requerir_caso(db, ctx, caso, "casos", "modificar")
-    if not ve_caso_reservado(db, ctx, caso):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
     if datos.autor_id is not None and db.get(Usuario, datos.autor_id) is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Autor inexistente.")
     e = CasoEvolucion(
@@ -490,7 +472,7 @@ def cambiar_estado(
     )
     db.commit()
     db.refresh(caso)
-    return caso_out(caso, ve_caso_reservado(db, ctx, caso), db.get(Persona, caso.persona_id), detalle=True)
+    return caso_out(caso, db.get(Persona, caso.persona_id), detalle=True)
 
 
 @router.post("/casos/{caso_id}/asignaciones", status_code=201)
@@ -512,7 +494,7 @@ def asignar(
     registrar_actividad_caso(caso)
     db.commit()
     db.refresh(caso)
-    return caso_out(caso, ve_caso_reservado(db, ctx, caso), db.get(Persona, caso.persona_id), detalle=True)
+    return caso_out(caso, db.get(Persona, caso.persona_id), detalle=True)
 
 
 @router.post("/casos/{caso_id}/asignaciones/{asignacion_id}/finalizar")
@@ -539,7 +521,7 @@ def finalizar_asignacion(
     )
     db.commit()
     db.refresh(caso)
-    return caso_out(caso, ve_caso_reservado(db, ctx, caso), db.get(Persona, caso.persona_id), detalle=True)
+    return caso_out(caso, db.get(Persona, caso.persona_id), detalle=True)
 
 
 # ---------------------------------------------------------------- cola de impresión
@@ -565,7 +547,7 @@ def caratulas_pendientes(
             Caso.creado_por == ctx.id
         )
     consulta = consulta.order_by(Caso.anio_actuacion, Caso.numero_actuacion, Caso.abierto_en).limit(200)
-    return [caso_out(c, ve_caso_reservado(db, ctx, c), p) for c, p in db.execute(consulta).all()]
+    return [caso_out(c, p) for c, p in db.execute(consulta).all()]
 
 
 @router.post("/caratulas/impresas")
@@ -606,7 +588,7 @@ def tablero(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
         )
         limite = ahora() - timedelta(days=DIAS_SIN_ACTIVIDAD)
         for c, p in db.execute(q).all():
-            out = caso_out(c, True, p)
+            out = caso_out(c, p)
             mis_casos.append(out)
             if c.ultima_actividad < limite:
                 sin_actividad.append(out)

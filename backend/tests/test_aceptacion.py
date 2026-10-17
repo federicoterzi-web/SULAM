@@ -1,5 +1,5 @@
 """Criterios mínimos de aceptación de SULAM 0.1 (documento de diseño §13.3),
-más los agregados de la revisión (reservados, consultas auditadas, respaldo)."""
+más los agregados de la revisión (consultas auditadas, respaldo)."""
 
 from __future__ import annotations
 

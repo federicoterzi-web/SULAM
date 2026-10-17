@@ -135,14 +135,6 @@ export function Estado({ estado }: { estado: string }) {
   return <span className={`insignia estado-${estado}`}>{ESTADOS[estado] ?? estado}</span>;
 }
 
-export function Reservado({ texto = "Reservado" }: { texto?: string }) {
-  return (
-    <span className="insignia reservado" title="Información reservada">
-      {texto}
-    </span>
-  );
-}
-
 export function Aviso({ error, tipo = "error" }: { error: unknown; tipo?: "error" | "info" | "exito" }) {
   if (!error) return null;
   const texto = typeof error === "string" ? error : error instanceof Error ? error.message : String(error);

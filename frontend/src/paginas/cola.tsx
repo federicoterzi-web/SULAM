@@ -2,7 +2,7 @@
 // para cargar varios casos y mandarlos todos juntos a la impresora.
 import { useEffect, useState } from "react";
 import { api, type Caso } from "../api";
-import { Aviso, Cargando, Enlace, Reservado, Vacio, fecha, nombre, useDatos, useSesion } from "../comun";
+import { Aviso, Cargando, Enlace, Vacio, fecha, nombre, useDatos, useSesion } from "../comun";
 
 type De = "mias" | "area" | "todas";
 
@@ -99,8 +99,7 @@ export function PaginaColaImpresion() {
                 <td>
                   <Enlace a={`/casos/${c.id}`}>
                     {c.caratula.numero_actuacion}/{c.caratula.anio_actuacion}
-                  </Enlace>{" "}
-                  {c.reservado && <Reservado />}
+                  </Enlace>
                 </td>
                 <td>{c.persona && nombre(c.persona)}</td>
                 <td>{c.area?.nombre ?? "—"}</td>

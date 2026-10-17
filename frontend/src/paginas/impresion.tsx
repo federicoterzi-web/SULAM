@@ -409,8 +409,8 @@ function ImprimirDemanda({ demandaId }: { demandaId: string }) {
 
 const GRAVES = ["maltrato", "situacion_calle", "negligencia"];
 
-function Chip({ children, tono }: { children: ReactNode; tono: "grave" | "alerta" | "info" | "neutro" | "reservado" }) {
-  const simbolo = tono === "grave" ? "▲ " : tono === "reservado" ? "" : tono === "alerta" ? "● " : "";
+function Chip({ children, tono }: { children: ReactNode; tono: "grave" | "alerta" | "info" | "neutro" }) {
+  const simbolo = tono === "grave" ? "▲ " : tono === "alerta" ? "● " : "";
   return (
     <span className={`chip-imp chip-${tono}`}>
       {simbolo}
@@ -453,7 +453,6 @@ function CaratulaCarpeta({ casoId, sinAvisoQr }: { casoId: string; sinAvisoQr?: 
   if (!c) return <Cargando />;
   const p = c.persona;
   const k = c.caratula;
-  const restringido = c.contenido_restringido;
   const edadHoy = p.fecha_nacimiento ? edadAl(p.fecha_nacimiento, new Date().toISOString().slice(0, 10)) : null;
   const texto = (lista: Opcion[], cod: string | null | undefined) => {
     for (const o of lista) {
@@ -470,8 +469,8 @@ function CaratulaCarpeta({ casoId, sinAvisoQr }: { casoId: string; sinAvisoQr?: 
         texto: o.texto,
         subs: (o.subopciones ?? []).filter((s) => valores.includes(s.codigo)).map((s) => s.texto),
       }));
-  const indicadores = restringido ? [] : grupos(f.indicadores, k.indicadores);
-  const intervenciones = restringido ? [] : grupos(f.intervenciones, k.intervenciones);
+  const indicadores = grupos(f.indicadores, k.indicadores);
+  const intervenciones = grupos(f.intervenciones, k.intervenciones);
   const reiteraciones = c.reiteraciones?.length ?? 0;
   const ingreso = [texto(f.tipos_ingreso, k.tipo_ingreso), k.tipo_ingreso_detalle ? texto(f.tipos_ingreso, `${k.tipo_ingreso}.${k.tipo_ingreso_detalle}`) : ""]
     .filter(Boolean)
@@ -523,7 +522,6 @@ function CaratulaCarpeta({ casoId, sinAvisoQr }: { casoId: string; sinAvisoQr?: 
       </div>
 
       <div className="chips-carpeta">
-        {c.reservado && <Chip tono="reservado">RESERVADO</Chip>}
         {indicadores.map((g) => (
           <Chip key={g.codigo} tono={GRAVES.includes(g.codigo) ? "grave" : g.codigo === "no_califica" ? "neutro" : "alerta"}>
             {g.texto}
@@ -537,10 +535,7 @@ function CaratulaCarpeta({ casoId, sinAvisoQr }: { casoId: string; sinAvisoQr?: 
         {p.cud === "si" && <Chip tono="neutro">Con CUD</Chip>}
       </div>
 
-      {restringido ? (
-        <p className="aviso-imp">Contenido reservado: solo puede imprimirlo quien tiene acceso al caso.</p>
-      ) : (
-        <>
+      <>
           {c.motivo && (
             <Tarjeta titulo="Motivo de ingreso" ancho>
               <p className="motivo-carpeta">{c.motivo}</p>
@@ -589,8 +584,7 @@ function CaratulaCarpeta({ casoId, sinAvisoQr }: { casoId: string; sinAvisoQr?: 
               </p>
             </Tarjeta>
           </div>
-        </>
-      )}
+      </>
       <footer className="pie-imp">
         Caso {c.numero} · abierto el {fecha(c.abierto_en)} · impreso el {fechaHora(new Date().toISOString())} · Escanee el QR para abrir el caso en SULAM
       </footer>

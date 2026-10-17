@@ -13,11 +13,11 @@ from ..db import get_db
 from ..deps import contexto
 from ..formularios import catalogo_formularios, validar_demanda
 from ..models import Caso, Documento, Persona, RegistroDemanda, Usuario
-from ..permissions import Contexto, requerir_caso, ve_caso_reservado
+from ..permissions import Contexto, requerir_caso
 from ..schemas import DemandaIn
 from ..security import ahora
 from ..serializers import demanda_out
-from ._comun import no_encontrado, obtener_caso, registrar_actividad_caso, ve_documento
+from ._comun import no_encontrado, obtener_caso, registrar_actividad_caso
 
 router = APIRouter(tags=["registro de demanda"])
 
@@ -83,8 +83,6 @@ def demanda_sugerida(caso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: 
     """Valores iniciales del registro, tomados del legajo y de la carátula."""
     caso = obtener_caso(db, caso_id)
     requerir_caso(db, ctx, caso, "casos", "modificar")
-    if not ve_caso_reservado(db, ctx, caso):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
     persona = db.get(Persona, caso.persona_id)
     sugerido: dict = {k: getattr(persona, k) for k in CAMPOS_LEGAJO}
     sugerido.update({k: getattr(caso, k) for k in CAMPOS_CARATULA})
@@ -135,8 +133,6 @@ def crear_demanda(
 ):
     caso = obtener_caso(db, caso_id)
     requerir_caso(db, ctx, caso, "casos", "modificar")
-    if not ve_caso_reservado(db, ctx, caso):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
     persona = db.get(Persona, caso.persona_id)
     valores = datos.model_dump()
     reg = RegistroDemanda(
@@ -164,8 +160,6 @@ def _obtener(db: Session, ctx: Contexto, demanda_id: uuid.UUID, accion: str) -> 
         raise no_encontrado("Registro de demanda")
     caso = db.get(Caso, reg.caso_id)
     requerir_caso(db, ctx, caso, "casos", accion)
-    if not ve_caso_reservado(db, ctx, caso):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Registro de un caso reservado.")
     return reg, caso
 
 
@@ -174,7 +168,7 @@ def ver_demanda(demanda_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Se
     reg, caso = _obtener(db, ctx, demanda_id, "consultar")
     audit.registrar(db, ctx, "consultar_demanda", "registro_demanda", reg.id, reg.persona_id)
     db.commit()
-    return {**demanda_out(reg, True, escaneos_de(db, ctx, [reg.id]).get(reg.id)), "caso_numero": caso.numero}
+    return {**demanda_out(reg, escaneos_de(db, ctx, [reg.id]).get(reg.id)), "caso_numero": caso.numero}
 
 
 @router.patch("/demandas/{demanda_id}")
@@ -196,12 +190,11 @@ def modificar_demanda(
 
 
 def escaneos_de(db: Session, ctx: Contexto, ids: list) -> dict:
-    """Documentos (escaneos del original) asociados a cada registro, visibles para el usuario."""
+    """Documentos (escaneos del original) asociados a cada registro."""
     resultado: dict = {}
     if not ids or not ctx.tiene("documentos", "consultar"):
         return resultado
     q = select(Documento).where(Documento.registro_demanda_id.in_(ids), Documento.eliminado_en.is_(None))
     for doc in db.execute(q).scalars():
-        if ve_documento(db, ctx, doc):
-            resultado.setdefault(doc.registro_demanda_id, []).append(str(doc.id))
+        resultado.setdefault(doc.registro_demanda_id, []).append(str(doc.id))
     return resultado

@@ -61,30 +61,3 @@ def validar_pertenencia(
                 status.HTTP_400_BAD_REQUEST, "El expediente no pertenece a este legajo."
             )
     return caso, exp
-
-
-def ve_documento(db: Session, ctx, d) -> bool:
-    """Un documento es visible si su caso (si tiene) es visible y, cuando es
-    reservado por sí o por su tipo, si el usuario puede ver lo reservado."""
-    from ..permissions import ve_caso_reservado, ve_reservado_de_persona
-
-    if d.caso_id is not None:
-        caso = db.get(Caso, d.caso_id)
-        if caso is not None and not ve_caso_reservado(db, ctx, caso):
-            return False
-    if d.reservado or d.tipo_documental.reservado:
-        if d.persona_id is None:
-            alc = ctx.alcance("reservados", "consultar")
-            return alc is not None and alc != "area"
-        return ve_reservado_de_persona(db, ctx, d.persona_id, d.caso_id)
-    return True
-
-
-def ve_expediente(db: Session, ctx, e) -> bool:
-    """La carátula de un expediente vinculado a un caso reservado es reservada."""
-    from ..permissions import ve_caso_reservado
-
-    if e.caso_id is None:
-        return True
-    caso = db.get(Caso, e.caso_id)
-    return caso is None or ve_caso_reservado(db, ctx, caso)

@@ -278,7 +278,6 @@ function FichaCaso({ c, conPersona }: { c: Caso; conPersona?: boolean }) {
       </span>
       {conPersona && c.persona && <span className="m-nombre-chico">{nombre(c.persona)}</span>}
       <span className="m-detalle">
-        {c.reservado && "Reservado · "}
         {c.area?.nombre.replace(/^Departamento |^División /, "") ?? "Sin área"}
         {c.ultima_actividad && ` · últ. actividad ${fecha(c.ultima_actividad)}`}
       </span>
@@ -476,7 +475,7 @@ interface CasoDetalle extends Caso {
   persona: Legajo;
   evoluciones: { id: number; texto: string; fecha: string; autor: { nombre_completo: string } | null }[];
   demandas: { id: string; fecha: string; escaneos: string[] }[];
-  documentos: { id: string; titulo?: string; cargado_en: string; tipo_documental: { nombre: string }; contenido_restringido: boolean }[];
+  documentos: { id: string; titulo?: string; cargado_en: string; tipo_documental: { nombre: string } }[];
   reiteraciones: { id: number; fecha: string }[];
   permisos: { modificar: boolean; derivar: boolean };
 }
@@ -511,12 +510,12 @@ function CasoMovil({ id }: { id: string }) {
         )}
       </Tarjeta>
 
-      {!c.contenido_restringido && indicadores && (
+      {indicadores && (
         <p className="m-indicadores">
           <strong>Indicadores:</strong> {indicadores}
         </p>
       )}
-      {!c.contenido_restringido && c.motivo && <p className="m-motivo">{c.motivo}</p>}
+      {c.motivo && <p className="m-motivo">{c.motivo}</p>}
       <Llamar telefono={c.persona.telefono} />
 
       <div className="m-acciones">
@@ -525,7 +524,7 @@ function CasoMovil({ id }: { id: string }) {
             Agregar evolución
           </Accion>
         )}
-        {puede("documentos", "crear") && !c.contenido_restringido && (
+        {puede("documentos", "crear") && (
           <Accion a={`/m/caso/${id}/fotos`} icono="◉">
             Sacar fotos
           </Accion>
@@ -542,10 +541,7 @@ function CasoMovil({ id }: { id: string }) {
         )}
       </div>
 
-      {c.contenido_restringido ? (
-        <p className="m-tenue">Caso reservado: el contenido solo lo ven sus responsables.</p>
-      ) : (
-        <>
+      <>
           <h2 className="m-subtitulo">Evolución</h2>
           {evol.length === 0 && <p className="m-tenue">Sin registros todavía.</p>}
           <ol className="m-evolucion">
@@ -576,8 +572,7 @@ function CasoMovil({ id }: { id: string }) {
               ))}
             </>
           )}
-        </>
-      )}
+      </>
     </>
   );
 }

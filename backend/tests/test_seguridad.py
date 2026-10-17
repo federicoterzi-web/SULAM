@@ -1,4 +1,4 @@
-"""Sesiones, información reservada, consultas auditadas, unificación y respaldo."""
+"""Sesiones, consultas auditadas, unificación y respaldo."""
 
 from __future__ import annotations
 
@@ -55,44 +55,32 @@ def test_usuario_desactivado_pierde_acceso(admin):
     assert tec.get("/api/tablero").status_code == 401
 
 
-def test_caso_reservado_y_vinculado_reservado(admin):
+def test_sin_informacion_reservada(admin):
+    """Decisión D-021: no existe la categoría «reservado»; quien puede ver un caso ve todo."""
     crear_usuario("tec1", "Técnico", AREA_ADMISION)
     crear_usuario("tec2", "Técnico", AREA_ADMISION)
     ids = {u["nombre_completo"]: u["id"] for u in admin.get("/api/catalogos").json()["usuarios_asignables"]}
     p = nueva_persona(admin)
-    caso = nuevo_caso(admin, p["id"], reservado=True, motivo="Denuncia de maltrato", responsable_id=ids["Tec1"])
+    # El campo ya no existe: pedirlo es un error de validación.
+    assert admin.post("/api/casos", json={"persona_id": p["id"], "reservado": True}).status_code == 422
+    caso = nuevo_caso(admin, p["id"], motivo="Denuncia de maltrato", responsable_id=ids["Tec1"])
     r = admin.post("/api/documentos", data={"tipo_documental_id": "6", "titulo": "Acta", "persona_id": p["id"], "caso_id": caso["id"]},
                    files={"archivo": ("a.pdf", PDF, "application/pdf")})
     doc = r.json()
     vinculos = {v["nombre"]: v["id"] for v in admin.get("/api/catalogos").json()["tipos_vinculo"]}
     admin.post(f"/api/personas/{p['id']}/vinculados",
-               json={"tipo_vinculo_id": vinculos["Denunciante"], "apellidos": "VECINA", "nombres": "Ana", "reservado": True})
-
-    # La técnica asignada ve todo.
-    tec1 = Cliente("tec1")
-    c = tec1.get(f"/api/casos/{caso['id']}").json()
-    assert c["motivo"] == "Denuncia de maltrato" and c["documentos"]
-    assert tec1.get(f"/api/documentos/{doc['id']}/archivo").status_code == 200
-    v = tec1.get(f"/api/personas/{p['id']}").json()["vinculados"][0]
-    assert v["apellidos"] == "VECINA"
-
-    # Otro técnico sabe que el caso existe (evita intervenciones duplicadas) pero no ve su contenido.
-    tec2 = Cliente("tec2")
-    c = tec2.get(f"/api/casos/{caso['id']}").json()
-    assert c["contenido_restringido"] is True and c["motivo"] is None and c["documentos"] == []
-    assert tec2.get(f"/api/documentos/{doc['id']}/archivo").status_code == 403
-    legajo = tec2.get(f"/api/personas/{p['id']}").json()
-    assert legajo["casos"][0]["contenido_restringido"] is True
-    assert legajo["documentos"][0]["contenido_restringido"] is True and "titulo" not in legajo["documentos"][0]
-    v = legajo["vinculados"][0]
-    assert v["contenido_restringido"] is True and "apellidos" not in v
-
-    # La carátula de un expediente del caso reservado tampoco se muestra.
+               json={"tipo_vinculo_id": vinculos["Denunciante"], "apellidos": "VECINA", "nombres": "Ana"})
     admin.post("/api/expedientes", json={"persona_id": p["id"], "caso_id": caso["id"], "numero": "J-1/2026",
                                          "tipo": "judicial", "caratula": "s/ protección"})
-    assert tec1.get(f"/api/personas/{p['id']}").json()["expedientes"][0]["caratula"] == "s/ protección"
-    exp = tec2.get(f"/api/personas/{p['id']}").json()["expedientes"][0]
-    assert exp["caratula"] is None and exp["contenido_restringido"] is True
+
+    tec2 = Cliente("tec2")  # sin el caso asignado
+    c = tec2.get(f"/api/casos/{caso['id']}").json()
+    assert c["motivo"] == "Denuncia de maltrato" and c["documentos"] and "contenido_restringido" not in c
+    assert tec2.get(f"/api/documentos/{doc['id']}/archivo").status_code == 200
+    legajo = tec2.get(f"/api/personas/{p['id']}").json()
+    assert legajo["vinculados"][0]["apellidos"] == "VECINA"
+    assert legajo["expedientes"][0]["caratula"] == "s/ protección"
+    assert "reservados" not in admin.get("/api/admin/permisos-catalogo").json()
 
 
 def test_las_consultas_quedan_registradas(admin):

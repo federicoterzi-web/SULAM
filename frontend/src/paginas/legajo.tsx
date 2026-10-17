@@ -8,7 +8,6 @@ import {
   Enlace,
   Estado,
   Modal,
-  Reservado,
   Seccion,
   Vacio,
   documento,
@@ -191,14 +190,9 @@ export function PaginaLegajo({ id }: { id: string }) {
               {l.vinculados.map((v) => (
                 <tr key={v.id} className={v.activo ? "" : "fila-inactiva"}>
                   <td>
-                    {v.tipo_vinculo.nombre} {v.reservado && <Reservado />} {!v.activo && <small>(inactivo)</small>}
+                    {v.tipo_vinculo.nombre} {!v.activo && <small>(inactivo)</small>}
                   </td>
-                  {v.contenido_restringido ? (
-                    <td colSpan={3} className="tenue">
-                      Información reservada
-                    </td>
-                  ) : (
-                    <>
+                  <>
                       <td>
                         {v.es_institucion ? v.nombre_institucion : `${(v.apellidos ?? "").toUpperCase()}, ${v.nombres ?? ""}`}
                         {v.numero_documento && <small className="tenue"> · Doc. {v.numero_documento}</small>}
@@ -215,8 +209,7 @@ export function PaginaLegajo({ id }: { id: string }) {
                           </button>
                         )}
                       </td>
-                    </>
-                  )}
+                  </>
                 </tr>
               ))}
             </tbody>
@@ -305,7 +298,7 @@ export function TablaCasos({ casos, conPersona }: { casos: Caso[]; conPersona?: 
         {casos.map((c) => (
           <tr key={c.id}>
             <td>
-              <Enlace a={`/casos/${c.id}`}>{c.numero}</Enlace> {c.reservado && <Reservado />}
+              <Enlace a={`/casos/${c.id}`}>{c.numero}</Enlace>
               {c.motivo && <div className="tenue recorte">{c.motivo}</div>}
             </td>
             {conPersona && <td>{c.persona && <Enlace a={`/legajos/${c.persona.id}`}>{nombre(c.persona)}</Enlace>}</td>}
@@ -344,7 +337,7 @@ export function TablaExpedientes({ expedientes, casos = [] }: { expedientes: Exp
             </td>
             <td>{x.tipo === "judicial" ? "Judicial" : "Administrativo"}</td>
             <td>{x.organismo ?? "—"}</td>
-            <td>{x.contenido_restringido ? <Reservado /> : x.caratula ?? "—"}</td>
+            <td>{x.caratula ?? "—"}</td>
             <td>{x.caso_id ? <Enlace a={`/casos/${x.caso_id}`}>{numeroCaso[x.caso_id] ?? "Ver caso"}</Enlace> : "—"}</td>
           </tr>
         ))}
@@ -430,7 +423,6 @@ function FormVinculado({ personaId, vinculado, alGuardar }: { personaId: string;
     telefono: vinculado?.telefono ?? "",
     domicilio: vinculado?.domicilio ?? "",
     observaciones: vinculado?.observaciones ?? "",
-    reservado: vinculado?.reservado ?? false,
     activo: vinculado?.activo ?? true,
   });
   const { enviando, error, ejecutar } = useEnvio();
@@ -495,10 +487,6 @@ function FormVinculado({ personaId, vinculado, alGuardar }: { personaId: string;
           <textarea rows={2} value={d.observaciones} onChange={cambia("observaciones")} />
         </Campo>
       </div>
-      <label className="casilla">
-        <input type="checkbox" checked={d.reservado} onChange={cambia("reservado")} />
-        Identidad reservada (por ejemplo, denunciante)
-      </label>
       {vinculado && (
         <label className="casilla">
           <input type="checkbox" checked={d.activo} onChange={cambia("activo")} />

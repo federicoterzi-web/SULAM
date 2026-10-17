@@ -1,4 +1,4 @@
-"""Conversión de entidades a JSON, ocultando lo reservado cuando corresponde."""
+"""Conversión de entidades a JSON."""
 
 from __future__ import annotations
 
@@ -80,18 +80,16 @@ CAMPOS_CARATULA = (
 )
 
 
-def caratula_out(c: Caso, visible: bool) -> dict:
+def caratula_out(c: Caso) -> dict:
     d = {k: getattr(c, k) for k in CAMPOS_CARATULA}
     d["fecha_ingreso"] = (c.fecha_ingreso or c.abierto_en.date()).isoformat()
     d["fecha_ultimo_ingreso"] = c.fecha_ultimo_ingreso.isoformat() if c.fecha_ultimo_ingreso else None
-    d["indicadores"] = (c.indicadores or []) if visible else []
-    d["intervenciones"] = (c.intervenciones or []) if visible else []
-    if not visible:
-        d["intervencion_derivacion"] = d["intervencion_otro"] = None
+    d["indicadores"] = c.indicadores or []
+    d["intervenciones"] = c.intervenciones or []
     return d
 
 
-def demanda_out(r, visible: bool = True, escaneos: list[str] | None = None) -> dict:
+def demanda_out(r, escaneos: list[str] | None = None) -> dict:
     from .models import RegistroDemanda
 
     base = {
@@ -105,10 +103,7 @@ def demanda_out(r, visible: bool = True, escaneos: list[str] | None = None) -> d
         "cargado_desde_papel": r.cargado_desde_papel,
         "escaneos": escaneos or [],
         "creado_en": r.creado_en.isoformat(),
-        "contenido_restringido": not visible,
     }
-    if not visible:
-        return base
     excluir = {
         "id", "caso_id", "persona_id", "fecha", "creado_por", "creado_en", "actualizado_en", "agente_id",
         "receptor_id", "receptor_nombre", "cargado_desde_papel",
@@ -121,20 +116,18 @@ def demanda_out(r, visible: bool = True, escaneos: list[str] | None = None) -> d
     return base
 
 
-def caso_out(c: Caso, visible: bool, persona: Persona | None = None, detalle: bool = False) -> dict:
+def caso_out(c: Caso, persona: Persona | None = None, detalle: bool = False) -> dict:
     d = {
         "id": str(c.id),
         "numero": c.numero,
         "persona_id": str(c.persona_id),
         "estado": c.estado,
-        "reservado": c.reservado,
-        "contenido_restringido": not visible,
         "area": {"id": c.area.id, "nombre": c.area.nombre} if c.area else None,
         "abierto_en": c.abierto_en.isoformat(),
         "cerrado_en": c.cerrado_en.isoformat() if c.cerrado_en else None,
         "ultima_actividad": c.ultima_actividad.isoformat() if c.ultima_actividad else None,
-        "motivo": c.motivo if visible else None,
-        "caratula": caratula_out(c, visible),
+        "motivo": c.motivo,
+        "caratula": caratula_out(c),
         "caratula_impresa_en": c.caratula_impresa_en.isoformat() if c.caratula_impresa_en else None,
         "responsables": [
             usuario_breve(a.usuario) for a in c.asignaciones if a.hasta is None
@@ -147,7 +140,7 @@ def caso_out(c: Caso, visible: bool, persona: Persona | None = None, detalle: bo
             {
                 "estado_anterior": h.estado_anterior,
                 "estado_nuevo": h.estado_nuevo,
-                "motivo": h.motivo if visible else None,
+                "motivo": h.motivo,
                 "usuario": usuario_breve(h.usuario),
                 "en": h.en.isoformat(),
             }
@@ -157,42 +150,33 @@ def caso_out(c: Caso, visible: bool, persona: Persona | None = None, detalle: bo
     return d
 
 
-def vinculado_out(v: PersonaVinculada, visible: bool) -> dict:
-    base = {
+def vinculado_out(v: PersonaVinculada) -> dict:
+    return {
         "id": str(v.id),
         "persona_id": str(v.persona_id),
         "tipo_vinculo": {"id": v.tipo_vinculo.id, "nombre": v.tipo_vinculo.nombre},
         "es_institucion": v.es_institucion,
-        "reservado": v.reservado,
         "activo": v.activo,
-        "contenido_restringido": not visible,
+        "apellidos": v.apellidos,
+        "nombres": v.nombres,
+        "nombre_institucion": v.nombre_institucion,
+        "numero_documento": v.numero_documento,
+        "telefono": v.telefono,
+        "domicilio": v.domicilio,
+        "observaciones": v.observaciones,
     }
-    if visible:
-        base.update(
-            {
-                "apellidos": v.apellidos,
-                "nombres": v.nombres,
-                "nombre_institucion": v.nombre_institucion,
-                "numero_documento": v.numero_documento,
-                "telefono": v.telefono,
-                "domicilio": v.domicilio,
-                "observaciones": v.observaciones,
-            }
-        )
-    return base
 
 
-def expediente_out(e: Expediente, visible: bool = True) -> dict:
+def expediente_out(e: Expediente) -> dict:
     return {
         "id": str(e.id),
         "numero": e.numero,
         "tipo": e.tipo,
         "organismo": e.organismo,
-        "caratula": e.caratula if visible else None,
+        "caratula": e.caratula,
         "persona_id": str(e.persona_id),
         "caso_id": str(e.caso_id) if e.caso_id else None,
-        "observaciones": e.observaciones if visible else None,
-        "contenido_restringido": not visible,
+        "observaciones": e.observaciones,
         "creado_en": e.creado_en.isoformat(),
     }
 
@@ -223,8 +207,8 @@ def ingreso_out(i: Ingreso, persona: Persona | None = None) -> dict:
     }
 
 
-def documento_out(d: Documento, visible: bool, cargado_por: Usuario | None = None) -> dict:
-    base = {
+def documento_out(d: Documento, cargado_por: Usuario | None = None) -> dict:
+    return {
         "id": str(d.id),
         "persona_id": str(d.persona_id) if d.persona_id else None,
         "caso_id": str(d.caso_id) if d.caso_id else None,
@@ -232,24 +216,16 @@ def documento_out(d: Documento, visible: bool, cargado_por: Usuario | None = Non
         "ingreso_id": str(d.ingreso_id) if d.ingreso_id else None,
         "registro_demanda_id": str(d.registro_demanda_id) if d.registro_demanda_id else None,
         "tipo_documental": {"id": d.tipo_documental.id, "nombre": d.tipo_documental.nombre},
-        "reservado": d.reservado or d.tipo_documental.reservado,
-        "contenido_restringido": not visible,
         "cargado_en": d.cargado_en.isoformat(),
         "eliminado": d.eliminado_en is not None,
+        "titulo": d.titulo,
+        "descripcion": d.descripcion,
+        "nombre_original": d.nombre_original,
+        "mime": d.mime,
+        "tamano": d.tamano,
+        "sha256": d.sha256,
+        "cargado_por": usuario_breve(cargado_por),
     }
-    if visible:
-        base.update(
-            {
-                "titulo": d.titulo,
-                "descripcion": d.descripcion,
-                "nombre_original": d.nombre_original,
-                "mime": d.mime,
-                "tamano": d.tamano,
-                "sha256": d.sha256,
-                "cargado_por": usuario_breve(cargado_por),
-            }
-        )
-    return base
 
 
 def reiteracion_out(r) -> dict:

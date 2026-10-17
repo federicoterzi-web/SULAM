@@ -28,7 +28,7 @@ backend/
     config.py         Configuración por variables de entorno / .env
     db.py             Motor y sesiones de base de datos
     models.py         Modelo de datos (todas las tablas)
-    permissions.py    Catálogo de permisos, alcances y reglas de información reservada
+    permissions.py    Catálogo de permisos y alcances
     security.py       Contraseñas (scrypt) y sesiones
     deps.py           Autenticación por petición y verificación CSRF
     audit.py          Registro de auditoría
@@ -36,7 +36,7 @@ backend/
     numbering.py      Numeración correlativa (legajos, casos, ingresos)
     storage.py        Almacenamiento de archivos (interfaz + implementación local)
     backup.py         Respaldo y restauración
-    serializers.py    Salida JSON, con ocultamiento de lo reservado
+    serializers.py    Salida JSON
     schemas.py        Validación de datos de entrada
     seed.py           Catálogos y roles iniciales; datos de demostración
     cli.py            Comandos de administración
@@ -85,14 +85,13 @@ auditoria (solo agregado)     sesiones     areas     contadores
 | Fuerza bruta | Bloqueo temporal tras 5 intentos fallidos; mismo mensaje para usuario inexistente |
 | Primer ingreso | Cambio de contraseña obligatorio antes de usar el sistema |
 | Permisos | Verificados en el servidor en cada operación (el frontend solo oculta botones por comodidad) |
-| Información reservada | Casos, documentos y vinculados reservados se devuelven sin contenido a quien no corresponde |
 | Auditoría | Tabla de solo agregado: triggers en PostgreSQL impiden `UPDATE`, `DELETE` y `TRUNCATE` |
 | Archivos | Se valida el tipo por contenido (no por extensión), tamaño máximo configurable, SHA-256 de cada archivo |
 | Cabeceras | `nosniff`, `X-Frame-Options: DENY`, CSP restrictiva, `Cache-Control: no-store` en la API |
 
 ### Permisos: módulo × acción × alcance
 
-`personas`, `casos`, `expedientes`, `mesa_entrada`, `documentos`, `reservados`, `auditoria`, `administracion` × `consultar`, `crear`, `modificar`, `descargar`, `derivar`, `administrar` × alcance:
+`personas`, `casos`, `expedientes`, `mesa_entrada`, `documentos`, `recursos`, `auditoria`, `administracion` × `consultar`, `crear`, `modificar`, `descargar`, `derivar`, `administrar` × alcance:
 
 | Alcance | Casos | Legajos / documentos / expedientes |
 |---|---|---|

@@ -18,7 +18,7 @@ from ..schemas import DocumentoPatch, EliminarDocumentoIn
 from ..security import ahora
 from ..serializers import documento_out
 from ..storage import almacenamiento_actual, almacenamiento_por_nombre, copiar_a_temporal, detectar_mime
-from ._comun import no_encontrado, obtener_persona, registrar_actividad_caso, validar_pertenencia, ve_documento
+from ._comun import no_encontrado, obtener_persona, registrar_actividad_caso, validar_pertenencia
 
 router = APIRouter(tags=["documentos"])
 
@@ -44,8 +44,6 @@ def _verificar_acceso(db: Session, ctx: Contexto, d: Documento, accion: str) -> 
             ctx.requerir("documentos", accion)
         if ctx.alcance("documentos", accion) == "propios" and d.cargado_por != ctx.id:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Documento fuera de su alcance.")
-    if not ve_documento(db, ctx, d):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Documento reservado.")
 
 
 @router.post("/documentos", status_code=201)
@@ -59,7 +57,6 @@ def cargar_documento(
     expediente_id: str | None = Form(None),
     ingreso_id: str | None = Form(None),
     registro_demanda_id: str | None = Form(None),
-    reservado: bool = Form(False),
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
@@ -148,7 +145,6 @@ def cargar_documento(
         sha256=guardado.sha256,
         almacenamiento=almacen.nombre,
         clave_almacenamiento=guardado.clave,
-        reservado=reservado,
         cargado_por=ctx.id,
     )
     db.add(doc)
@@ -168,7 +164,7 @@ def cargar_documento(
     )
     db.commit()
 
-    r = documento_out(doc, True, ctx.usuario)
+    r = documento_out(doc, ctx.usuario)
     r["advertencias"] = []
     if identicos:
         mismos_legajo = [d for d in identicos if d.persona_id == pid and pid is not None]
@@ -186,7 +182,7 @@ def ver_documento(documento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db
     if d is None:
         raise no_encontrado("Documento")
     _verificar_acceso(db, ctx, d, "consultar")
-    return documento_out(d, True, db.get(Usuario, d.cargado_por) if d.cargado_por else None)
+    return documento_out(d, db.get(Usuario, d.cargado_por) if d.cargado_por else None)
 
 
 @router.get("/documentos/{documento_id}/archivo")
@@ -251,7 +247,7 @@ def modificar_documento(
         audit.registrar(db, ctx, "modificar", "documento", d.id, d.persona_id, {"cambios": diff})
         db.commit()
         db.refresh(d)
-    return documento_out(d, True, db.get(Usuario, d.cargado_por) if d.cargado_por else None)
+    return documento_out(d, db.get(Usuario, d.cargado_por) if d.cargado_por else None)
 
 
 @router.post("/documentos/{documento_id}/eliminar")
@@ -322,7 +318,6 @@ def cargar_fotos(
     persona_id: str | None = Form(None),
     caso_id: str | None = Form(None),
     registro_demanda_id: str | None = Form(None),
-    reservado: bool = Form(False),
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
@@ -351,7 +346,6 @@ def cargar_fotos(
         expediente_id=None,
         ingreso_id=None,
         registro_demanda_id=registro_demanda_id,
-        reservado=reservado,
         ctx=ctx,
         db=db,
     )

@@ -261,10 +261,7 @@ _CATALOGOS = {
 
 
 def _catalogo_out(obj) -> dict:
-    d = {"id": obj.id, "nombre": obj.nombre, "activo": obj.activo}
-    if isinstance(obj, TipoDocumental):
-        d["reservado"] = obj.reservado
-    return d
+    return {"id": obj.id, "nombre": obj.nombre, "activo": obj.activo}
 
 
 def _modelo(catalogo: str):
@@ -283,8 +280,6 @@ def listar_catalogo(catalogo: str, ctx: Contexto = Depends(_admin), db: Session 
 def crear_item(catalogo: str, datos: CatalogoIn, ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
     modelo, entidad = _modelo(catalogo)
     obj = modelo(nombre=datos.nombre, activo=datos.activo)
-    if modelo is TipoDocumental:
-        obj.reservado = bool(datos.reservado)
     db.add(obj)
     try:
         db.flush()
@@ -305,8 +300,6 @@ def modificar_item(
     if obj is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Elemento inexistente.")
     valores = {"nombre": datos.nombre, "activo": datos.activo}
-    if modelo is TipoDocumental and datos.reservado is not None:
-        valores["reservado"] = datos.reservado
     diff = audit.cambios(obj, valores)
     if diff:
         try:

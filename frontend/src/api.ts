@@ -205,7 +205,6 @@ export interface Demanda {
   cargado_desde_papel: boolean;
   escaneos: string[];
   creado_en: string;
-  contenido_restringido: boolean;
   caso_numero?: string;
   agente?: UsuarioBreve | null;
   datos_persona?: Record<string, string | null>;
@@ -226,8 +225,6 @@ export interface Caso {
   numero: string;
   persona_id: string;
   estado: "abierto" | "en_seguimiento" | "pausado" | "cerrado";
-  reservado: boolean;
-  contenido_restringido: boolean;
   area: { id: number; nombre: string } | null;
   abierto_en: string;
   cerrado_en: string | null;
@@ -257,7 +254,6 @@ export interface Expediente {
   caso_id: string | null;
   observaciones: string | null;
   creado_en: string;
-  contenido_restringido?: boolean;
   persona?: PersonaResumen;
 }
 
@@ -265,9 +261,7 @@ export interface Vinculado {
   id: string;
   tipo_vinculo: { id: number; nombre: string };
   es_institucion: boolean;
-  reservado: boolean;
   activo: boolean;
-  contenido_restringido: boolean;
   apellidos?: string | null;
   nombres?: string | null;
   nombre_institucion?: string | null;
@@ -285,8 +279,6 @@ export interface Documento {
   ingreso_id: string | null;
   registro_demanda_id?: string | null;
   tipo_documental: { id: number; nombre: string };
-  reservado: boolean;
-  contenido_restringido: boolean;
   cargado_en: string;
   titulo?: string;
   descripcion?: string | null;
@@ -336,7 +328,7 @@ export interface Legajo extends PersonaDetalle {
 
 export interface Catalogos {
   areas: { id: number; nombre: string }[];
-  tipos_documentales: { id: number; nombre: string; reservado: boolean }[];
+  tipos_documentales: { id: number; nombre: string }[];
   tipos_vinculo: { id: number; nombre: string }[];
   usuarios_asignables: { id: string; nombre_completo: string; area: string | null }[];
 }

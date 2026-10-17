@@ -24,7 +24,7 @@ Casos se cierran, documentos se dan de baja lógica, vínculos se desactivan, le
 ### D-006 · Auditoría de solo agregado, incluidas las consultas — *Vigente*
 Se registran también aperturas de legajos, búsquedas y descargas. Motivo: los legajos contienen **datos sensibles** en los términos de la Ley 25.326 (art. 2, por ejemplo información referente a la salud) e información sobre situaciones de violencia, y la institución debe poder responder *quién vio qué*. La inmutabilidad se garantiza en la base con triggers, no solo en la aplicación.
 
-### D-007 · Información reservada — *Vigente*
+### D-007 · Información reservada — *Reemplazada por D-021*
 Además del alcance por rol, existe una marca de **reserva** para casos, tipos documentales, documentos y personas vinculadas. Un caso reservado muestra su existencia (para evitar intervenciones duplicadas) pero no su contenido. Acceso: responsables asignados, quien lo creó y el permiso *Información reservada › Consultar*.
 
 ### D-008 · Almacenamiento local en la 0.1; Google Drive postergado — *Provisoria*
@@ -45,7 +45,7 @@ Criterios documentados en FUNCTIONAL_SPEC §3.1. Mismo documento bloquea; el res
 ### D-012 · Participación del área informática — *Vigente*
 Para dar al área informática un rol real sin reabrir decisiones funcionales, se separan:
 - **Propuestas sujetas a su evaluación**: hosting, almacenamiento definitivo, copias de seguridad programadas, monitoreo, certificados HTTPS, integración con cuentas institucionales, endurecimiento del servidor.
-- **Principios no negociables** (definidos por la Dirección): legajo único, permisos verificados en el servidor, auditoría inmutable, información reservada, nada se borra, sin datos reales sin las condiciones de D-009.
+- **Principios no negociables** (definidos por la Dirección): legajo único, permisos verificados en el servidor, auditoría inmutable, nada se borra, sin datos reales sin las condiciones de D-009.
 
 ### D-013 · Catálogos iniciales — *Provisoria*
 - **Áreas**: organigrama vigente (2011). La propuesta de modificación no está aprobada y no se usa.
@@ -82,6 +82,9 @@ Pedido de la Dirección para agilizar las cargas, también en visitas (con datos
 - Sesiones iniciadas desde el celular: cierre por inactividad a los 15 minutos (configurable). Al vencer se pide la contraseña sin perder lo escrito.
 - Sin carga sin conexión por ahora (requeriría guardar datos sensibles en el teléfono). Se reevalúa si en las visitas la falta de señal resulta frecuente.
 - Uso fuera de la oficina: requiere publicar con HTTPS (preparado con Caddy en `docker-compose`, perfil `publico`) o una VPN. Lo define informática (P-009).
+
+### D-021 · Sin categoría de información reservada — *Vigente*
+Decisión de la Dirección (17/10/2026): se elimina la marca de reserva de casos, documentos, tipos documentales y personas vinculadas, y el permiso *Información reservada*. Quien puede consultar un caso ve todo su contenido, también en el mapa y las salidas. Lo que sigue limitando el acceso es el alcance de cada rol (consultar / modificar) y la auditoría, que registra cada consulta. La migración 0012 elimina las columnas.
 
 ---
 

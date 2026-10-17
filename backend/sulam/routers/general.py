@@ -23,10 +23,9 @@ from ..models import (
     TipoVinculo,
     Usuario,
 )
-from ..permissions import Contexto, filtro_casos, filtro_personas, ve_caso_reservado
+from ..permissions import Contexto, filtro_casos, filtro_personas
 from ..serializers import caso_out, expediente_out, ingreso_out, persona_resumen
 from ..textutil import escapar_like, normalizar, normalizar_documento
-from ._comun import ve_expediente
 
 router = APIRouter(tags=["general"])
 
@@ -78,7 +77,7 @@ def buscar(
             .limit(10)
         )
         resultado["casos"] = [
-            caso_out(c, ve_caso_reservado(db, ctx, c), p) for c, p in db.execute(q_casos).all()
+            caso_out(c, p) for c, p in db.execute(q_casos).all()
         ]
 
     if ctx.tiene("expedientes", "consultar"):
@@ -90,7 +89,7 @@ def buscar(
             .limit(10)
         )
         resultado["expedientes"] = [
-            {**expediente_out(e, ve_expediente(db, ctx, e)), "persona": persona_resumen(p)}
+            {**expediente_out(e), "persona": persona_resumen(p)}
             for e, p in db.execute(q_exp).all()
         ]
 
@@ -119,7 +118,7 @@ def catalogos(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
             for a in db.execute(select(Area).where(Area.activo).order_by(Area.nombre)).scalars()
         ],
         "tipos_documentales": [
-            {"id": t.id, "nombre": t.nombre, "reservado": t.reservado}
+            {"id": t.id, "nombre": t.nombre}
             for t in db.execute(
                 select(TipoDocumental).where(TipoDocumental.activo).order_by(TipoDocumental.orden, TipoDocumental.nombre)
             ).scalars()

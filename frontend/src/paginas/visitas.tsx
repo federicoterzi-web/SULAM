@@ -12,7 +12,6 @@ export interface CasoEnMapa {
   numero: string;
   actuacion: string;
   estado: string;
-  reservado: boolean;
   area: string | null;
   responsables: UsuarioBreve[];
   maltrato: boolean;

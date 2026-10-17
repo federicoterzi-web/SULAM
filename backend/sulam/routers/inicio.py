@@ -1,8 +1,7 @@
 """Página de inicio de cada rol.
 
 Cada rol tiene un «perfil de inicio» (roles.inicio) que decide qué ve la persona
-al entrar. Todo lo que se muestra respeta los permisos de siempre: alcance de
-consulta y contenido reservado.
+al entrar. Todo lo que se muestra respeta el alcance de consulta de cada rol.
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ from ..models import (
     Reiteracion,
     Usuario,
 )
-from ..permissions import Contexto, filtro_casos, ve_caso_reservado
+from ..permissions import Contexto, filtro_casos
 from ..security import ahora
 from ..serializers import caso_out, documento_out, expediente_out, ingreso_out, persona_resumen
 
@@ -73,7 +72,7 @@ def _visibles(ctx: Contexto):
 
 
 def _casos(db: Session, ctx: Contexto, consulta) -> list[dict]:
-    return [caso_out(c, ve_caso_reservado(db, ctx, c), p) for c, p in db.execute(consulta).all()]
+    return [caso_out(c, p) for c, p in db.execute(consulta).all()]
 
 
 def _base(ctx: Contexto):
@@ -127,7 +126,7 @@ def _tecnico(db: Session, ctx: Contexto) -> dict:
     nuevo_desde = ahora() - timedelta(days=7)
     casos = []
     for c, p in filas:
-        d = caso_out(c, True, p)
+        d = caso_out(c, p)
         e = ultimas.get(c.id)
         d["ultima_evolucion"] = (
             {"fecha": e.fecha.isoformat(), "texto": e.texto[:240], "autor": e.autor.nombre_completo if e.autor else e.autor_nombre}
@@ -276,7 +275,6 @@ def _direccion(db: Session, ctx: Contexto) -> dict:
             "cerrados": sum(a["cerrados"] for a in areas),
         },
         "maltrato_mes": {"casos": len(con_maltrato), "por_tipo": dict(tipos)},
-        "reservados_activos": _contar(db, visibles, _activos(), Caso.reservado),
         "sin_responsable": {
             "cantidad": _contar(db, visibles, _activos(), ~_con_responsable()),
             "casos": _casos(db, ctx, sin_responsable_q.order_by(Caso.abierto_en).limit(8)),
@@ -357,7 +355,7 @@ def _administrativo_area(db: Session, ctx: Contexto) -> dict:
     expedientes = []
     if ctx.tiene("expedientes", "consultar"):
         expedientes = [
-            {**expediente_out(e, ve_caso_reservado(db, ctx, c)), "persona": persona_resumen(p)}
+            {**expediente_out(e), "persona": persona_resumen(p)}
             for e, c, p in db.execute(
                 select(Expediente, Caso, Persona)
                 .join(Caso, Caso.id == Expediente.caso_id)
@@ -368,7 +366,7 @@ def _administrativo_area(db: Session, ctx: Contexto) -> dict:
             ).all()
         ]
     documentos = [
-        documento_out(d, True, ctx.usuario)
+        documento_out(d, ctx.usuario)
         for d in db.execute(
             select(Documento)
             .where(Documento.cargado_por == ctx.id, Documento.eliminado_en.is_(None))

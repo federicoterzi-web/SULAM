@@ -63,9 +63,6 @@ class TipoDocumental(Base):
     __tablename__ = "tipos_documentales"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     nombre: Mapped[str] = mapped_column(String(200), unique=True)
-    # Un tipo reservado solo es visible con el permiso "reservados.consultar"
-    # o para quien tenga asignado el caso.
-    reservado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     orden: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
 
@@ -255,8 +252,6 @@ class PersonaVinculada(Base):
     telefono: Mapped[str | None] = mapped_column(String(100))
     domicilio: Mapped[str | None] = mapped_column(Text)
     observaciones: Mapped[str | None] = mapped_column(Text)
-    # Ej.: identidad de un denunciante. Requiere "reservados.consultar".
-    reservado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
     creado_en: Mapped[datetime] = _ts()
@@ -290,7 +285,6 @@ class Caso(Base):
     persona_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("personas.id"), index=True)
     area_id: Mapped[int | None] = mapped_column(ForeignKey("areas.id"))
     estado: Mapped[str] = mapped_column(String(20), default="abierto")
-    reservado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     motivo: Mapped[str | None] = mapped_column(Text)  # "Motivo de ingreso" de la carátula
 
     # Carátula (modelo institucional)
@@ -545,7 +539,6 @@ class Documento(Base):
     sha256: Mapped[str] = mapped_column(String(64))
     almacenamiento: Mapped[str] = mapped_column(String(30))
     clave_almacenamiento: Mapped[str] = mapped_column(String(300))
-    reservado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     cargado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
     cargado_en: Mapped[datetime] = _ts()
     eliminado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

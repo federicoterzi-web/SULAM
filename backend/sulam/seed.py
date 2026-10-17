@@ -64,14 +64,13 @@ ROLES: dict[str, dict] = {
             ("mesa_entrada", "consultar", T), ("mesa_entrada", "crear", T), ("mesa_entrada", "modificar", T),
             ("documentos", "consultar", T), ("documentos", "crear", T), ("documentos", "descargar", T),
             ("documentos", "modificar", T), ("documentos", "administrar", T),
-            ("reservados", "consultar", T),
             ("auditoria", "consultar", T),
             ("administracion", "administrar", T),
         ],
     },
     "Directora": {
         "inicio": "direccion",
-        "descripcion": "Conducción de la Dirección: ve todos los casos, la información reservada y la auditoría, y puede derivar y asignar. No administra usuarios ni permisos.",
+        "descripcion": "Conducción de la Dirección: ve todos los casos y la auditoría, y puede derivar y asignar. No administra usuarios ni permisos.",
         "permisos": [
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
@@ -80,13 +79,12 @@ ROLES: dict[str, dict] = {
             ("mesa_entrada", "consultar", T),
             ("documentos", "consultar", T), ("documentos", "crear", T), ("documentos", "descargar", T),
             ("documentos", "modificar", T),
-            ("reservados", "consultar", T),
             ("auditoria", "consultar", T),
         ],
     },
     "Jefe/a de departamento": {
         "inicio": "jefatura",
-        "descripcion": "Conduce un departamento que maneja casos (Admisión o Promoción, según el área del usuario): abre carátulas, asigna técnicos y ve la información reservada de su área.",
+        "descripcion": "Conduce un departamento que maneja casos (Admisión o Promoción, según el área del usuario): abre carátulas y asigna técnicos en su área.",
         "permisos": [
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AR),
@@ -95,7 +93,6 @@ ROLES: dict[str, dict] = {
             ("mesa_entrada", "consultar", T),
             ("documentos", "consultar", T), ("documentos", "crear", AR), ("documentos", "descargar", AR),
             ("documentos", "modificar", AR),
-            ("reservados", "consultar", AR),
         ],
     },
     "Jefe/a de división": {
@@ -109,7 +106,6 @@ ROLES: dict[str, dict] = {
             ("mesa_entrada", "consultar", T),
             ("documentos", "consultar", T), ("documentos", "crear", AR), ("documentos", "descargar", AR),
             ("documentos", "modificar", AR),
-            ("reservados", "consultar", AR),
         ],
     },
     "Carga de Datos": {

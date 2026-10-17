@@ -19,7 +19,7 @@ def test_ubicacion_y_mapa(admin, cliente):
     p3 = nueva_persona(admin, apellidos="TRES", nombres="Otre", numero_documento="3333333")
     c1 = nuevo_caso(admin, p1["id"], area_id=areas[AREA_ADMISION], responsable_id=tec_id, indicadores=["maltrato.fisico"])
     nuevo_caso(admin, p2["id"], area_id=areas[AREA_ADMISION])
-    reservado = nuevo_caso(admin, p3["id"], area_id=areas[AREA_ADMISION], reservado=True)
+    tercero = nuevo_caso(admin, p3["id"], area_id=areas[AREA_ADMISION], indicadores=["maltrato.psicologico"])
 
     tec = cliente("tec")
     # El técnico asignado marca el domicilio con el GPS durante la visita.
@@ -33,8 +33,7 @@ def test_ubicacion_y_mapa(admin, cliente):
     assert [x["caso_id"] for x in mios["puntos"]] == [c1["id"]] and mios["puntos"][0]["maltrato"] is True
     todos = cliente("otro").get("/api/mapa/casos", params={"de": "todos"}).json()
     ids = {x["caso_id"] for x in todos["puntos"]}
-    assert c1["id"] in ids and reservado["id"] not in ids  # el reservado no aparece para quien no lo ve
-    assert reservado["id"] in {x["caso_id"] for x in admin.get("/api/mapa/casos", params={"de": "todos"}).json()["puntos"]}
+    assert c1["id"] in ids and tercero["id"] in ids  # todos los técnicos ven todos los casos
     assert len(todos["partida"]) == 2
 
     # Quitar la ubicación lo pasa a «sin ubicación».

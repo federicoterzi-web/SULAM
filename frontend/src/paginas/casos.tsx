@@ -8,7 +8,6 @@ import {
   Enlace,
   Estado,
   Modal,
-  Reservado,
   Seccion,
   Vacio,
   documento,
@@ -98,15 +97,14 @@ export function PaginaCaso({ id }: { id: string }) {
     setDialogo(null);
     recargar();
   };
-  const restringido = c.contenido_restringido;
-  const escaneosCaratula = c.documentos.filter((d) => !d.contenido_restringido && d.tipo_documental.nombre === "Carátula");
+  const escaneosCaratula = c.documentos.filter((d) => d.tipo_documental.nombre === "Carátula");
 
   return (
     <>
       <div className="ficha">
         <div>
           <span className="ficha-legajo">
-            Caso {c.numero} {c.reservado && <Reservado />}
+            Caso {c.numero}
           </span>
           <h1>{c.persona && <Enlace a={`/legajos/${c.persona.id}`}>{nombre(c.persona)}</Enlace>}</h1>
           <p className="ficha-datos">
@@ -115,7 +113,7 @@ export function PaginaCaso({ id }: { id: string }) {
           </p>
         </div>
         <div className="fila-botones">
-          {c.permisos.modificar && !restringido && (
+          {c.permisos.modificar && (
             <>
               <button className="boton boton-primario" onClick={() => setDialogo("estado")}>
                 Cambiar estado
@@ -133,23 +131,16 @@ export function PaginaCaso({ id }: { id: string }) {
         </div>
       </div>
 
-      {restringido && (
-        <div className="aviso aviso-info">
-          Caso reservado: puede ver su existencia y estado, pero no su contenido. Solicite acceso a la Dirección si
-          necesita intervenir.
-        </div>
-      )}
-
       <Seccion
         titulo="Carátula de legajo"
         acciones={
           <>
-            {c.permisos.modificar && !restringido && (
+            {c.permisos.modificar && (
               <button className="boton" onClick={() => setDialogo("caratula")}>
                 Editar carátula
               </button>
             )}
-            {c.permisos.modificar && !restringido && (
+            {c.permisos.modificar && (
               <button className="boton" onClick={() => setDialogo("escaneo-caratula")}>
                 Adjuntar escaneo
               </button>
@@ -185,10 +176,10 @@ export function PaginaCaso({ id }: { id: string }) {
           </p>
         )}
         <h3>Motivo de ingreso</h3>
-        <p className="texto-largo">{restringido ? "Reservado" : c.motivo || "—"}</p>
+        <p className="texto-largo">{c.motivo || "—"}</p>
         <h3>
           Reiteraciones ({c.reiteraciones.length})
-          {c.permisos.modificar && !restringido && (
+          {c.permisos.modificar && (
             <button className="boton boton-chico" style={{ marginLeft: "0.8rem" }} onClick={() => setDialogo("reiteracion")}>
               Registrar reiteración
             </button>
@@ -217,8 +208,7 @@ export function PaginaCaso({ id }: { id: string }) {
       <Seccion
         titulo="Registro de demanda"
         acciones={
-          c.permisos.modificar &&
-          !restringido && (
+          c.permisos.modificar && (
             <button className="boton boton-primario" onClick={() => setDialogo("demanda")}>
               {c.demandas.length ? "Nuevo registro" : "Cargar registro de demanda"}
             </button>
@@ -240,15 +230,7 @@ export function PaginaCaso({ id }: { id: string }) {
               </tr>
             </thead>
             <tbody>
-              {c.demandas.map((d) =>
-                d.contenido_restringido ? (
-                  <tr key={d.id} className="fila-restringida">
-                    <td>{fecha(d.fecha)}</td>
-                    <td colSpan={5}>
-                      <Reservado texto="Contenido reservado" />
-                    </td>
-                  </tr>
-                ) : (
+              {c.demandas.map((d) => (
                   <tr key={d.id}>
                     <td>{fecha(d.fecha)}</td>
                     <td>
@@ -290,16 +272,13 @@ export function PaginaCaso({ id }: { id: string }) {
                       )}
                     </td>
                   </tr>
-                ),
-              )}
+              ))}
             </tbody>
           </table>
         )}
       </Seccion>
 
-      {!restringido && (
-        <SeccionEvolucion casoId={c.id} evoluciones={c.evoluciones} puedeAgregar={c.permisos.modificar} alAgregar={recargar} />
-      )}
+      <SeccionEvolucion casoId={c.id} evoluciones={c.evoluciones} puedeAgregar={c.permisos.modificar} alAgregar={recargar} />
 
       <Seccion titulo="Responsables">
         {c.asignaciones && c.asignaciones.length > 0 ? (
@@ -349,14 +328,12 @@ export function PaginaCaso({ id }: { id: string }) {
       <Seccion
         titulo="Documentos del caso"
         acciones={
-          !restringido && (
-            <button className="boton" onClick={() => setDialogo("documento")}>
-              Cargar documento
-            </button>
-          )
+          <button className="boton" onClick={() => setDialogo("documento")}>
+            Cargar documento
+          </button>
         }
       >
-        {restringido ? <Vacio>Contenido reservado.</Vacio> : <TablaDocumentos documentos={c.documentos} alCambiar={recargar} />}
+        <TablaDocumentos documentos={c.documentos} alCambiar={recargar} />
       </Seccion>
 
       <Seccion titulo="Expedientes del caso">
@@ -559,12 +536,11 @@ function FormEditarCaso({ caso, alGuardar }: { caso: Caso; alGuardar: () => void
   const { catalogos } = useSesion();
   const [areaId, setAreaId] = useState(String(caso.area?.id ?? ""));
   const [motivo, setMotivo] = useState(caso.motivo ?? "");
-  const [reservado, setReservado] = useState(caso.reservado);
   const { enviando, error, ejecutar } = useEnvio();
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     const r = await ejecutar(() =>
-      api.patch(`/casos/${caso.id}`, { area_id: areaId ? Number(areaId) : null, motivo: motivo || null, reservado }),
+      api.patch(`/casos/${caso.id}`, { area_id: areaId ? Number(areaId) : null, motivo: motivo || null }),
     );
     if (r) alGuardar();
   };
@@ -583,10 +559,6 @@ function FormEditarCaso({ caso, alGuardar }: { caso: Caso; alGuardar: () => void
       <Campo etiqueta="Descripción">
         <textarea rows={4} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
       </Campo>
-      <label className="casilla">
-        <input type="checkbox" checked={reservado} onChange={(e) => setReservado(e.target.checked)} />
-        Caso reservado
-      </label>
       <Aviso error={error} />
       <div className="fila-botones">
         <button className="boton boton-primario" disabled={enviando}>

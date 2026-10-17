@@ -130,7 +130,6 @@ class VinculadoIn(Entrada):
     telefono: str | None = Field(default=None, max_length=100)
     domicilio: str | None = Field(default=None, max_length=2000)
     observaciones: str | None = Field(default=None, max_length=5000)
-    reservado: bool = False
 
     _limpiar = field_validator(
         "apellidos", "nombres", "nombre_institucion", "numero_documento", "telefono",
@@ -147,7 +146,6 @@ class VinculadoPatch(Entrada):
     telefono: str | None = Field(default=None, max_length=100)
     domicilio: str | None = Field(default=None, max_length=2000)
     observaciones: str | None = Field(default=None, max_length=5000)
-    reservado: bool | None = None
     activo: bool | None = None
 
 
@@ -200,7 +198,6 @@ class CaratulaCampos(Entrada):
 class CasoIn(CaratulaCampos):
     persona_id: uuid.UUID
     area_id: int | None = None
-    reservado: bool = False
     responsable_id: uuid.UUID | None = None
     ingreso_id: uuid.UUID | None = None
     # Excepción a «una actuación por persona por año» (solo Administración, con motivo).
@@ -211,7 +208,6 @@ class CasoIn(CaratulaCampos):
 class CasoPatch(Entrada):
     area_id: int | None = None
     motivo: str | None = Field(default=None, max_length=5000)
-    reservado: bool | None = None
 
 
 class ReiteracionIn(Entrada):
@@ -362,7 +358,6 @@ class DocumentoPatch(Entrada):
     tipo_documental_id: int | None = None
     caso_id: uuid.UUID | None = None
     expediente_id: uuid.UUID | None = None
-    reservado: bool | None = None
 
 
 class EliminarDocumentoIn(Entrada):
@@ -415,7 +410,6 @@ class NumeracionIn(Entrada):
 class CatalogoIn(Entrada):
     nombre: str = Field(min_length=2, max_length=200)
     activo: bool = True
-    reservado: bool | None = None
 
 
 class CaratulasImpresasIn(Entrada):

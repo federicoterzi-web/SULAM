@@ -23,7 +23,6 @@ from ._comun import (
     obtener_persona,
     registrar_actividad_caso,
     validar_pertenencia,
-    ve_documento,
 )
 
 router = APIRouter(tags=["mesa de entrada"])
@@ -114,7 +113,7 @@ def ver_ingreso(ingreso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Se
         .outerjoin(Usuario, Usuario.id == Documento.cargado_por)
         .where(Documento.ingreso_id == ingreso.id, Documento.eliminado_en.is_(None))
     )
-    r["documentos"] = [documento_out(d, ve_documento(db, ctx, d), u) for d, u in db.execute(q).all()]
+    r["documentos"] = [documento_out(d, u) for d, u in db.execute(q).all()]
 
     # Legajos sugeridos para vincular, según los datos mencionados en el ingreso.
     r["sugerencias"] = []

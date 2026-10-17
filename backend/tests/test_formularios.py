@@ -105,12 +105,12 @@ def test_registro_de_demanda_sobre_caratula(admin):
     assert detalle["demandas"][0]["escaneos"] == [escaneo["id"]]
 
 
-def test_evolucion_y_reserva(admin):
+def test_evolucion_y_permisos(admin):
     crear_usuario("tec1", "Técnico", AREA_ADMISION)
     crear_usuario("tec2", "Técnico", AREA_ADMISION)
     ids = {u["nombre_completo"]: u["id"] for u in admin.get("/api/catalogos").json()["usuarios_asignables"]}
     p = nueva_persona(admin)
-    caso = nuevo_caso(admin, p["id"], reservado=True, responsable_id=ids["Tec1"], **CARATULA)
+    caso = nuevo_caso(admin, p["id"], responsable_id=ids["Tec1"], **CARATULA)
     tec1, tec2 = Cliente("tec1"), Cliente("tec2")
     assert tec1.post(f"/api/casos/{caso['id']}/evolucion", json={"texto": "Visita domiciliaria realizada"}).status_code == 201
     # Evolución escrita en papel por otra persona y cargada después.
@@ -126,10 +126,11 @@ def test_evolucion_y_reserva(admin):
     assert [x["texto"] for x in visto["evoluciones"]] == ["Llamado a la hija", "Visita domiciliaria realizada"]
     assert visto["evoluciones"][1]["autor"]["usuario"] == "tec1"
 
+    # Otro técnico ve todo el caso (no hay información reservada), pero no carga en un caso que no tiene asignado.
     ajeno = tec2.get(f"/api/casos/{caso['id']}").json()
-    assert ajeno["evoluciones"] == [] and ajeno["caratula"]["indicadores"] == []
-    assert ajeno["demandas"][0]["contenido_restringido"] is True and "solicitante_nombre" not in ajeno["demandas"][0]
-    assert tec2.get(f"/api/demandas/{ajeno['demandas'][0]['id']}").status_code == 403
+    assert len(ajeno["evoluciones"]) == 2 and ajeno["caratula"]["indicadores"]
+    assert ajeno["demandas"][0]["solicitante_nombre"] == "X"
+    assert tec2.get(f"/api/demandas/{ajeno['demandas'][0]['id']}").status_code == 200
     assert tec2.post(f"/api/casos/{caso['id']}/evolucion", json={"texto": "x x"}).status_code == 403
 
 

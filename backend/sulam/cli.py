@@ -169,19 +169,19 @@ def cmd_datos_demo(_args) -> None:
         promocion = areas["Departamento Promoción Integral de Derechos"]
         cuidados = areas["División Cuidados y Promoción de Autonomía"]
         casos_def = [
-            (0, admision, "en_seguimiento", "tecnica1", False, "Situación de vulnerabilidad habitacional (ficticio)."),
-            (1, promocion, "abierto", "tecnico2", False, "Solicitud de acompañamiento para trámites (ficticio)."),
-            (2, admision, "abierto", "tecnica1", True, "Denuncia de posible maltrato en el ámbito familiar (ficticio)."),
-            (3, cuidados, "pausado", "tecnico2", False, "Seguimiento de cuidados domiciliarios (ficticio)."),
-            (4, admision, "cerrado", "tecnica1", False, "Orientación sobre prestaciones (ficticio)."),
+            (0, admision, "en_seguimiento", "tecnica1", "Situación de vulnerabilidad habitacional (ficticio)."),
+            (1, promocion, "abierto", "tecnico2", "Solicitud de acompañamiento para trámites (ficticio)."),
+            (2, admision, "abierto", "tecnica1", "Denuncia de posible maltrato en el ámbito familiar (ficticio)."),
+            (3, cuidados, "pausado", "tecnico2", "Seguimiento de cuidados domiciliarios (ficticio)."),
+            (4, admision, "cerrado", "tecnica1", "Orientación sobre prestaciones (ficticio)."),
         ]
         casos = []
-        for idx, area, estado, tecnico, reservado, motivo in casos_def:
+        for idx, area, estado, tecnico, motivo in casos_def:
             anio, n, numero = nueva_actuacion(db)
             c = Caso(
                 numero=numero, numero_actuacion=n, anio_actuacion=anio,
                 persona_id=personas[idx].id, area_id=area.id,
-                estado=estado, reservado=reservado, motivo=motivo, creado_por=usuarios["carga"].id,
+                estado=estado, motivo=motivo, creado_por=usuarios["carga"].id,
             )
             db.add(c)
             db.flush()
@@ -202,7 +202,7 @@ def cmd_datos_demo(_args) -> None:
         ))
         db.add(PersonaVinculada(
             persona_id=personas[2].id, tipo_vinculo_id=vinculos["Denunciante"].id,
-            apellidos="VECINO", nombres="Identidad reservada (ficticio)", reservado=True,
+            apellidos="VECINO", nombres="Vecina denunciante (ficticio)",
             creado_por=usuarios["carga"].id,
         ))
         db.add(Expediente(

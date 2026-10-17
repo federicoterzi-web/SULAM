@@ -17,8 +17,7 @@ Reglas que el sistema **implementa hoy**. Lo que falta definir está en [DECISIO
 ## 2. Personas e instituciones vinculadas
 
 1. Cada legajo puede tener familiares, referentes, convivientes, denunciantes, representantes, instituciones u otros vínculos (catálogo administrable).
-2. Un vinculado puede marcarse **reservado** (por ejemplo, la identidad de un denunciante): solo lo ven quienes tienen acceso a información reservada o un caso asignado de esa persona. Los demás ven que existe un vínculo de ese tipo, sin datos.
-3. Los vínculos no se borran: se marcan como no vigentes.
+2. Los vínculos no se borran: se marcan como no vigentes.
 
 ## 3. Duplicados y unificación
 
@@ -58,7 +57,7 @@ Reglas que el sistema **implementa hoy**. Lo que falta definir está en [DECISIO
    - Pausar, cerrar o reabrir exige **motivo**.
    - Cada cambio guarda estado anterior, nuevo, usuario, fecha y motivo. El historial nunca se modifica.
 4. **Asignación**: uno o varios responsables. Reasignar finaliza la asignación anterior (con fecha y usuario) sin borrarla.
-5. **Casos reservados** (por ejemplo, denuncias de maltrato): cualquiera con acceso al legajo ve que el caso existe, su número, estado, área y responsables —para evitar intervenciones duplicadas— pero **no** su descripción, documentos, motivos de cambios de estado ni la carátula de sus expedientes. El contenido lo ven los responsables asignados, quien lo creó y quienes tienen el permiso *Información reservada › Consultar*.
+5. **Sin información reservada** (D-021): no hay casos, documentos ni vinculados reservados. Quien puede consultar un caso ve todo su contenido; modificarlo depende del alcance de su rol (por ejemplo, el técnico modifica solo sus casos asignados).
 6. El tablero de cada usuario muestra sus casos activos asignados y señala los que llevan **más de 30 días sin movimientos**.
 
 ## 5. bis-0. Una actuación por persona por año; reiteraciones
@@ -83,7 +82,6 @@ Implementados según los modelos institucionales («Modelo de carátula de legaj
    - Datos de la persona: género, obra social / cobertura de salud, CUD, domicilio, localidad, departamento y teléfono. **Estos datos actualizan el legajo** (con auditoría).
    - Información administrativa: fecha de ingreso, antecedentes y fecha del último ingreso, motivo de ingreso, tipo de ingreso (Espontáneo presencial/no presencial, Mesa de Entrada/Amparo, Portal SAE, Derivada), indicadores y tipo de intervención (con texto para «Derivación» y «Otro»).
    - **Antecedentes**: si no se indican, se completan con los ingresos previos registrados en SULAM. Si la carátula dice «No» y el sistema encuentra un ingreso anterior, se muestra un aviso.
-   - Si se marca un indicador de **maltrato**, el sistema sugiere registrar el caso como reservado.
 2. **Registro de demanda**: se carga después, sobre el caso, y llega **precargado** con la carátula (indicadores, intervenciones, tipo de ingreso, motivo como solicitud expresa) y con el legajo (género, teléfono, domicilio, coberturas, CUD, discapacidad). Secciones 1 a 8 del modelo, observaciones, lugar y fecha. El **receptor** es el usuario que lo carga.
    - Los datos que también pertenecen al legajo lo actualizan (se puede desmarcar).
    - Guarda una copia de los datos de identificación de la persona al momento del registro.
@@ -96,9 +94,8 @@ Implementados según los modelos institucionales («Modelo de carátula de legaj
 - La impresión aclara que es una transcripción del original en papel y quién la cargó.
 - El rol Carga de Datos puede transcribir carátulas, registros y evoluciones.
 
-**Reserva**: en un caso reservado, quien no tiene acceso ve que existe un registro de demanda (fecha y receptor) pero no su contenido; tampoco ve indicadores, intervenciones ni la evolución.
 
-**Carátula para carpeta**: versión de lectura rápida para la carpeta física. Muestra solo lo cargado y destaca lo importante: N° de actuación grande, nombre, legajo (DNI), edad; en blanco y negro y sin rellenos (poca tinta): alertas graves —maltrato, negligencia, situación de calle— en mayúsculas, negrita, con ▲ y borde doble; «RESERVADO» con borde doble, antecedentes, reiteraciones; motivo, ingreso, intervención, domicilio, cobertura y responsables. Lleva un QR que abre el caso en SULAM (no contiene datos personales; requiere iniciar sesión).
+**Carátula para carpeta**: versión de lectura rápida para la carpeta física. Muestra solo lo cargado y destaca lo importante: N° de actuación grande, nombre, legajo (DNI), edad; en blanco y negro y sin rellenos (poca tinta): alertas graves —maltrato, negligencia, situación de calle— en mayúsculas, negrita, con ▲ y borde doble; antecedentes, reiteraciones; motivo, ingreso, intervención, domicilio, cobertura y responsables. Lleva un QR que abre el caso en SULAM (no contiene datos personales; requiere iniciar sesión).
 
 **Impresión**: la carátula y el registro de demanda (con la evolución) tienen una vista imprimible en A4 con la estructura de los modelos y las casillas marcadas (☒/☐).
 
@@ -139,24 +136,24 @@ Técnicos de municipios y comunas y referentes de otras instituciones: nombre, c
 ## 5 decies. Casos en el mapa y salidas de visita
 
 - **Ubicación del domicilio** (legajo): se marca en el mapa o, durante una visita, con «Estoy en el domicilio: usar mi ubicación» (GPS del celular). Nunca se consulta a servicios externos con domicilios de casos. Queda en la auditoría.
-- **Mapa de casos** (*Mapa de casos y salidas*; en el celular desde el inicio): casos activos con ubicación, de «Mis casos», «Mi área» o «Todos», a la vista de todos los técnicos. Rojo: maltrato; naranja: sin movimiento hace más de 30 días. Los reservados solo aparecen para quien puede verlos. Se pueden mostrar también los recursos.
+- **Mapa de casos** (*Mapa de casos y salidas*; en el celular desde el inicio): casos activos con ubicación, de «Mis casos», «Mi área» o «Todos», a la vista de todos los técnicos. Rojo: maltrato; naranja: sin movimiento hace más de 30 días. Se pueden mostrar también los recursos.
 - **Salida**: se eligen los casos a visitar; SULAM sugiere el orden (vecino más cercano y mejora 2-opt, en línea recta desde el punto de partida `SULAM_PUNTO_PARTIDA`, o desde la ubicación del celular), muestra los kilómetros aproximados, abre el recorrido en Google Maps (en tramos si son más de 10 paradas) e imprime la **hoja de salida** (orden, persona, domicilio, teléfono, caso, responsables y espacio para hora y observaciones).
 - Los casos sin ubicación se listan para completarlos.
 
 ## 5 septies. Página de inicio por rol
 
-Cada rol tiene una página de inicio (se elige en *Administración › Roles*). Quien tiene varios roles puede cambiar de inicio; SULAM recuerda el último elegido en ese navegador. Todo respeta los permisos habituales y el contenido reservado.
+Cada rol tiene una página de inicio (se elige en *Administración › Roles*). Quien tiene varios roles puede cambiar de inicio; SULAM recuerda el último elegido en ese navegador. Todo respeta el alcance de consulta de cada rol.
 
 | Inicio | Roles iniciales | Qué muestra |
 |---|---|---|
-| Dirección | Directora; Dirección y Administración | Año en curso: actuaciones nuevas, reiteraciones, activos y cerrados, en total y por departamento; maltrato del mes por tipo; reservados activos; casos sin responsable y sin movimiento; actividad reciente |
+| Dirección | Directora; Dirección y Administración | Año en curso: actuaciones nuevas, reiteraciones, activos y cerrados, en total y por departamento; maltrato del mes por tipo; casos sin responsable y sin movimiento; actividad reciente |
 | Jefatura | Jefe/a de departamento; Jefe/a de división | Su área: casos sin responsable (para asignar), equipo con su carga de casos, casos sin movimiento, actuaciones y reiteraciones del mes, carátulas por imprimir |
 | Técnico/a | Técnico | Sus casos por urgencia (maltrato, volvió a consultar en los últimos 30 días, sin movimiento, asignado esta semana) con la última evolución |
 | Carga de datos | Carga de Datos | Casos sin registro de demanda, registros desde papel sin escaneo, carátulas por imprimir, lo cargado hoy |
 | Mesa de Entrada | Mesa de Entrada | Ingresos de hoy, ingresos sin vincular, sus últimos ingresos |
 | Administrativo de área | Administrativo de Área | Casos del área, expedientes recientes, documentos que cargó, carátulas por imprimir |
 
-Roles nuevos (propuesta, editables): **Directora** (ve todo, incluida la información reservada y la auditoría; no administra usuarios), **Jefe/a de departamento** y **Jefe/a de división** (mismos permisos; el departamento o la división sale del área del usuario: Participación y Sensibilización Ciudadana, Cuidados y Promoción de Autonomía, o quien cumple esa función en un departamento). La información reservada con alcance «Su área» permite ver solo la de los casos del área propia.
+Roles nuevos (propuesta, editables): **Directora** (ve todo, incluida la auditoría; no administra usuarios), **Jefe/a de departamento** y **Jefe/a de división** (mismos permisos; el departamento o la división sale del área del usuario: Participación y Sensibilización Ciudadana, Cuidados y Promoción de Autonomía, o quien cumple esa función en un departamento).
 
 ## 5 sexies. Membrete institucional
 
@@ -176,7 +173,7 @@ Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un
 
 - **Inicio**: buscador (DNI, apellido o N° de legajo; botón para teclado numérico) y *Mis casos* (asignados); si no hay, los de actividad reciente.
 - **Legajo**: datos de identificación y domicilio, botones para llamar a la persona y a sus vinculados con teléfono, casos. Si ya tiene actuación en el año ofrece *Nueva demanda (reiteración)*; si no, *Nueva carátula*.
-- **Caso**: actuación, estado, indicadores y motivo, llamar, *Agregar evolución*, *Sacar fotos*, *Fotografiar registro de demanda* (si alguno no tiene escaneo) y *Registrar reiteración*; últimas entradas de evolución y documentos. El contenido reservado se oculta igual que en la versión completa.
+- **Caso**: actuación, estado, indicadores y motivo, llamar, *Agregar evolución*, *Sacar fotos*, *Fotografiar registro de demanda* (si alguno no tiene escaneo) y *Registrar reiteración*; últimas entradas de evolución y documentos.
 - **Nuevo caso**: DNI primero (avisa al instante si ya tiene legajo); opción sin DNI con número «SD-»; control de posibles duplicados con motivo obligatorio para confirmar. Sigue la **carátula en 6 pasos** (ingreso, persona, domicilio, indicadores, intervención, confirmar con resumen editable). El botón «atrás» del teléfono vuelve al paso anterior sin perder lo cargado. La actuación se numera al crear; si la persona ya tiene una en el año, se ofrece la reiteración (regla de §5).
 - **Fotos**: una o varias hojas con la cámara (o elegidas del teléfono), reordenables; se guardan como **un PDF** asociado al legajo, al caso y, si corresponde, al registro de demanda como escaneo del original. Las fotos se reducen a 2000 px y se envían sin metadatos; el servidor vuelve a procesarlas (máx. 2400 px, sin EXIF) y muestra el avance del envío.
 - **Sesión**: las iniciadas desde el celular vencen a los 15 minutos sin uso. Al vencer cualquier sesión con la pantalla abierta, se pide la contraseña encima y se conserva lo escrito.
@@ -194,10 +191,9 @@ Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un
 1. Formatos admitidos en la 0.1: **PDF, JPG y PNG**, validados por su contenido real. Tamaño máximo configurable (20 MB por defecto).
 2. Cada documento tiene: identificador interno, legajo, caso o expediente opcional, ingreso de origen, tipo documental, título, descripción, nombre original, tamaño, SHA-256, usuario y fecha de carga.
 3. **Archivos idénticos**: se aceptan, se avisa al usuario y no ocupan espacio adicional.
-4. **Reservados**: un documento es reservado si se marca así, si su tipo documental es reservado o si pertenece a un caso reservado.
-5. **Baja lógica** con motivo obligatorio y permiso específico: el documento deja de mostrarse, pero el archivo y su registro se conservan.
-6. Cada descarga o visualización queda registrada.
-7. **Fotos desde el celular**: varias fotos JPG/PNG (hasta 30 hojas) se unen en un único PDF al cargarlas (§5 quater); se aplican los mismos permisos y la misma auditoría que a cualquier documento.
+4. **Baja lógica** con motivo obligatorio y permiso específico: el documento deja de mostrarse, pero el archivo y su registro se conservan.
+5. Cada descarga o visualización queda registrada.
+6. **Fotos desde el celular**: varias fotos JPG/PNG (hasta 30 hojas) se unen en un único PDF al cargarlas (§5 quater); se aplican los mismos permisos y la misma auditoría que a cualquier documento.
 
 ## 8. Búsqueda
 
@@ -215,7 +211,7 @@ Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un
 
 | Rol | Resumen de la propuesta |
 |---|---|
-| Dirección y Administración del Sistema | Todo, con información reservada, auditoría y administración |
+| Dirección y Administración del Sistema | Todo, con auditoría y administración |
 | Carga de Datos | Alta y actualización transversal de legajos, casos, expedientes y documentos |
 | Técnico | Consulta general; modifica legajos, casos y documentos de sus casos asignados |
 | Mesa de Entrada | Ingresos y su vinculación; consulta de legajos; alta de expedientes; documentos propios |
@@ -247,5 +243,5 @@ Cada criterio del documento de diseño (§13.3) tiene una prueba automatizada:
 | Registrar la autoría de las operaciones | `test_registrar_autoria_de_las_operaciones`, `test_auditoria_inmutable` |
 | Recuperar la información después de reiniciar | `test_recuperar_informacion_despues_de_reiniciar` |
 | *(agregado)* Respaldo y restauración | `test_respaldo_y_restauracion` |
-| *(agregado)* Información reservada | `test_caso_reservado_y_vinculado_reservado` |
+| *(agregado)* Sin información reservada (D-021) | `test_sin_informacion_reservada` |
 | *(agregado)* Registro de consultas | `test_las_consultas_quedan_registradas` |

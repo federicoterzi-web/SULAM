@@ -7,10 +7,6 @@ Cada permiso combina:
 
 Un usuario puede tener varios roles; para cada (módulo, acción) vale el alcance
 más amplio entre sus roles. Toda verificación se hace en el servidor.
-
-Además del alcance, la información marcada como reservada (casos reservados,
-tipos documentales reservados, personas vinculadas reservadas) solo es visible
-con el permiso "reservados.consultar" o para quien tenga asignado el caso.
 """
 
 from __future__ import annotations
@@ -47,10 +43,6 @@ CATALOGO: dict[str, dict] = {
     "documentos": {
         "nombre": "Gestión documental",
         "acciones": ["consultar", "crear", "descargar", "modificar", "administrar"],
-    },
-    "reservados": {
-        "nombre": "Información reservada",
-        "acciones": ["consultar"],
     },
     "auditoria": {
         "nombre": "Auditoría",
@@ -184,85 +176,3 @@ def requerir_caso(db: Session, ctx: Contexto, caso: Caso, modulo: str, accion: s
     alcance = ctx.requerir(modulo, accion)
     if not caso_en_alcance(db, ctx, caso, alcance):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "El caso está fuera de su alcance.")
-
-
-# ---------------------------------------------------------------------------
-# Información reservada
-# ---------------------------------------------------------------------------
-
-
-def esta_asignado(db: Session, ctx: Contexto, caso_id: uuid.UUID) -> bool:
-    q = select(CasoAsignacion.id).where(
-        CasoAsignacion.caso_id == caso_id,
-        CasoAsignacion.usuario_id == ctx.id,
-        CasoAsignacion.hasta.is_(None),
-    )
-    return db.execute(q).first() is not None
-
-
-def asignado_a_persona(db: Session, ctx: Contexto, persona_id: uuid.UUID) -> bool:
-    q = select(CasoAsignacion.id).join(Caso, Caso.id == CasoAsignacion.caso_id).where(
-        Caso.persona_id == persona_id,
-        CasoAsignacion.usuario_id == ctx.id,
-        CasoAsignacion.hasta.is_(None),
-    )
-    return db.execute(q).first() is not None
-
-
-def _reservados_de_toda_la_direccion(ctx: Contexto) -> bool:
-    """«reservados.consultar» con alcance amplio: ve toda la información reservada.
-
-    Con alcance «area» (jefes de departamento) solo ve la de los casos de su área.
-    """
-    alc = ctx.alcance("reservados", "consultar")
-    return alc is not None and alc != "area"
-
-
-def _reservados_del_area(ctx: Contexto) -> int | None:
-    if ctx.alcance("reservados", "consultar") == "area":
-        return ctx.usuario.area_id
-    return None
-
-
-def ve_caso_reservado(db: Session, ctx: Contexto, caso: Caso) -> bool:
-    if not caso.reservado:
-        return True
-    if _reservados_de_toda_la_direccion(ctx) or caso.creado_por == ctx.id:
-        return True
-    area = _reservados_del_area(ctx)
-    if area is not None and caso.area_id == area:
-        return True
-    return esta_asignado(db, ctx, caso.id)
-
-
-def ve_reservado_de_persona(
-    db: Session, ctx: Contexto, persona_id: uuid.UUID, caso_id: uuid.UUID | None = None
-) -> bool:
-    """Para documentos o vinculados reservados de una persona."""
-    if _reservados_de_toda_la_direccion(ctx):
-        return True
-    area = _reservados_del_area(ctx)
-    if area is not None:
-        q = select(Caso.id).where(Caso.area_id == area)
-        q = q.where(Caso.id == caso_id) if caso_id is not None else q.where(Caso.persona_id == persona_id)
-        if db.execute(q).first() is not None:
-            return True
-    if caso_id is not None:
-        return esta_asignado(db, ctx, caso_id)
-    return asignado_a_persona(db, ctx, persona_id)
-
-
-def filtro_casos_visibles_reservados(ctx: Contexto):
-    """Condición SQL: el caso no es reservado o el usuario puede verlo."""
-    if _reservados_de_toda_la_direccion(ctx):
-        return true()
-    condiciones = [
-        Caso.reservado.is_(False),
-        Caso.creado_por == ctx.id,
-        Caso.id.in_(_casos_asignados(ctx.id)),
-    ]
-    area = _reservados_del_area(ctx)
-    if area is not None:
-        condiciones.append(Caso.area_id == area)
-    return or_(*condiciones)
-

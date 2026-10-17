@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api, type Caso, type Documento, type Expediente } from "../api";
-import { Aviso, Campo, Modal, Reservado, Vacio, fechaHora, tamano, useEnvio, useSesion } from "../comun";
+import { Aviso, Campo, Modal, Vacio, fechaHora, tamano, useEnvio, useSesion } from "../comun";
 
 export function TablaDocumentos({
   documentos,
@@ -24,20 +24,10 @@ export function TablaDocumentos({
           </tr>
         </thead>
         <tbody>
-          {documentos.map((d) =>
-            d.contenido_restringido ? (
-              <tr key={d.id} className="fila-restringida">
-                <td>
-                  <Reservado texto="Documento reservado" />
-                </td>
-                <td>{d.tipo_documental.nombre}</td>
-                <td>{fechaHora(d.cargado_en)}</td>
-                <td></td>
-              </tr>
-            ) : (
+          {documentos.map((d) => (
               <tr key={d.id}>
                 <td>
-                  <strong>{d.titulo}</strong> {d.reservado && <Reservado />}
+                  <strong>{d.titulo}</strong>
                   <br />
                   <small className="tenue">
                     {d.nombre_original} · {tamano(d.tamano)}
@@ -68,8 +58,7 @@ export function TablaDocumentos({
                   )}
                 </td>
               </tr>
-            ),
-          )}
+          ))}
         </tbody>
       </table>
       {eliminar && (
@@ -142,7 +131,6 @@ export function FormDocumento({
   const [descripcion, setDescripcion] = useState("");
   const [casoId, setCasoId] = useState(casoFijo ?? "");
   const [expedienteId, setExpedienteId] = useState("");
-  const [reservado, setReservado] = useState(false);
   const [advertencias, setAdvertencias] = useState<string[]>([]);
   const { enviando, error, ejecutar } = useEnvio();
 
@@ -159,7 +147,6 @@ export function FormDocumento({
     if (registroDemandaId) fd.append("registro_demanda_id", registroDemandaId);
     if (casoId) fd.append("caso_id", casoId);
     if (expedienteId) fd.append("expediente_id", expedienteId);
-    fd.append("reservado", String(reservado));
     const d = await ejecutar(() => api.post<Documento>("/documentos", fd));
     if (d) {
       if (d.advertencias?.length) {
@@ -168,8 +155,6 @@ export function FormDocumento({
       } else alGuardar(d);
     }
   };
-
-  const tipoElegido = catalogos.tipos_documentales.find((t) => String(t.id) === tipo);
 
   return (
     <form onSubmit={enviar} className="formulario">
@@ -192,7 +177,6 @@ export function FormDocumento({
             {catalogos.tipos_documentales.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.nombre}
-                {t.reservado ? " (reservado)" : ""}
               </option>
             ))}
           </select>
@@ -204,13 +188,11 @@ export function FormDocumento({
           <Campo etiqueta="Caso">
             <select value={casoId} onChange={(e) => setCasoId(e.target.value)}>
               <option value="">Sin caso (documento del legajo)</option>
-              {casos
-                .filter((c) => !c.contenido_restringido)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.numero}
-                  </option>
-                ))}
+              {casos.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.numero}
+                </option>
+              ))}
             </select>
           </Campo>
         )}
@@ -230,14 +212,6 @@ export function FormDocumento({
           <textarea rows={2} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
         </Campo>
       </div>
-      {tipoElegido?.reservado ? (
-        <p className="tenue">Este tipo documental es reservado: solo lo verán quienes tengan acceso a información reservada o el caso asignado.</p>
-      ) : (
-        <label className="casilla">
-          <input type="checkbox" checked={reservado} onChange={(e) => setReservado(e.target.checked)} />
-          Documento reservado
-        </label>
-      )}
       {advertencias.map((a) => (
         <Aviso key={a} error={a} tipo="info" />
       ))}

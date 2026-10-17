@@ -40,7 +40,7 @@ export function PaginaExpedientes() {
               <tr key={x.id}>
                 <td>
                   <strong>{x.numero}</strong>
-                  {x.contenido_restringido ? <div className="tenue">Carátula reservada</div> : x.caratula && <div className="tenue">{x.caratula}</div>}
+                  {x.caratula && <div className="tenue">{x.caratula}</div>}
                 </td>
                 <td>{x.tipo === "judicial" ? "Judicial" : "Administrativo"}</td>
                 <td>{x.persona && <Enlace a={`/legajos/${x.persona.id}`}>{nombre(x.persona)}</Enlace>}</td>

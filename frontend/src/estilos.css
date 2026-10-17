@@ -18,8 +18,6 @@
   --advertencia-claro: #fff4dc;
   --info-claro: #e8f1fb;
   --exito-claro: #e6f4ee;
-  --reservado: #6b2f8a;
-  --reservado-claro: #f3e9f8;
   --radio: 6px;
   --sombra: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 10%);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -706,10 +704,6 @@ a.indicador:hover {
   color: var(--texto-tenue);
 }
 
-.fila-restringida td {
-  color: var(--texto-tenue);
-  background: #fbf8fd;
-}
 
 .recorte {
   max-width: 420px;
@@ -763,9 +757,9 @@ a.indicador:hover {
   color: #4a5361;
 }
 
-.reservado {
-  background: var(--reservado-claro);
-  color: var(--reservado);
+.bloqueado {
+  background: var(--peligro-claro);
+  color: var(--peligro);
 }
 
 .pendiente {
@@ -1312,11 +1306,6 @@ a.indicador:hover {
   border-style: dashed;
 }
 
-.chip-reservado {
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  border: 0.8mm double #000;
-}
 
 .grilla-carpeta {
   display: grid;

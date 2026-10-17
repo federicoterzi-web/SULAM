@@ -1,7 +1,7 @@
 // Página de inicio: cada rol ve lo que necesita para su trabajo (sulam/routers/inicio.py).
 import { useState, type ReactNode } from "react";
 import { api, type Caso, type Documento, type Expediente, type Ingreso, type PersonaResumen } from "../api";
-import { Aviso, Cargando, ESTADOS, Enlace, Estado, Reservado, Seccion, Vacio, fecha, nombre, useDatos, useSesion } from "../comun";
+import { Aviso, Cargando, ESTADOS, Enlace, Estado, Seccion, Vacio, fecha, nombre, useDatos, useSesion } from "../comun";
 import { TablaCasos } from "./legajo";
 import { textoDe } from "./formularios";
 
@@ -115,8 +115,7 @@ function Actuacion({ c }: { c: Caso }) {
     <>
       <Enlace a={`/casos/${c.id}`}>
         {c.caratula?.numero_actuacion ? `Actuación ${c.caratula.numero_actuacion}/${c.caratula.anio_actuacion}` : c.numero}
-      </Enlace>{" "}
-      {c.reservado && <Reservado />}
+      </Enlace>
     </>
   );
 }
@@ -270,7 +269,6 @@ interface Direccion {
   por_area: { area: string; nuevas: number; reiteraciones: number; activos: number; cerrados: number }[];
   totales: { nuevas: number; reiteraciones: number; activos: number; cerrados: number };
   maltrato_mes: { casos: number; por_tipo: Record<string, number> };
-  reservados_activos: number;
   sin_responsable: { cantidad: number; casos: Caso[] };
   sin_actividad: number;
   recientes: Caso[];
@@ -333,9 +331,6 @@ function InicioDireccion({ d }: { d: Direccion }) {
               ))}
             </ul>
           )}
-          <p className="tenue">
-            {d.reservados_activos} {d.reservados_activos === 1 ? "caso reservado activo" : "casos reservados activos"}.
-          </p>
         </Seccion>
       </div>
 

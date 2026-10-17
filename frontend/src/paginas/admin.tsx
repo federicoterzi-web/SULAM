@@ -116,7 +116,7 @@ function Usuarios() {
               <td>
                 <code>{u.usuario}</code>
                 {!u.activo && <small> (inactivo)</small>}
-                {u.bloqueado_hasta && new Date(u.bloqueado_hasta) > new Date() && <span className="insignia reservado">Bloqueado</span>}
+                {u.bloqueado_hasta && new Date(u.bloqueado_hasta) > new Date() && <span className="insignia bloqueado">Bloqueado</span>}
               </td>
               <td>{u.nombre_completo}</td>
               <td>{u.area?.nombre ?? "—"}</td>
@@ -415,9 +415,9 @@ function FormRol({ rol, catalogo, alGuardar }: { rol?: RolAdmin; catalogo: Catal
 
 // ---------------------------------------------------------------- catálogos
 
-const CATALOGOS: { clave: string; titulo: string; reservable?: boolean }[] = [
+const CATALOGOS: { clave: string; titulo: string }[] = [
   { clave: "areas", titulo: "Áreas" },
-  { clave: "tipos-documentales", titulo: "Tipos documentales", reservable: true },
+  { clave: "tipos-documentales", titulo: "Tipos documentales" },
   { clave: "tipos-vinculo", titulo: "Tipos de vínculo" },
 ];
 
@@ -436,10 +436,9 @@ interface Item {
   id: number;
   nombre: string;
   activo: boolean;
-  reservado?: boolean;
 }
 
-function Catalogo({ clave, titulo, reservable }: { clave: string; titulo: string; reservable?: boolean }) {
+function Catalogo({ clave, titulo }: { clave: string; titulo: string }) {
   const { recargarCatalogos } = useSesion();
   const { datos, error, recargar } = useDatos(() => api.get<Item[]>(`/admin/catalogos/${clave}`), [clave]);
   const [nuevo, setNuevo] = useState("");
@@ -471,22 +470,6 @@ function Catalogo({ clave, titulo, reservable }: { clave: string; titulo: string
                   }
                 />
               </td>
-              {reservable && (
-                <td>
-                  <label className="casilla">
-                    <input
-                      type="checkbox"
-                      checked={!!it.reservado}
-                      onChange={(e) =>
-                        guardar(() =>
-                          api.patch(`/admin/catalogos/${clave}/${it.id}`, { nombre: it.nombre, activo: it.activo, reservado: e.target.checked }),
-                        )
-                      }
-                    />
-                    Reservado
-                  </label>
-                </td>
-              )}
               <td>
                 <label className="casilla">
                   <input

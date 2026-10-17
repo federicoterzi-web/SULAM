@@ -32,8 +32,6 @@ from ..permissions import (
     filtro_casos,
     filtro_personas,
     requerir_persona,
-    ve_caso_reservado,
-    ve_reservado_de_persona,
 )
 from ..schemas import (
     PersonaIn,
@@ -54,7 +52,7 @@ from ..serializers import (
     vinculado_out,
 )
 from ..textutil import escapar_like, normalizar, normalizar_documento
-from ._comun import no_encontrado, obtener_persona, ve_documento, ve_expediente
+from ._comun import no_encontrado, obtener_persona
 
 router = APIRouter(tags=["legajos"])
 
@@ -253,13 +251,13 @@ def ver_legajo(persona_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Ses
             .order_by(Caso.abierto_en.desc())
         )
         for c in db.execute(q).scalars():
-            casos.append(caso_out(c, ve_caso_reservado(db, ctx, c)))
+            casos.append(caso_out(c))
     resultado["casos"] = casos
 
     expedientes: list[dict] = []
     if ctx.tiene("expedientes", "consultar"):
         q = select(Expediente).where(Expediente.persona_id == persona.id).order_by(Expediente.creado_en)
-        expedientes = [expediente_out(e, ve_expediente(db, ctx, e)) for e in db.execute(q).scalars()]
+        expedientes = [expediente_out(e) for e in db.execute(q).scalars()]
     resultado["expedientes"] = expedientes
 
     q = (
@@ -267,9 +265,8 @@ def ver_legajo(persona_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Ses
         .where(PersonaVinculada.persona_id == persona.id)
         .order_by(PersonaVinculada.activo.desc(), PersonaVinculada.creado_en)
     )
-    ve_reservados = ve_reservado_de_persona(db, ctx, persona.id)
     resultado["vinculados"] = [
-        vinculado_out(v, not v.reservado or ve_reservados) for v in db.execute(q).scalars()
+        vinculado_out(v) for v in db.execute(q).scalars()
     ]
 
     documentos: list[dict] = []
@@ -281,7 +278,7 @@ def ver_legajo(persona_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Ses
             .order_by(Documento.cargado_en.desc())
         )
         for d, u in db.execute(q).all():
-            documentos.append(documento_out(d, ve_documento(db, ctx, d), u))
+            documentos.append(documento_out(d, u))
     resultado["documentos"] = documentos
 
     q = select(Ingreso).where(Ingreso.persona_id == persona.id).order_by(Ingreso.fecha_ingreso.desc())
@@ -506,10 +503,10 @@ def crear_vinculado(
     db.refresh(v)
     audit.registrar(
         db, ctx, "crear", "vinculado", v.id, persona.id,
-        {"tipo_vinculo": tipo.nombre, "reservado": v.reservado},
+        {"tipo_vinculo": tipo.nombre},
     )
     db.commit()
-    return vinculado_out(v, True)
+    return vinculado_out(v)
 
 
 @router.patch("/vinculados/{vinculado_id}")
@@ -524,8 +521,6 @@ def modificar_vinculado(
         raise no_encontrado("Persona vinculada")
     persona = obtener_persona(db, v.persona_id)
     requerir_persona(db, ctx, persona, "personas", "modificar")
-    if v.reservado and not ve_reservado_de_persona(db, ctx, persona.id):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Información reservada.")
     cambios_pedidos = datos.model_dump(exclude_unset=True)
     if "tipo_vinculo_id" in cambios_pedidos:
         tipo = db.get(TipoVinculo, cambios_pedidos["tipo_vinculo_id"])
@@ -537,8 +532,8 @@ def modificar_vinculado(
     if diff:
         audit.registrar(
             db, ctx, "modificar", "vinculado", v.id, persona.id,
-            {"campos": sorted(diff.keys()) if v.reservado else diff},
+            diff,
         )
         db.commit()
         db.refresh(v)
-    return vinculado_out(v, True)
+    return vinculado_out(v)
