@@ -227,6 +227,13 @@ Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un
 - Permisos: la ve quien consulta el legajo; la registra quien puede cargar documentos en él. El CUIL y la negativa se pueden agregar como datos en los informes.
 - La lectura automática se probó con PDF simulados: falta calibrarla con negativas reales.
 
+## 5 quattuordecies. Novedades
+
+- Página **Novedades** (menú, con la cantidad sin confirmar) que mezcla las de la **Dirección (para todos)** y las de **cada área** (cada persona ve las generales y las de su área). Filtros: todas, sin confirmar, de la Dirección, de las áreas.
+- **Publican** la Directora y Dirección (para todos o para un área) y las jefaturas de departamento y de división (solo para su área); permiso `novedades.publicar`. Texto con formato, **circular adjunta** (PDF, JPG o PNG), opción de fijarla arriba.
+- **Confirmación de lectura** («Leí y estoy al tanto»): una vez por persona, con fecha y hora. Quien publica ve «Leída por X de Y» y la lista de quién falta. Se puede publicar sin pedir confirmación.
+- Las no confirmadas aparecen arriba del inicio de cada perfil, en computadora y celular. Retirar una novedad la oculta (queda registrada en la auditoría).
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.

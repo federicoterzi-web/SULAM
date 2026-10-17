@@ -56,6 +56,10 @@ CATALOGO: dict[str, dict] = {
         "nombre": "Plantillas de informes (con alcance «área»: las del área propia)",
         "acciones": ["modificar"],
     },
+    "novedades": {
+        "nombre": "Novedades y circulares (con alcance «área»: solo para el área propia)",
+        "acciones": ["publicar"],
+    },
     "administracion": {
         "nombre": "Administración del sistema",
         "acciones": ["administrar"],

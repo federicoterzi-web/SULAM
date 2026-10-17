@@ -761,3 +761,43 @@ class Constancia(Base):
     en: Mapped[datetime] = _ts()
 
     usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
+# ---------------------------------------------------------------------------
+# Novedades: circulares e información de la Dirección y de cada área.
+# ---------------------------------------------------------------------------
+
+
+class Novedad(Base):
+    """Aviso o circular. Sin área = para toda la Dirección; con área = para esa área."""
+
+    __tablename__ = "novedades"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    titulo: Mapped[str] = mapped_column(String(300))
+    cuerpo: Mapped[str] = mapped_column(Text)  # HTML limpio (párrafos, listas, negrita…)
+    area_id: Mapped[int | None] = mapped_column(ForeignKey("areas.id"), index=True)
+    requiere_confirmacion: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    fijada: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Circular adjunta (PDF o imagen), en el almacenamiento de archivos.
+    archivo_nombre: Mapped[str | None] = mapped_column(String(300))
+    archivo_mime: Mapped[str | None] = mapped_column(String(100))
+    archivo_tamano: Mapped[int | None] = mapped_column(BigInteger)
+    archivo_sha256: Mapped[str | None] = mapped_column(String(64))
+    archivo_almacenamiento: Mapped[str | None] = mapped_column(String(30))
+    archivo_clave: Mapped[str | None] = mapped_column(String(300))
+    autor_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    publicada_en: Mapped[datetime] = _ts()
+    retirada_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retirada_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+
+    area: Mapped[Area | None] = relationship(lazy="joined")
+    autor: Mapped[Usuario | None] = relationship(foreign_keys=[autor_id], lazy="joined")
+
+
+class NovedadLectura(Base):
+    """Confirmación de lectura (una por persona)."""
+
+    __tablename__ = "novedades_lecturas"
+    novedad_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("novedades.id", ondelete="CASCADE"), primary_key=True)
+    usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"), primary_key=True)
+    confirmada_en: Mapped[datetime] = _ts()

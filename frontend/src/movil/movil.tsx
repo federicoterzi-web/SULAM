@@ -1,6 +1,7 @@
 // Versión para celular: las mismas funciones de SULAM pensadas para el pulgar.
 // Pantallas cortas, botones grandes, teclado numérico para DNI y fechas, y la
 // cámara integrada. Nada se guarda en el teléfono: todo va directo al servidor.
+import { NovedadesPendientes, PaginaNovedades } from "../paginas/novedades";
 import { PanelNegativa } from "../paginas/anses";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, type Caso, type Legajo, type PersonaResumen } from "../api";
@@ -85,6 +86,7 @@ export function Movil({ ruta, alSalir, alCambiarPassword }: { ruta: string; alSa
         <div className="m-menu-fondo" onClick={() => setMenu(false)}>
           <nav className="m-menu" onClick={(e) => e.stopPropagation()}>
             <MenuUsuario />
+            <a href="#/m/novedades">Novedades</a>
             <a href={"#" + equivalenteCompleto(p)}>Ver en la versión completa</a>
             <button onClick={alCambiarPassword}>Cambiar contraseña</button>
             <button onClick={salir}>Cerrar sesión</button>
@@ -154,6 +156,8 @@ function titulo(p: string[]): string {
       return p[1] === "nuevo" ? "Nuevo contacto" : "Editar contacto";
     case "ingreso":
       return "Mesa de Entrada";
+    case "novedades":
+      return "Novedades";
     case "informe":
       return "Informe";
     case "visitas":
@@ -193,6 +197,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "recursos") return "/recursos";
   if (p[0] === "contactos") return "/contactos";
   if (p[0] === "ingreso") return "/mesa";
+  if (p[0] === "novedades") return "/novedades";
   if (p[0] === "informe" && p[1]) return `/informes/${p[1]}`;
   if (p[0] === "visitas") return "/visitas";
   return "/";
@@ -216,6 +221,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       return <Aviso error="Pantalla inexistente." />;
     case "ingreso":
       return <IngresoMovil />;
+    case "novedades":
+      return <PaginaNovedades movil />;
     case "informe":
       return <PaginaInforme id={p[1]} movil key={p[1]} />;
     case "visitas":
@@ -415,6 +422,7 @@ function InicioMovil() {
           ))}
         </div>
       )}
+      <NovedadesPendientes movil />
       <CajaBusqueda inicial="" />
       <div className="m-acciones">
         {puede("mesa_entrada", "crear") && (

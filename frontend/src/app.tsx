@@ -1,3 +1,4 @@
+import { PaginaNovedades, usePendientes } from "./paginas/novedades";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, api, configurarSesion, type Catalogos, type Formularios, type Yo } from "./api";
 import { Aviso, Cargando, Campo, Enlace, SesionCtx, esCelular, navegar, rutaActual, useEnvio, useRuta } from "./comun";
@@ -198,6 +199,7 @@ export function CambioPassword({
 
 const MENU: { ruta: string; texto: string; permiso?: [string, string] }[] = [
   { ruta: "/", texto: "Tablero" },
+  { ruta: "/novedades", texto: "Novedades" },
   { ruta: "/legajos", texto: "Legajos", permiso: ["personas", "consultar"] },
   { ruta: "/casos", texto: "Casos", permiso: ["casos", "consultar"] },
   { ruta: "/imprimir-caratulas", texto: "Imprimir carátulas", permiso: ["casos", "consultar"] },
@@ -319,6 +321,7 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
           {MENU.filter((m) => !m.permiso || puede(...m.permiso)).map((m) => (
             <Enlace key={m.ruta} a={m.ruta} className={seccion === m.ruta ? "activo" : ""}>
               {m.texto}
+              {m.ruta === "/novedades" && <InsigniaNovedades ruta={ruta} />}
             </Enlace>
           ))}
           <Enlace a="/m" className="menu-celular">
@@ -360,6 +363,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return <PaginaInforme id={p[1]} key={p[1]} />;
     case "plantillas":
       return <PaginaPlantillas />;
+    case "novedades":
+      return <PaginaNovedades />;
     case "recursos":
       return p[1] ? <PaginaRecurso id={p[1]} key={p[1]} /> : <PaginaRecursos />;
     case "imprimir-caratulas":
@@ -375,4 +380,19 @@ function Rutas({ ruta }: { ruta: string }) {
     default:
       return <Aviso error={new ApiError(404, "Página inexistente.")} />;
   }
+}
+
+/** Cantidad de novedades sin confirmar, junto al menú. Se actualiza al navegar. */
+function InsigniaNovedades({ ruta }: { ruta: string }) {
+  const { datos, recargar } = usePendientes();
+  useEffect(() => {
+    recargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ruta]);
+  if (!datos || datos.cantidad === 0) return null;
+  return (
+    <span className="insignia" aria-label={`${datos.cantidad} sin confirmar`}>
+      {datos.cantidad}
+    </span>
+  );
 }
