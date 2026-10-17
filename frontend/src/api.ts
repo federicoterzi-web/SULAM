@@ -151,6 +151,9 @@ export interface PersonaDetalle extends PersonaResumen {
   cobertura_previsional: string[];
   trabajo_informal: boolean | null;
   discapacidades: string[];
+  lat?: number | null;
+  lng?: number | null;
+  ubicacion_actualizada_en?: string | null;
   creado_en: string;
 }
 

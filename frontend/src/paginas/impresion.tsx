@@ -3,6 +3,7 @@ import { type ReactNode } from "react";
 import { api, type Caso, type Demanda, type Evolucion, type Opcion, type PersonaDetalle } from "../api";
 import { Aviso, Cargando, fecha, fechaHora, useDatos, useSesion } from "../comun";
 import { ConfirmarImpresion } from "./cola";
+import { HojaDeSalida } from "./visitas";
 import membrete from "../recursos/membrete-2024.jpg";
 
 interface CasoImpresion extends Omit<Caso, "persona"> {
@@ -18,7 +19,7 @@ export function Impresion({ ruta }: { ruta: string }) {
   return (
     <div className="impresion">
       <div className="barra-impresion no-imprimir">
-        {lote.length > 0 && <span className="tenue">{lote.length} carátulas, una por hoja</span>}
+        {lote.length > 0 && tipo !== "salida" && <span className="tenue">{lote.length} carátulas, una por hoja</span>}
         <button className="boton boton-primario" onClick={() => window.print()}>
           Imprimir
         </button>
@@ -35,6 +36,8 @@ export function Impresion({ ruta }: { ruta: string }) {
         lote.map((x, i) => <div key={x} className={i < lote.length - 1 ? "salto-hoja" : ""}><CaratulaCarpeta casoId={x} sinAvisoQr={i > 0} /></div>)
       ) : tipo === "caratulas" ? (
         lote.map((x, i) => <div key={x} className={i < lote.length - 1 ? "salto-hoja" : ""}><ImprimirCaratula casoId={x} /></div>)
+      ) : tipo === "salida" ? (
+        <HojaDeSalida ids={lote} />
       ) : tipo === "demanda" ? (
         <ImprimirDemanda demandaId={id} />
       ) : null}

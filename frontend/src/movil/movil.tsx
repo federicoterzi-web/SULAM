@@ -9,6 +9,8 @@ import { CaratulaMovil, NuevaPersonaMovil, ReiteracionMovil } from "./carga";
 import { EvolucionMovil } from "./evolucion";
 import { FotosMovil } from "./fotos";
 import { RecursosMovil } from "./recursos";
+import { VisitasMovil } from "./visitas";
+import { UbicacionDomicilio } from "../paginas/ubicacion";
 
 // ---------------------------------------------------------------- aviso entre pantallas
 
@@ -143,6 +145,8 @@ function titulo(p: string[]): string {
       return "Buscar";
     case "recursos":
       return "Recursos";
+    case "visitas":
+      return "Salida de visitas";
     case "nuevo":
       return "Nuevo caso";
     case "legajo":
@@ -159,6 +163,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "caso" && p[1]) return `/casos/${p[1]}`;
   if (p[0] === "buscar" && p[1]) return `/buscar/${p[1]}`;
   if (p[0] === "recursos") return "/recursos";
+  if (p[0] === "visitas") return "/visitas";
   return "/";
 }
 
@@ -172,6 +177,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       return <InicioMovil />;
     case "recursos":
       return <RecursosMovil />;
+    case "visitas":
+      return <VisitasMovil />;
     case "buscar":
       return <BuscarMovil q={decodeURIComponent(p[1] ?? "")} key={p[1] ?? ""} />;
     case "nuevo":
@@ -292,6 +299,11 @@ function InicioMovil() {
     <>
       <p className="m-saludo">Hola, {yo.nombre_completo.split(" ")[0]}</p>
       <CajaBusqueda inicial="" />
+      <div className="m-acciones">
+        <Accion a="/m/visitas" icono="⌖">
+          Mapa de casos y salida de visitas
+        </Accion>
+      </div>
       <h2 className="m-subtitulo">Mis casos</h2>
       {mios.error && <Aviso error={mios.error} />}
       {!mios.datos ? (
@@ -404,7 +416,7 @@ function BuscarMovil({ q }: { q: string }) {
 
 function LegajoMovil({ id }: { id: string }) {
   const { puede } = useSesion();
-  const { datos: l, error } = useDatos(() => api.get<Legajo>(`/personas/${id}`), [id]);
+  const { datos: l, error, recargar } = useDatos(() => api.get<Legajo>(`/personas/${id}`), [id]);
   if (error) return <Aviso error={error} />;
   if (!l) return <Cargando />;
   const anio = new Date().getFullYear();
@@ -439,6 +451,9 @@ function LegajoMovil({ id }: { id: string }) {
           </Accion>
         )}
       </div>
+
+      <h2 className="m-subtitulo">Ubicación del domicilio</h2>
+      <UbicacionDomicilio persona={l} puedeModificar={l.permisos.modificar} alCambiar={recargar} />
 
       {puede("casos", "consultar") && (
         <>

@@ -212,6 +212,10 @@ class Persona(Base):
     domicilio: Mapped[str | None] = mapped_column(Text)
     localidad: Mapped[str | None] = mapped_column(String(200))
     telefono: Mapped[str | None] = mapped_column(String(100))
+    # Ubicación del domicilio, marcada a mano o con el GPS en una visita (nunca con servicios externos).
+    lat: Mapped[float | None] = mapped_column(Float)
+    lng: Mapped[float | None] = mapped_column(Float)
+    ubicacion_actualizada_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     observaciones: Mapped[str | None] = mapped_column(Text)
 
     # Datos de la carátula y del registro de demanda (ver formularios.py).
@@ -611,3 +615,32 @@ class Recurso(Base):
     creado_en: Mapped[datetime] = _ts()
     actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
     actualizado_en: Mapped[datetime] = _ts()
+
+
+class Contacto(Base):
+    """Personas de contacto: técnicos de gobiernos locales y de otras instituciones."""
+
+    __tablename__ = "contactos"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    nombre: Mapped[str] = mapped_column(String(200))
+    nombre_norm: Mapped[str] = mapped_column(String(200), index=True)
+    cargo: Mapped[str | None] = mapped_column(String(200))
+    institucion: Mapped[str | None] = mapped_column(String(300))
+    institucion_norm: Mapped[str | None] = mapped_column(String(300), index=True)
+    categoria: Mapped[str | None] = mapped_column(String(40))
+    recurso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("recursos.id"), index=True)
+    localidad: Mapped[str | None] = mapped_column(String(200))
+    departamento: Mapped[str | None] = mapped_column(String(100), index=True)
+    telefono: Mapped[str | None] = mapped_column(String(100))
+    telefono_alternativo: Mapped[str | None] = mapped_column(String(100))
+    whatsapp: Mapped[str | None] = mapped_column(String(30))
+    email: Mapped[str | None] = mapped_column(String(200))
+    temas: Mapped[str | None] = mapped_column(Text)
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()
+
+    recurso: Mapped["Recurso | None"] = relationship(lazy="joined")

@@ -67,8 +67,9 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Funcionalidad | Estado |
 |---|---|
 | Mapa de recursos: centros de día, centros de jubilados, residencias, instituciones, cuidadores formados | ✅ |
-| Directorio de contactos (técnicos de gobiernos locales y otras instituciones) | ⏳ próximo |
-| Casos en el mapa (solo Directora y jefaturas; técnicos sus casos; sin reservados) y recursos cercanos | ⏳ |
+| Directorio de contactos (técnicos de gobiernos locales y otras instituciones) | ✅ |
+| Casos en el mapa (todos los técnicos; reservados solo para quien los ve) y salidas de visita con recorrido y hoja imprimible | ✅ |
+| Recursos cercanos a un caso (p. ej., cuidadores que viven cerca) | ⏳ |
 | Cuidadores de cada caso (vínculo del legajo con un cuidador, formado o no) | ⏳ |
 | Registro de la División de Participación y Sensibilización Ciudadana (talleres, campañas, capacitaciones, centros de jubilados) | ⏳ a relevar con la División |
 | Carga inicial de recursos (hoy en papel o dispersos) | ⏳ |
@@ -79,7 +80,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0011) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0012) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |

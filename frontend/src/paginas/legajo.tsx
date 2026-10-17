@@ -1,3 +1,4 @@
+import { UbicacionDomicilio } from "./ubicacion";
 import { useState, type FormEvent } from "react";
 import { ApiError, api, type Caso, type EventoAuditoria, type Expediente, type Legajo, type PersonaResumen, type Vinculado } from "../api";
 import {
@@ -129,6 +130,10 @@ export function PaginaLegajo({ id }: { id: string }) {
           <dt>Legajo creado</dt>
           <dd>{fechaHora(l.creado_en)}</dd>
         </dl>
+      </Seccion>
+
+      <Seccion titulo="Ubicación del domicilio">
+        <UbicacionDomicilio persona={l} puedeModificar={l.permisos.modificar} alCambiar={recargar} />
       </Seccion>
 
       <Seccion

@@ -10,7 +10,7 @@ from sqlalchemy import text
 from . import __version__
 from .config import get_settings
 from .db import get_engine
-from .routers import admin, auth, casos, demandas, documentos, expedientes, general, ingresos, personas, recursos
+from .routers import admin, auth, casos, demandas, documentos, expedientes, general, ingresos, personas, recursos, contactos, mapa
 from .routers import inicio as inicio_por_rol
 
 API = "/api"
@@ -27,7 +27,7 @@ def crear_app() -> FastAPI:
         openapi_url=f"{API}/openapi.json" if cfg.environment != "produccion" else None,
     )
 
-    for r in (auth, personas, casos, demandas, expedientes, ingresos, documentos, general, inicio_por_rol, recursos, admin):
+    for r in (auth, personas, casos, demandas, expedientes, ingresos, documentos, general, inicio_por_rol, recursos, contactos, mapa, admin):
         app.include_router(r.router, prefix=API)
 
     @app.get(f"{API}/salud", tags=["general"])
@@ -42,7 +42,7 @@ def crear_app() -> FastAPI:
         respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
         respuesta.headers.setdefault("X-Frame-Options", "DENY")
         respuesta.headers.setdefault("Referrer-Policy", "same-origin")
-        respuesta.headers.setdefault("Permissions-Policy", "camera=(self), geolocation=(), microphone=()")
+        respuesta.headers.setdefault("Permissions-Policy", "camera=(self), geolocation=(self), microphone=()")
         if request.url.path.startswith(API):
             respuesta.headers.setdefault("Cache-Control", "no-store")
         else:

@@ -4,8 +4,77 @@ import { api } from "../api";
 import { Aviso, Cargando, useDatos } from "../comun";
 import { MapaRecursos, enlaceComoLlegar, type Punto } from "../mapa";
 import { telefonoLimpio, textoTipo, useCatalogoRecursos, type Recurso } from "../paginas/recursos";
+import { enlaceWhatsapp, type Contacto } from "../paginas/contactos";
 
 export function RecursosMovil() {
+  const [vista, setVista] = useState<"lugares" | "contactos">("lugares");
+  return (
+    <>
+      <div className="m-segmentado" role="tablist">
+        <button role="tab" aria-selected={vista === "lugares"} className={vista === "lugares" ? "activo" : ""} onClick={() => setVista("lugares")}>
+          Lugares
+        </button>
+        <button role="tab" aria-selected={vista === "contactos"} className={vista === "contactos" ? "activo" : ""} onClick={() => setVista("contactos")}>
+          Contactos
+        </button>
+      </div>
+      {vista === "lugares" ? <LugaresMovil /> : <ContactosMovil />}
+    </>
+  );
+}
+
+function ContactosMovil() {
+  const [q, setQ] = useState("");
+  const [filtroQ, setFiltroQ] = useState("");
+  const lista = useDatos(() => api.get<Contacto[]>("/contactos", { q: filtroQ }), [filtroQ]);
+  return (
+    <>
+      <form
+        className="m-busqueda"
+        role="search"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setFiltroQ(q.trim());
+        }}
+      >
+        <input type="search" enterKeyHint="search" placeholder="Nombre, institución, localidad o tema" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar contacto" />
+        <button aria-label="Buscar">⌕</button>
+      </form>
+      <Aviso error={lista.error} />
+      {!lista.datos ? (
+        <Cargando />
+      ) : lista.datos.length === 0 ? (
+        <p className="m-tenue">No hay contactos con esa búsqueda.</p>
+      ) : (
+        lista.datos.map((c) => (
+          <div key={c.id} className="m-tarjeta">
+            <strong className="m-nombre">{c.nombre}</strong>
+            <span className="m-detalle">{[c.cargo, c.institucion].filter(Boolean).join(" · ")}</span>
+            {(c.localidad || c.departamento) && <span className="m-detalle">{[c.localidad, c.departamento].filter(Boolean).join(", ")}</span>}
+            {c.temas && <span className="m-detalle">Temas: {c.temas}</span>}
+            <div className="m-recurso-acciones">
+              {c.telefono && (
+                <a className="m-llamar" href={`tel:${telefonoLimpio(c.telefono)}`}>
+                  ✆ {c.telefono}
+                </a>
+              )}
+              {c.whatsapp && (
+                <a className="m-accion" href={enlaceWhatsapp(c.whatsapp)} target="_blank" rel="noreferrer">
+                  <span className="m-accion-icono" aria-hidden>
+                    ✉
+                  </span>
+                  WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+        ))
+      )}
+    </>
+  );
+}
+
+function LugaresMovil() {
   const cat = useCatalogoRecursos();
   const [tipo, setTipo] = useState("");
   const [q, setQ] = useState("");

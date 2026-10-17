@@ -16,6 +16,8 @@ export interface Punto {
   lng: number;
   tipo: string;
   titulo: string;
+  /** Texto dentro del marcador (por defecto, la letra del tipo). */
+  etiqueta?: string;
 }
 
 const LETRAS: Record<string, string> = {
@@ -26,10 +28,11 @@ const LETRAS: Record<string, string> = {
   cuidador: "C",
 };
 
-function icono(tipo: string, elegido: boolean) {
+function icono(tipo: string, elegido: boolean, etiqueta?: string) {
+  const texto = (etiqueta ?? LETRAS[tipo] ?? "•").replace(/[<>&"]/g, "");
   return L.divIcon({
     className: `pin pin-${tipo} ${elegido ? "pin-elegido" : ""}`,
-    html: `<span>${LETRAS[tipo] ?? "•"}</span>`,
+    html: `<span>${texto}</span>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   });
@@ -59,6 +62,7 @@ export function MapaRecursos({
   const mapa = useRef<any>(null);
   const capa = useRef<any>(null);
   const marcadores = useRef<Record<string, any>>({});
+  const encuadre = useRef("");
   const elegirRef = useRef(alElegir);
   elegirRef.current = alElegir;
 
@@ -78,13 +82,15 @@ export function MapaRecursos({
     capa.current.clearLayers();
     marcadores.current = {};
     for (const p of puntos) {
-      const mk = L.marker([p.lat, p.lng], { icon: icono(p.tipo, false), title: p.titulo, keyboard: true });
+      const mk = L.marker([p.lat, p.lng], { icon: icono(p.tipo, false, p.etiqueta), title: p.titulo, keyboard: true });
       mk.on("click", () => elegirRef.current?.(p.id));
       mk.bindTooltip(p.titulo, { direction: "top", offset: [0, -14] });
       mk.addTo(capa.current);
       marcadores.current[p.id] = mk;
     }
-    if (puntos.length > 0) {
+    const firma = puntos.map((p) => p.id).sort().join(",");
+    if (puntos.length > 0 && firma !== encuadre.current) {
+      encuadre.current = firma;
       mapa.current.fitBounds(L.latLngBounds(puntos.map((p) => [p.lat, p.lng])), { padding: [30, 30], maxZoom: 15 });
     }
   }, [puntos]);
@@ -92,7 +98,7 @@ export function MapaRecursos({
   useEffect(() => {
     for (const [id, mk] of Object.entries(marcadores.current)) {
       const p = puntos.find((x) => x.id === id);
-      if (p) mk.setIcon(icono(p.tipo, id === elegido));
+      if (p) mk.setIcon(icono(p.tipo, id === elegido, p.etiqueta));
     }
     const mk = elegido ? marcadores.current[elegido] : null;
     if (mk && mapa.current) mapa.current.panTo(mk.getLatLng());

@@ -10,6 +10,8 @@ import { PaginaExpedientes } from "./paginas/expedientes";
 import { PaginaFichas } from "./paginas/fichas";
 import { PaginaColaImpresion } from "./paginas/cola";
 import { PaginaRecurso, PaginaRecursos } from "./paginas/recursos";
+import { PaginaContactos } from "./paginas/contactos";
+import { PaginaVisitas } from "./paginas/visitas";
 import { PaginaLegajo } from "./paginas/legajo";
 import { PaginaLegajos } from "./paginas/legajos";
 import { PaginaIngreso, PaginaMesa } from "./paginas/mesa";
@@ -197,7 +199,9 @@ const MENU: { ruta: string; texto: string; permiso?: [string, string] }[] = [
   { ruta: "/legajos", texto: "Legajos", permiso: ["personas", "consultar"] },
   { ruta: "/casos", texto: "Casos", permiso: ["casos", "consultar"] },
   { ruta: "/imprimir-caratulas", texto: "Imprimir carátulas", permiso: ["casos", "consultar"] },
+  { ruta: "/visitas", texto: "Mapa de casos y salidas", permiso: ["casos", "consultar"] },
   { ruta: "/recursos", texto: "Recursos y mapa", permiso: ["recursos", "consultar"] },
+  { ruta: "/contactos", texto: "Contactos", permiso: ["recursos", "consultar"] },
   { ruta: "/mesa", texto: "Mesa de Entrada", permiso: ["mesa_entrada", "consultar"] },
   { ruta: "/expedientes", texto: "Expedientes", permiso: ["expedientes", "consultar"] },
   { ruta: "/fichas", texto: "Fichas en papel" },
@@ -345,6 +349,10 @@ function Rutas({ ruta }: { ruta: string }) {
       return p[1] ? <PaginaIngreso id={p[1]} key={p[1]} /> : <PaginaMesa />;
     case "expedientes":
       return <PaginaExpedientes />;
+    case "visitas":
+      return <PaginaVisitas />;
+    case "contactos":
+      return <PaginaContactos />;
     case "recursos":
       return p[1] ? <PaginaRecurso id={p[1]} key={p[1]} /> : <PaginaRecursos />;
     case "imprimir-caratulas":

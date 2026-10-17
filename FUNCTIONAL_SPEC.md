@@ -126,11 +126,22 @@ SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `su
 
 *Recursos y mapa* reúne centros de día, centros de jubilados, residencias de larga estadía, instituciones con las que se articula (salud, municipios y comunas, desarrollo social, justicia, seguridad, educación, organizaciones sociales) y cuidadores domiciliarios formados.
 
-- Cada recurso tiene tipo, nombre, dirección, localidad, departamento, ubicación en el mapa, teléfonos, correo, horario, referente, servicios y observaciones. Los cuidadores, además, los departamentos donde trabajan, su formación y su disponibilidad; para ellos se marca la zona aproximada, no el domicilio.
+- Cada recurso tiene tipo, nombre, dirección, localidad, departamento, ubicación en el mapa, teléfonos, correo, horario, referente, servicios y observaciones. Los cuidadores, además, los departamentos donde trabajan, su formación y su disponibilidad; para ellos se marca su domicilio, para saber quién vive cerca de cada caso.
 - Mapa con un color y una letra por tipo; lista al costado con llamar y «cómo llegar». Filtros por tipo, departamento (un cuidador aparece también donde trabaja) y texto.
 - La ubicación se marca tocando el mapa o con «Buscar la dirección», que consulta OpenStreetMap (Nominatim) **solo para recursos**; los domicilios de los casos nunca se envían a servicios externos. Configurable (`SULAM_MAPA_TESELAS`, `SULAM_GEOCODIFICADOR_URL`, vacío = desactivado).
 - En el celular: pestaña *Recursos* con búsqueda, filtros, llamar, cómo llegar y mapa.
 - Permisos (módulo «recursos»): consultan todos los roles iniciales; cargan Dirección, jefaturas, Carga de Datos, técnicos y administrativos de área; técnicos y administrativos de área modifican solo lo que cargaron. Las bajas son lógicas y todo cambio queda en la auditoría.
+
+## 5 nonies. Directorio de contactos
+
+Técnicos de municipios y comunas y referentes de otras instituciones: nombre, cargo, institución (opcionalmente vinculada a un recurso del mapa), tipo de institución, localidad, departamento, teléfonos, WhatsApp, correo, temas con los que se articula y observaciones. Búsqueda por nombre, institución, cargo, localidad o tema; filtros por departamento y tipo. Botones para llamar, escribir por WhatsApp (el número se normaliza: «381 15 400-1111» → 5493814001111) y enviar correo. La ficha de cada institución del mapa muestra sus contactos. En el celular, *Recursos › Contactos*. Mismos permisos que la red de recursos; quien deja la institución se da de baja, no se borra.
+
+## 5 decies. Casos en el mapa y salidas de visita
+
+- **Ubicación del domicilio** (legajo): se marca en el mapa o, durante una visita, con «Estoy en el domicilio: usar mi ubicación» (GPS del celular). Nunca se consulta a servicios externos con domicilios de casos. Queda en la auditoría.
+- **Mapa de casos** (*Mapa de casos y salidas*; en el celular desde el inicio): casos activos con ubicación, de «Mis casos», «Mi área» o «Todos», a la vista de todos los técnicos. Rojo: maltrato; naranja: sin movimiento hace más de 30 días. Los reservados solo aparecen para quien puede verlos. Se pueden mostrar también los recursos.
+- **Salida**: se eligen los casos a visitar; SULAM sugiere el orden (vecino más cercano y mejora 2-opt, en línea recta desde el punto de partida `SULAM_PUNTO_PARTIDA`, o desde la ubicación del celular), muestra los kilómetros aproximados, abre el recorrido en Google Maps (en tramos si son más de 10 paradas) e imprime la **hoja de salida** (orden, persona, domicilio, teléfono, caso, responsables y espacio para hora y observaciones).
+- Los casos sin ubicación se listan para completarlos.
 
 ## 5 septies. Página de inicio por rol
 

@@ -3,6 +3,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { Aviso, Campo, Cargando, Enlace, Seccion, Vacio, fechaHora, navegar, useDatos, useEnvio, useSesion } from "../comun";
 import { MapaRecursos, MapaSelector, enlaceComoLlegar, type ConfigMapa, type Punto } from "../mapa";
+import { ContactosDelRecurso } from "./contactos";
 
 export interface TipoRecurso {
   codigo: string;
@@ -274,6 +275,11 @@ export function PaginaRecurso({ id }: { id: string }) {
           )}
         </Seccion>
       </div>
+      {r.tipo !== "cuidador" && (
+        <Seccion titulo="Contactos">
+          <ContactosDelRecurso cat={c} recurso={r} />
+        </Seccion>
+      )}
     </>
   );
 }
@@ -447,9 +453,9 @@ function FormRecurso({
           <h3>Ubicación</h3>
           <p className="tenue">
             Toque el mapa para marcar el lugar; el marcador se puede arrastrar.
-            {cuidador && " Para cuidadores, alcanza con marcar la zona aproximada (no el domicilio)."}
+            {cuidador && " Para cuidadores, marque su domicilio: sirve para ver quién vive cerca de cada caso."}
           </p>
-          {cat.geocodificador && !cuidador && (
+          {cat.geocodificador && (
             <div className="fila-botones fila-izquierda">
               <button type="button" className="boton boton-chico" onClick={buscarDireccion} disabled={busqueda.enviando || !d.direccion}>
                 {busqueda.enviando ? "Buscando…" : "Buscar la dirección en el mapa"}

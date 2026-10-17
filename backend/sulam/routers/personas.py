@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from typing import Literal
+
+from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, or_, select, update
@@ -361,6 +364,41 @@ def modificar_persona(
     audit.registrar(
         db, ctx, "modificar", "persona", persona.id, persona.id,
         {"cambios": diff, "motivo": datos.motivo_cambio},
+    )
+    db.commit()
+    return persona_detalle(persona)
+
+
+class UbicacionIn(BaseModel):
+    lat: float | None = None
+    lng: float | None = None
+    origen: Literal["mapa", "gps"] = "mapa"
+
+
+@router.put("/personas/{persona_id}/ubicacion")
+def ubicar_domicilio(
+    persona_id: uuid.UUID,
+    datos: UbicacionIn,
+    ctx: Contexto = Depends(contexto),
+    db: Session = Depends(get_db),
+):
+    """Ubicación del domicilio en el mapa (marcada a mano o con el GPS durante una visita)."""
+    from .recursos import CAJA_TUCUMAN
+
+    persona = obtener_persona(db, persona_id)
+    requerir_persona(db, ctx, persona, "personas", "modificar")
+    if (datos.lat is None) != (datos.lng is None):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indique latitud y longitud, o ninguna.")
+    if datos.lat is not None:
+        c = CAJA_TUCUMAN
+        if not (c["sur"] <= datos.lat <= c["norte"] and c["oeste"] <= datos.lng <= c["este"]):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "La ubicación queda fuera de la provincia de Tucumán.")
+    persona.lat = round(datos.lat, 6) if datos.lat is not None else None
+    persona.lng = round(datos.lng, 6) if datos.lng is not None else None
+    persona.ubicacion_actualizada_en = ahora() if datos.lat is not None else None
+    audit.registrar(
+        db, ctx, "ubicar_domicilio" if datos.lat is not None else "quitar_ubicacion", "persona", persona.id, persona.id,
+        {"origen": datos.origen},
     )
     db.commit()
     return persona_detalle(persona)
