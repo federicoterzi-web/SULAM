@@ -3,7 +3,7 @@
 // los adaptan a una columna con campos y botones grandes.
 import type { ReactNode } from "react";
 import { api, type Caso, type Demanda, type Legajo, type PersonaDetalle } from "../api";
-import { Aviso, Cargando, nombre, useDatos, useSesion } from "../comun";
+import { Aviso, Cargando, nombre, useDatos } from "../comun";
 import { FormArticulacion } from "../paginas/articulaciones";
 import { FormAsignar, FormEditarCaso, FormEstado } from "../paginas/casos";
 import { FormContacto, type Contacto } from "../paginas/contactos";
@@ -47,7 +47,6 @@ function contextoCaso(c: CasoDetalle) {
 // ---------------------------------------------------------------- caso
 
 export function FormularioCasoMovil({ casoId, que, demandaId }: { casoId: string; que: string; demandaId?: string }) {
-  const { catalogos } = useSesion();
   const { datos: c, error } = useCaso(casoId);
   if (error) return <Aviso error={error} />;
   if (!c) return <Cargando />;
@@ -68,7 +67,7 @@ export function FormularioCasoMovil({ casoId, que, demandaId }: { casoId: string
       cuerpo = <FormEstado caso={caso} alGuardar={() => listo("Estado actualizado")} />;
       break;
     case "asignar":
-      cuerpo = <FormAsignar caso={caso} usuarios={catalogos.usuarios_asignables} alGuardar={() => listo("Responsable asignado")} />;
+      cuerpo = <FormAsignar caso={caso} alGuardar={() => listo("Equipo actualizado")} />;
       break;
     case "editar":
       cuerpo = <FormEditarCaso caso={caso} alGuardar={() => listo("Caso actualizado")} />;

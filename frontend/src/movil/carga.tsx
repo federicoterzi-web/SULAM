@@ -1,4 +1,5 @@
 // Alta rápida de legajo, carátula por pasos y reiteración, para el celular.
+import { SelectorEquipo } from "../paginas/equipo";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ApiError, api, type Caso, type Coincidencia, type PersonaDetalle, type PersonaResumen } from "../api";
 import { Aviso, Cargando, documento, edad, nombre, useEnvio, useSesion } from "../comun";
@@ -214,7 +215,7 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
   const [persona, setPersona] = useState<(PersonaDetalle & { casos?: Caso[] }) | null>(null);
   const [d, setD] = useState<Datos | null>(null);
   const [areaId, setAreaId] = useState(String(yo.area?.id ?? ""));
-  const [responsable, setResponsable] = useState("");
+  const [responsables, setResponsables] = useState<string[]>([]);
   const [existente, setExistente] = useState<{ id: string; numero: string } | null>(null);
   const { enviando, error, setError, ejecutar } = useEnvio();
   const paso = pasoDeRuta();
@@ -281,7 +282,7 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
         return await api.post<Caso>("/casos", {
           persona_id: personaId,
           area_id: areaId ? Number(areaId) : null,
-          responsable_id: responsable || null,
+          responsables_ids: responsables,
           fecha_ingreso: d.fecha_ingreso,
           motivo: d.motivo,
           tipo_ingreso: d.tipo_ingreso,
@@ -441,17 +442,11 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
             </select>
           </label>
           {puede("casos", "derivar") && (
-            <label className="m-campo">
-              <span>Responsable</span>
-              <select value={responsable} onChange={(e) => setResponsable(e.target.value)}>
-                <option value="">Asignar más tarde</option>
-                {catalogos.usuarios_asignables.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.nombre_completo}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="m-campo">
+              <span>Técnicos a cargo</span>
+              <SelectorEquipo elegidos={responsables} alCambiar={setResponsables} areaPreferida={catalogos.areas.find((a) => String(a.id) === String(areaId))?.nombre} />
+              <small>Puede marcar varios. Si no marca ninguno, se asigna más tarde.</small>
+            </div>
           )}
           <p className="m-tenue">El número de actuación se asigna al crear el caso.</p>
         </>

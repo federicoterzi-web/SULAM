@@ -21,6 +21,17 @@ def _vacio_a_none(v):
     return v
 
 
+def _cuil(v):
+    """CUIL con guiones (20-12345678-6) y dígito verificador correcto."""
+    if v is None or (isinstance(v, str) and not v.strip()):
+        return None
+    from .anses import cuil_valido, formatear
+
+    if not cuil_valido(v):
+        raise ValueError("CUIL inválido: revise los 11 números (el último es el dígito verificador).")
+    return formatear(v)
+
+
 # ---------------------------------------------------------------- auth
 
 
@@ -61,11 +72,13 @@ class PersonaBase(Entrada):
     cobertura_previsional: list[str] | None = None
     trabajo_informal: bool | None = None
     discapacidades: list[str] | None = None
+    cuil: str | None = Field(default=None, max_length=20)
 
     _limpiar = field_validator(
         "numero_documento", "motivo_sin_documento", "domicilio", "localidad", "telefono",
         "observaciones", "genero", "barrio", "departamento", "cud", "obra_social", mode="before",
     )(_vacio_a_none)
+    _validar_cuil = field_validator("cuil", mode="before")(_cuil)
 
 
 class PersonaIn(PersonaBase):
@@ -95,6 +108,7 @@ class PersonaPatch(Entrada):
     cobertura_previsional: list[str] | None = None
     trabajo_informal: bool | None = None
     discapacidades: list[str] | None = None
+    cuil: str | None = Field(default=None, max_length=20)
     motivo_cambio: str | None = Field(default=None, max_length=1000)
     confirmar_posible_duplicado: bool = False
 
@@ -103,6 +117,7 @@ class PersonaPatch(Entrada):
         "observaciones", "motivo_cambio", "genero", "barrio", "departamento", "cud", "obra_social",
         mode="before",
     )(_vacio_a_none)
+    _validar_cuil = field_validator("cuil", mode="before")(_cuil)
 
 
 class VerificarDuplicadosIn(Entrada):
@@ -199,6 +214,8 @@ class CasoIn(CaratulaCampos):
     persona_id: uuid.UUID
     area_id: int | None = None
     responsable_id: uuid.UUID | None = None
+    # Equipo a cargo: todos los anotados son responsables por igual.
+    responsables_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
     ingreso_id: uuid.UUID | None = None
     # Excepción a «una actuación por persona por año» (solo Administración, con motivo).
     forzar_otra_actuacion: bool = False
@@ -299,6 +316,13 @@ class AsignacionIn(Entrada):
     usuario_id: uuid.UUID
     motivo: str | None = Field(default=None, max_length=2000)
     reemplazar_actuales: bool = False
+
+
+class EquipoIn(Entrada):
+    """Equipo a cargo completo: se suman los nuevos y se finalizan los que no están."""
+
+    usuarios_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
+    motivo: str | None = Field(default=None, max_length=2000)
 
 
 class FinAsignacionIn(Entrada):

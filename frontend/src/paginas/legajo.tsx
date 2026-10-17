@@ -1,3 +1,4 @@
+import { SeccionNegativa } from "./anses";
 import { SeccionInformes } from "./informes";
 import { UbicacionDomicilio } from "./ubicacion";
 import { useState, type FormEvent } from "react";
@@ -101,6 +102,8 @@ export function PaginaLegajo({ id }: { id: string }) {
           <dd>{l.domicilio || "—"}</dd>
           <dt>Teléfono</dt>
           <dd>{l.telefono || "—"}</dd>
+          <dt>CUIL</dt>
+          <dd>{l.cuil || "—"}</dd>
           {l.sin_documento && (
             <>
               <dt>Situación del documento</dt>
@@ -131,6 +134,8 @@ export function PaginaLegajo({ id }: { id: string }) {
           <dd>{fechaHora(l.creado_en)}</dd>
         </dl>
       </Seccion>
+
+      <SeccionNegativa personaId={l.id} />
 
       <Seccion titulo="Ubicación del domicilio">
         <UbicacionDomicilio persona={l} puedeModificar={l.permisos.modificar} alCambiar={recargar} />

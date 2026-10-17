@@ -1,6 +1,7 @@
 // Versión para celular: las mismas funciones de SULAM pensadas para el pulgar.
 // Pantallas cortas, botones grandes, teclado numérico para DNI y fechas, y la
 // cámara integrada. Nada se guarda en el teléfono: todo va directo al servidor.
+import { PanelNegativa } from "../paginas/anses";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, type Caso, type Legajo, type PersonaResumen } from "../api";
 import { Aviso, Cargando, ESTADOS, documento, edad, fecha, navegar, nombre, useDatos, useSesion } from "../comun";
@@ -161,7 +162,7 @@ function titulo(p: string[]): string {
       return "Nuevo caso";
     case "legajo":
       return (
-        { caratula: "Carátula", fotos: "Fotos", editar: "Datos personales", vinculado: "Vínculo", expediente: "Expediente", informe: "Redactar informe" }[p[2] ?? ""] ??
+        { caratula: "Carátula", fotos: "Fotos", editar: "Datos personales", vinculado: "Vínculo", expediente: "Expediente", informe: "Redactar informe", negativa: "Negativa de ANSES" }[p[2] ?? ""] ??
         "Legajo"
       );
     case "caso":
@@ -172,7 +173,7 @@ function titulo(p: string[]): string {
           reiteracion: "Reiteración",
           demanda: "Registro de demanda",
           estado: "Estado del caso",
-          asignar: "Asignar / derivar",
+          asignar: "Equipo a cargo",
           editar: "Editar caso",
           caratula: "Carátula",
           articulacion: "Articulación",
@@ -227,6 +228,12 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       if (p[2] === "caratula") return <CaratulaMovil personaId={p[1]} key={p[1]} />;
       if (p[2] === "fotos") return <FotosMovil personaId={p[1]} key={p[1]} />;
       if (p[2] === "informe") return <NuevoInformeMovil personaId={p[1]} key={p[1]} />;
+      if (p[2] === "negativa")
+        return (
+          <div className="m-formulario m-formulario-completo">
+            <PanelNegativa personaId={p[1]} casoId={parametro(ruta, "caso") || undefined} movil key={p[1]} />
+          </div>
+        );
       if (p[2] === "editar" || p[2] === "vinculado" || p[2] === "expediente")
         return <FormularioLegajoMovil personaId={p[1]} que={p[2]} vinculadoId={parametro(ruta, "editar") || undefined} key={ruta} />;
       return <LegajoMovil id={p[1]} key={p[1]} />;
@@ -525,6 +532,11 @@ function LegajoMovil({ id }: { id: string }) {
             Redactar informe o nota
           </Accion>
         )}
+        {l.permisos.cargar_documento && (
+          <Accion a={`/m/legajo/${id}/negativa`} icono="✓">
+            Negativa de ANSES
+          </Accion>
+        )}
         {l.permisos.crear_expediente && (
           <Accion a={`/m/legajo/${id}/expediente`} icono="▤">
             Vincular expediente
@@ -605,6 +617,9 @@ function CasoMovil({ id }: { id: string }) {
           {c.persona.fecha_nacimiento && ` · ${edad(c.persona.fecha_nacimiento)} años`}
         </span>
         {car.fecha_ingreso && <span className="m-detalle">Ingreso: {fecha(car.fecha_ingreso)}</span>}
+        <span className="m-detalle">
+          A cargo: {c.responsables.length ? c.responsables.map((r) => r.nombre_completo).join(", ") : "sin asignar"}
+        </span>
         {c.reiteraciones.length > 0 && (
           <span className="m-detalle">
             Reiteraciones: {c.reiteraciones.map((r) => fecha(r.fecha)).join(", ")}
@@ -641,6 +656,11 @@ function CasoMovil({ id }: { id: string }) {
             {c.demandas.length ? "Nuevo registro de demanda" : "Cargar registro de demanda"}
           </Accion>
         )}
+        {puede("documentos", "crear") && (
+          <Accion a={`/m/legajo/${c.persona.id}/negativa?caso=${id}`} icono="✓">
+            Negativa de ANSES
+          </Accion>
+        )}
         {c.permisos.modificar && (
           <Accion a={`/m/caso/${id}/informe`} icono="▤">
             Redactar informe
@@ -663,7 +683,7 @@ function CasoMovil({ id }: { id: string }) {
         )}
         {c.permisos.derivar && (
           <Accion a={`/m/caso/${id}/asignar`} icono="⇢">
-            Asignar / derivar
+            Equipo a cargo
           </Accion>
         )}
         {c.permisos.modificar && (

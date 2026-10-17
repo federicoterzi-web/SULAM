@@ -54,6 +54,7 @@ def persona_detalle(p: Persona) -> dict:
             "cobertura_previsional": p.cobertura_previsional or [],
             "trabajo_informal": p.trabajo_informal,
             "discapacidades": p.discapacidades or [],
+            "cuil": p.cuil,
             "lat": p.lat,
             "lng": p.lng,
             "ubicacion_actualizada_en": p.ubicacion_actualizada_en.isoformat() if p.ubicacion_actualizada_en else None,

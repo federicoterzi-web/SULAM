@@ -91,6 +91,7 @@ CAMPOS: dict[str, str] = {
     "fecha_nacimiento": "Fecha de nacimiento",
     "edad": "Edad",
     "documento": "DNI",
+    "cuil": "CUIL",
     "legajo": "N° de legajo",
     "actuacion": "Actuación",
     "obra_social": "Obra social",
@@ -99,6 +100,7 @@ CAMPOS: dict[str, str] = {
     "domicilio": "Domicilio",
     "departamento": "Departamento",
     "telefono": "Teléfono",
+    "negativa_anses": "Certificación negativa ANSES",
     "cud": "Certificado Único de Discapacidad (CUD)",
     "discapacidad": "Discapacidad",
     "convive_con": "Convive con",
@@ -121,6 +123,25 @@ def ultima_demanda(db: Session, persona: Persona, caso: Caso | None) -> Registro
         if r is not None:
             return r
     return db.execute(q.order_by(RegistroDemanda.fecha.desc(), RegistroDemanda.creado_en.desc())).scalars().first()
+
+
+def _negativa(db: Session, persona: Persona, al: date) -> str:
+    from .models import Constancia
+
+    c = db.execute(
+        select(Constancia)
+        .where(Constancia.persona_id == persona.id, Constancia.tipo == "negativa_anses")
+        .order_by(Constancia.fecha_emision.desc(), Constancia.en.desc())
+    ).scalars().first()
+    if c is None:
+        return ""
+    texto = {"sin_registros": "No registra", "con_registros": "Registra", "no_emitida": "ANSES no emitió la negativa"}[c.resultado]
+    if c.resultado == "con_registros" and c.detalle:
+        texto += f" ({c.detalle.splitlines()[0][:120]})"
+    texto += f" — emitida el {c.fecha_emision:%d/%m/%Y}"
+    if c.vence and c.vence < al:
+        texto += " (vencida)"
+    return texto
 
 
 def valores_disponibles(db: Session, persona: Persona, caso: Caso | None, al: date) -> dict[str, str]:
@@ -158,6 +179,8 @@ def valores_disponibles(db: Session, persona: Persona, caso: Caso | None, al: da
         "fecha_ingreso": _fecha(caso.fecha_ingreso) if caso else "",
         "indicadores": _indicadores(caso.indicadores) if caso else "",
         "area": caso.area.nombre if caso and caso.area else "",
+        "cuil": persona.cuil or "",
+        "negativa_anses": _negativa(db, persona, al),
     }
     if persona.tipo_documento and persona.tipo_documento.upper() != "DNI" and v["documento"]:
         v["documento"] = f"{persona.tipo_documento} {v['documento']}"

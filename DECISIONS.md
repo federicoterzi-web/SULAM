@@ -90,6 +90,12 @@ Decisión de la Dirección (17/10/2026): se elimina la marca de reserva de casos
 
 Los informes se redactan dentro de SULAM a partir de plantillas que traen los datos de la persona. Mientras es borrador se edita (con guardado automático); al **firmarlo** se genera el PDF con membrete y queda como documento del legajo, sin cambios posteriores. Para corregir se abre una **nueva versión** del mismo informe; la anterior queda «reemplazada» y se conserva (pedido de la Dirección, 17/10/2026). El texto con formato se limpia en el servidor (solo párrafos, listas, negrita, cursiva y subrayado). Las plantillas las editan la Dirección (todas) y las jefaturas (las de su área). El modelo de informe aportado por la Dirección se usó solo como estructura; su contenido no se cargó en SULAM.
 
+
+### D-023 · Varios técnicos a cargo, todos responsables — *Vigente*
+Pedido de la Dirección (17/10/2026): un caso puede tener varios técnicos a cargo, sin responsable principal. Se usa la tabla de asignaciones existente (una fila por técnico, con desde/hasta); `PUT /casos/{id}/equipo` deja el equipo indicado.
+
+### D-024 · Negativa de ANSES asistida, sin consultas automáticas a ANSES — *Vigente*
+SULAM no consulta ANSES desde el servidor: el servicio está pensado para uso desde el navegador (con controles anti-robots) y no se envían datos de los legajos a sitios externos. SULAM calcula el CUIL, abre el servicio, lee el PDF descargado (propuesta que la persona revisa), lo guarda en el legajo y controla el vencimiento. La tabla `constancias` admite otros tipos de constancias a futuro.
 ---
 
 ## Pendientes (no se inventan)

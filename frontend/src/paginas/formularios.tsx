@@ -1,5 +1,6 @@
 // Carátula de legajo, registro de demanda y evolución del caso.
 // Las opciones vienen del servidor (/api/formularios) con los textos de los modelos institucionales.
+import { SelectorEquipo } from "./equipo";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ApiError, api, type Caso, type Demanda, type Evolucion, type Opcion, type PersonaDetalle } from "../api";
 import { Aviso, Campo, Cargando, ESTADOS, Seccion, Vacio, documento, edad, fecha, fechaHora, navegar, nombre, useEnvio, useSesion } from "../comun";
@@ -267,7 +268,7 @@ export function FormCaratula({
   const [persona, setPersona] = useState<PersonaDetalle | null>(null);
   const [d, setD] = useState<DatosCaratula | null>(null);
   const [areaId, setAreaId] = useState(String(yo.area?.id ?? ""));
-  const [responsable, setResponsable] = useState("");
+  const [responsables, setResponsables] = useState<string[]>([]);
   const [existente, setExistente] = useState<any>(null);
   const { enviando, error, setError, ejecutar } = useEnvio();
 
@@ -357,7 +358,7 @@ export function FormCaratula({
             ...caratula,
             persona_id: personaId,
             area_id: areaId ? Number(areaId) : null,
-            responsable_id: responsable || null,
+            responsables_ids: responsables,
             ingreso_id: ingresoId ?? null,
           }));
       } catch (err) {
@@ -511,17 +512,11 @@ export function FormCaratula({
               </select>
             </Campo>
             {puede("casos", "derivar") && (
-              <Campo etiqueta="Responsable">
-                <select value={responsable} onChange={(e) => setResponsable(e.target.value)}>
-                  <option value="">Asignar más tarde</option>
-                  {catalogos.usuarios_asignables.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombre_completo}
-                      {u.area ? ` — ${u.area}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </Campo>
+              <div className="campo campo-completo">
+                <span className="campo-etiqueta">Técnicos a cargo</span>
+                <SelectorEquipo elegidos={responsables} alCambiar={setResponsables} areaPreferida={catalogos.areas.find((a) => String(a.id) === String(areaId))?.nombre} />
+                <span className="campo-ayuda">Puede marcar varios; todos quedan como responsables. Si no marca ninguno, se asigna más tarde.</span>
+              </div>
             )}
           </div>
         </section>

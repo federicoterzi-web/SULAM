@@ -204,6 +204,21 @@ Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un
 - Permisos: lo ve quien puede consultar el caso; lo redacta, firma o corrige quien puede modificarlo (los mismos que escriben evoluciones).
 - **Plantillas** (*Plantillas de informes*): la Dirección edita todas y crea generales; cada jefatura edita y crea las de su área (permiso `plantillas.modificar`, alcance «área»). Se definen datos, secciones con guía y texto inicial, título impreso, destinatario y tipo documental. Los cambios valen para informes nuevos.
 
+## 5 duodecies. Equipo a cargo de un caso
+
+- Un caso puede tener **varios técnicos a cargo, todos responsables por igual** (sin referente principal, decisión de la Dirección 17/10/2026). Todos lo ven en «Mis casos», en el mapa y pueden trabajarlo.
+- Se eligen al crear la carátula (computadora y celular) y se cambian con **Equipo a cargo**: se marcan y desmarcan técnicos y se guardan los cambios de una vez, con motivo opcional. Requiere el permiso de asignar/derivar.
+- El historial del caso conserva quién estuvo a cargo, desde y hasta cuándo.
+
+## 5 terdecies. Certificación negativa de ANSES
+
+- En el legajo y en el caso (computadora y celular): estado de la última negativa («no registra · vence …», «registra …», «vencida», «ANSES no la emitió» o «sin registrar»).
+- **CUIL**: si el legajo no lo tiene, SULAM lo calcula del DNI y el género (con ambos prefijos si falta el género) para copiarlo con un toque. **Abrir ANSES** abre el servicio oficial (configurable con `SULAM_URL_NEGATIVA_ANSES`). SULAM **no consulta ANSES por su cuenta ni le envía datos**: la consulta la hace el técnico en su navegador.
+- **Subir el PDF**: SULAM lee CUIL, fecha de emisión, código de validación y si registra o no; quien carga **revisa** y confirma el resultado. Si el CUIL del PDF no corresponde al DNI o al CUIL del legajo, no se guarda (es de otra persona). El PDF queda en los documentos (del caso, si se carga desde el caso) como «Certificación negativa ANSES», y el CUIL confirmado pasa al legajo.
+- Vence a los 30 días de la emisión (`SULAM_DIAS_VIGENCIA_NEGATIVA`). «ANSES no emitió la negativa» se registra sin PDF.
+- Permisos: la ve quien consulta el legajo; la registra quien puede cargar documentos en él. El CUIL y la negativa se pueden agregar como datos en los informes.
+- La lectura automática se probó con PDF simulados: falta calibrarla con negativas reales.
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.

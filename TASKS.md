@@ -88,13 +88,22 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Plantillas editables por Dirección y jefaturas | ✅ |
 | Validar las plantillas iniciales con los equipos técnicos | ⏳ |
 
+## Casos y constancias
+
+| Funcionalidad | Estado |
+|---|---|
+| Varios técnicos a cargo de un caso (todos responsables) | ✅ |
+| Certificación negativa de ANSES: CUIL, acceso a ANSES, lectura del PDF, vencimiento, avisos | ✅ |
+| Calibrar la lectura con negativas reales (con datos autorizados) | ⏳ |
+| Otras constancias de organismos | ⏳ a definir |
+
 ## Digitalización de fichas — en curso
 
 | Funcionalidad | Estado |
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0015) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0016) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |

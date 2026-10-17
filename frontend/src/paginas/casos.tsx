@@ -1,4 +1,6 @@
+import { SeccionNegativa } from "./anses";
 import { SeccionInformes } from "./informes";
+import { FormEquipo } from "./equipo";
 import { SeccionArticulaciones } from "./articulaciones";
 import { useState, type FormEvent } from "react";
 import { api, type Caso, type Demanda, type Documento, type Evolucion, type Expediente, type Ingreso, type PersonaDetalle } from "../api";
@@ -87,7 +89,7 @@ type Dialogo = null | "estado" | "asignar" | "documento" | "editar" | "caratula"
 
 export function PaginaCaso({ id }: { id: string }) {
   const { datos: c, error, recargar } = useDatos(() => api.get<CasoDetalle>(`/casos/${id}`), [id]);
-  const { catalogos, formularios } = useSesion();
+  const { formularios } = useSesion();
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [demandaEditada, setDemandaEditada] = useState<Demanda | null>(null);
   const [escaneoDemanda, setEscaneoDemanda] = useState<Demanda | null>(null);
@@ -127,7 +129,7 @@ export function PaginaCaso({ id }: { id: string }) {
           )}
           {c.permisos.derivar && (
             <button className="boton" onClick={() => setDialogo("asignar")}>
-              Asignar / derivar
+              Equipo a cargo
             </button>
           )}
         </div>
@@ -284,9 +286,11 @@ export function PaginaCaso({ id }: { id: string }) {
 
       <SeccionInformes casoId={c.id} puedeCrear={c.permisos.modificar} />
 
+      {c.persona && <SeccionNegativa personaId={c.persona.id} casoId={c.id} />}
+
       <SeccionArticulaciones casoId={c.id} puedeAgregar={c.permisos.modificar} />
 
-      <Seccion titulo="Responsables">
+      <Seccion titulo="Equipo a cargo (historial)">
         {c.asignaciones && c.asignaciones.length > 0 ? (
           <table className="tabla">
             <thead>
@@ -426,8 +430,8 @@ export function PaginaCaso({ id }: { id: string }) {
         </Modal>
       )}
       {dialogo === "asignar" && (
-        <Modal titulo="Asignar responsable" alCerrar={() => setDialogo(null)}>
-          <FormAsignar caso={c} usuarios={catalogos.usuarios_asignables} alGuardar={listo} />
+        <Modal titulo="Equipo a cargo" alCerrar={() => setDialogo(null)} ancho>
+          <FormAsignar caso={c} alGuardar={listo} />
         </Modal>
       )}
       {dialogo === "editar" && (
@@ -483,59 +487,16 @@ export function FormEstado({ caso, alGuardar }: { caso: Caso; alGuardar: () => v
   );
 }
 
+/** Equipo a cargo (varios técnicos, todos responsables). Se mantiene el nombre por compatibilidad. */
 export function FormAsignar({
   caso,
-  usuarios,
   alGuardar,
 }: {
   caso: Caso;
-  usuarios: { id: string; nombre_completo: string; area: string | null }[];
+  usuarios?: { id: string; nombre_completo: string; area: string | null }[];
   alGuardar: () => void;
 }) {
-  const actuales = new Set(caso.responsables.map((r) => r.id));
-  const [usuario, setUsuario] = useState("");
-  const [motivo, setMotivo] = useState("");
-  const [reemplazar, setReemplazar] = useState(caso.responsables.length > 0);
-  const { enviando, error, ejecutar } = useEnvio();
-  const enviar = async (e: FormEvent) => {
-    e.preventDefault();
-    const r = await ejecutar(() =>
-      api.post(`/casos/${caso.id}/asignaciones`, { usuario_id: usuario, motivo: motivo || null, reemplazar_actuales: reemplazar }),
-    );
-    if (r) alGuardar();
-  };
-  return (
-    <form onSubmit={enviar} className="formulario">
-      <Campo etiqueta="Usuario *">
-        <select value={usuario} onChange={(e) => setUsuario(e.target.value)} required>
-          <option value="">Elegir…</option>
-          {usuarios
-            .filter((u) => !actuales.has(u.id))
-            .map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nombre_completo}
-                {u.area ? ` — ${u.area}` : ""}
-              </option>
-            ))}
-        </select>
-      </Campo>
-      <Campo etiqueta="Motivo">
-        <input value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-      </Campo>
-      {caso.responsables.length > 0 && (
-        <label className="casilla">
-          <input type="checkbox" checked={reemplazar} onChange={(e) => setReemplazar(e.target.checked)} />
-          Reemplaza a los responsables actuales ({caso.responsables.map((r) => r.nombre_completo).join(", ")})
-        </label>
-      )}
-      <Aviso error={error} />
-      <div className="fila-botones">
-        <button className="boton boton-primario" disabled={enviando}>
-          Asignar
-        </button>
-      </div>
-    </form>
-  );
+  return <FormEquipo caso={caso} alGuardar={alGuardar} />;
 }
 
 export function FormEditarCaso({ caso, alGuardar }: { caso: Caso; alGuardar: () => void }) {

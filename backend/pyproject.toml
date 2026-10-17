@@ -17,6 +17,8 @@ dependencies = [
     "reportlab>=4",
     "segno>=1.6",
     "pillow>=10",
+    # Lectura del PDF de la certificación negativa de ANSES.
+    "pypdfium2>=4",
 ]
 
 [project.optional-dependencies]

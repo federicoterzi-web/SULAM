@@ -130,6 +130,7 @@ interface DatosPersona {
   genero: string;
   barrio: string;
   departamento: string;
+  cuil: string;
 }
 
 function inicial(p?: PersonaDetalle, sugerido?: Partial<DatosPersona>): DatosPersona {
@@ -161,6 +162,7 @@ function desdePersona(p?: PersonaDetalle): DatosPersona {
     genero: p?.genero ?? "",
     barrio: p?.barrio ?? "",
     departamento: p?.departamento ?? "",
+    cuil: p?.cuil ?? "",
   };
 }
 
@@ -227,6 +229,7 @@ export function FormPersona({
       genero: d.genero || null,
       barrio: d.barrio,
       departamento: d.departamento,
+      cuil: d.cuil || null,
       confirmar_posible_duplicado: confirmado,
     };
     if (persona) cuerpo.motivo_cambio = motivoCambio || null;
@@ -325,6 +328,9 @@ export function FormPersona({
         </Campo>
         <Campo etiqueta="Teléfono">
           <input value={d.telefono} onChange={cambia("telefono")} />
+        </Campo>
+        <Campo etiqueta="CUIL" ayuda="Se completa solo al registrar la negativa de ANSES.">
+          <input value={d.cuil} onChange={cambia("cuil")} inputMode="numeric" placeholder="27-12345678-9" />
         </Campo>
         <Campo etiqueta="Observaciones" ancho="completo">
           <textarea rows={3} value={d.observaciones} onChange={cambia("observaciones")} />

@@ -53,6 +53,8 @@ class Settings:
     mapa_atribucion: str
     geocodificador_url: str | None
     pie_informes: str
+    url_negativa_anses: str
+    dias_vigencia_negativa: int
     lugar_informes: str
     allowed_mime: tuple[str, ...] = field(
         default=("application/pdf", "image/jpeg", "image/png")
@@ -109,5 +111,10 @@ def get_settings() -> Settings:
             "SULAM_PIE_INFORMES",
             "Córdoba 777 - San Miguel de Tucumán – Tucumán – 4000 – Tel: 2557101 - E-mail: direccionadultosmayores@gmail.com",
         ).strip(),
+        # Servicio de ANSES que abre el técnico desde su navegador (SULAM no lo consulta).
+        url_negativa_anses=os.environ.get(
+            "SULAM_URL_NEGATIVA_ANSES", "https://servicioswww.anses.gob.ar/censite/index.aspx"
+        ).strip(),
+        dias_vigencia_negativa=int(os.environ.get("SULAM_DIAS_VIGENCIA_NEGATIVA", "30")),
         lugar_informes=os.environ.get("SULAM_LUGAR_INFORMES", "San Miguel de Tucumán").strip(),
     )

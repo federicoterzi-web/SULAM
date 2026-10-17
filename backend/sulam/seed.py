@@ -29,6 +29,7 @@ TIPOS_DOCUMENTALES = [
     "Informe social",
     "Informe de seguimiento",
     "Nota",
+    "Certificación negativa ANSES",
     "Memorándum",
     "Acta de acción o intervención",
     "Elevación",

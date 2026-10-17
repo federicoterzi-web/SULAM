@@ -39,6 +39,7 @@ from ..schemas import (
     CasoIn,
     CasoPatch,
     EvolucionIn,
+    EquipoIn,
     FinAsignacionIn,
     ReiteracionIn,
 )
@@ -196,7 +197,7 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
     caratula = datos.model_dump(
         exclude_unset=True,
         exclude={
-            "persona_id", "area_id", "responsable_id", "ingreso_id", "numero_actuacion",
+            "persona_id", "area_id", "responsable_id", "responsables_ids", "ingreso_id", "numero_actuacion",
             "anio_actuacion", "forzar_otra_actuacion", "motivo_forzado",
         },
     )
@@ -221,9 +222,11 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
         },
     )
 
-    if datos.responsable_id is not None:
+    equipo = list(dict.fromkeys(([datos.responsable_id] if datos.responsable_id else []) + datos.responsables_ids))
+    if equipo:
         ctx.requerir("casos", "derivar")
-        _asignar(db, ctx, caso, datos.responsable_id, "Asignación inicial")
+        for uid in equipo:
+            _asignar(db, ctx, caso, uid, "Asignación inicial")
 
     if datos.ingreso_id is not None:
         ingreso = db.get(Ingreso, datos.ingreso_id)
@@ -492,6 +495,36 @@ def asignar(
                 )
     _asignar(db, ctx, caso, datos.usuario_id, datos.motivo)
     registrar_actividad_caso(caso)
+    db.commit()
+    db.refresh(caso)
+    return caso_out(caso, db.get(Persona, caso.persona_id), detalle=True)
+
+
+@router.put("/casos/{caso_id}/equipo")
+def definir_equipo(
+    caso_id: uuid.UUID, datos: EquipoIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)
+):
+    """Deja a cargo exactamente a los usuarios indicados (todos responsables por igual)."""
+    caso = obtener_caso(db, caso_id)
+    requerir_caso(db, ctx, caso, "casos", "derivar")
+    nuevos = list(dict.fromkeys(datos.usuarios_ids))
+    vigentes = {a.usuario_id: a for a in caso.asignaciones if a.hasta is None}
+    cambios = 0
+    for uid, a in vigentes.items():
+        if uid not in nuevos:
+            a.hasta = ahora()
+            a.finalizado_por = ctx.id
+            audit.registrar(
+                db, ctx, "finalizar_asignacion", "caso", caso.id, caso.persona_id,
+                {"usuario": a.usuario.usuario, "motivo": datos.motivo or "Cambio de equipo"},
+            )
+            cambios += 1
+    for uid in nuevos:
+        if uid not in vigentes:
+            _asignar(db, ctx, caso, uid, datos.motivo)
+            cambios += 1
+    if cambios:
+        registrar_actividad_caso(caso)
     db.commit()
     db.refresh(caso)
     return caso_out(caso, db.get(Persona, caso.persona_id), detalle=True)

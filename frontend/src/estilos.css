@@ -3516,3 +3516,176 @@ h1.hoja-titulo {
 .form-plantilla .barra-formato {
   margin-bottom: 0.4rem;
 }
+
+/* ================================================================ equipo a cargo */
+
+.selector-equipo-resumen {
+  margin: 0 0 0.4rem;
+  font-weight: 600;
+}
+
+.selector-equipo input[type="search"] {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.selector-equipo-lista {
+  max-height: 18rem;
+  overflow: auto;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.3rem 0.7rem;
+  background: var(--superficie);
+}
+
+.selector-equipo fieldset {
+  border: none;
+  margin: 0;
+  padding: 0.3rem 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.1rem 1rem;
+}
+
+.selector-equipo legend {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--texto-tenue);
+  padding: 0.3rem 0 0.1rem;
+}
+
+.selector-equipo .casilla {
+  padding: 0.2rem 0.3rem;
+  border-radius: 4px;
+}
+
+.selector-equipo .casilla.elegido {
+  background: var(--primario-claro);
+  font-weight: 600;
+}
+
+.m-app .selector-equipo-lista {
+  max-height: none;
+}
+
+.m-app .selector-equipo fieldset {
+  grid-template-columns: 1fr;
+}
+
+.m-app .selector-equipo .casilla {
+  min-height: 44px;
+  align-items: center;
+}
+
+.m-app .selector-equipo .casilla input {
+  width: 22px;
+  height: 22px;
+  margin-top: 0;
+}
+
+/* ================================================================ negativa de ANSES */
+
+.negativa-estado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.6rem;
+}
+
+.chip-negativa {
+  display: inline-block;
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.chip-neg-ok {
+  background: var(--exito-claro);
+  color: var(--acento);
+}
+
+.chip-neg-registra {
+  background: var(--info-claro);
+  color: var(--primario);
+}
+
+.chip-neg-vencida {
+  background: var(--advertencia-claro);
+  color: var(--advertencia);
+}
+
+.chip-neg-sin {
+  background: #eceef1;
+  color: var(--texto-tenue);
+}
+
+.negativa-detalle {
+  white-space: pre-line;
+  margin: 0 0 0.6rem;
+  font-size: 0.92rem;
+}
+
+.negativa-pasos {
+  margin: 0.4rem 0 0.6rem;
+  padding-left: 1.4rem;
+}
+
+.negativa-pasos li {
+  padding: 0.35rem 0;
+}
+
+.negativa-pasos .cuil {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  margin-right: 0.3rem;
+}
+
+.negativa-historial summary {
+  cursor: pointer;
+  color: var(--primario);
+  font-size: 0.92rem;
+}
+
+.opciones-resultado {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.opciones-resultado .casilla {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+
+.opciones-resultado .casilla.elegido {
+  border-color: var(--primario);
+  background: var(--primario-claro);
+}
+
+.panel-negativa-movil .negativa-pasos {
+  padding-left: 1.2rem;
+}
+
+.panel-negativa-movil .negativa-pasos .boton {
+  width: 100%;
+  min-height: 48px;
+  margin: 0.3rem 0;
+}
+
+.panel-negativa-movil .negativa-pasos .tenue {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.m-hoja-modal {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px solid var(--primario);
+}

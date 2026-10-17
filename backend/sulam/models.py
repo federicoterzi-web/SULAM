@@ -210,6 +210,7 @@ class Persona(Base):
     localidad: Mapped[str | None] = mapped_column(String(200))
     telefono: Mapped[str | None] = mapped_column(String(100))
     # Ubicación del domicilio, marcada a mano o con el GPS en una visita (nunca con servicios externos).
+    cuil: Mapped[str | None] = mapped_column(String(13))
     lat: Mapped[float | None] = mapped_column(Float)
     lng: Mapped[float | None] = mapped_column(Float)
     ubicacion_actualizada_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -731,3 +732,32 @@ class Informe(Base):
     autor: Mapped[Usuario | None] = relationship(foreign_keys=[creado_por], lazy="joined")
     firmante_usuario: Mapped[Usuario | None] = relationship(foreign_keys=[firmado_por], lazy="joined")
     tipo_documental: Mapped[TipoDocumental | None] = relationship(lazy="joined")
+
+
+class Constancia(Base):
+    """Constancias de organismos sobre la persona (por ahora, la certificación
+    negativa de ANSES), con su resultado, vencimiento y el PDF en el legajo."""
+
+    __tablename__ = "constancias"
+    __table_args__ = (
+        CheckConstraint(
+            "resultado IN ('sin_registros', 'con_registros', 'no_emitida')", name="ck_constancias_resultado"
+        ),
+    )
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    persona_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("personas.id"), index=True)
+    tipo: Mapped[str] = mapped_column(String(40), default="negativa_anses")
+    cuil: Mapped[str | None] = mapped_column(String(13))
+    fecha_emision: Mapped[date] = mapped_column(Date)
+    vence: Mapped[date | None] = mapped_column(Date)
+    resultado: Mapped[str] = mapped_column(String(20))
+    detalle: Mapped[str | None] = mapped_column(Text)
+    codigo_validacion: Mapped[str | None] = mapped_column(String(100))
+    documento_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documentos.id"))
+    # «pdf» si los datos se leyeron del PDF (y se revisaron), «manual» si se cargaron a mano.
+    origen: Mapped[str] = mapped_column(String(20), default="manual")
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    en: Mapped[datetime] = _ts()
+
+    usuario: Mapped[Usuario | None] = relationship(lazy="joined")
