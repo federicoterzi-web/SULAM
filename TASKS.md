@@ -44,8 +44,8 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Carga desde papel: receptor ≠ quien carga, fecha y autor de cada evolución, escaneo del original | ✅ |
 | Legajo = DNI (SD provisorio sin documento) | ✅ |
 | Una actuación por persona por año; reiteraciones | ✅ |
-| Circuito: Mesa deriva al área → director/a crea la carátula en pantalla (número automático) → Registro digitaliza | ⏳ a definir con la Dirección |
-| Roles «Director/a de área» (Admisión, Promoción) y «Oficina de Registro» | ⏳ |
+| Circuito: Mesa deriva al departamento → jefe/a de departamento crea la carátula en pantalla (número automático) → Registro digitaliza | ⏳ a definir con la Dirección |
+| Roles «Jefe/a de departamento» (Admisión, Promoción) y «Oficina de Registro» | ⏳ |
 
 ## Digitalización de fichas — en curso
 
