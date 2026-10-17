@@ -52,6 +52,8 @@ class Settings:
     mapa_teselas: str
     mapa_atribucion: str
     geocodificador_url: str | None
+    pie_informes: str
+    lugar_informes: str
     allowed_mime: tuple[str, ...] = field(
         default=("application/pdf", "image/jpeg", "image/png")
     )
@@ -102,4 +104,10 @@ def get_settings() -> Settings:
         geocodificador_url=os.environ.get(
             "SULAM_GEOCODIFICADOR_URL", "https://nominatim.openstreetmap.org/search"
         ).strip() or None,
+        # Pie de página de los informes en PDF (datos institucionales públicos).
+        pie_informes=os.environ.get(
+            "SULAM_PIE_INFORMES",
+            "Córdoba 777 - San Miguel de Tucumán – Tucumán – 4000 – Tel: 2557101 - E-mail: direccionadultosmayores@gmail.com",
+        ).strip(),
+        lugar_informes=os.environ.get("SULAM_LUGAR_INFORMES", "San Miguel de Tucumán").strip(),
     )

@@ -11,6 +11,8 @@ import { PaginaFichas } from "./paginas/fichas";
 import { PaginaColaImpresion } from "./paginas/cola";
 import { PaginaRecurso, PaginaRecursos } from "./paginas/recursos";
 import { PaginaContactos } from "./paginas/contactos";
+import { PaginaInforme } from "./paginas/informes";
+import { PaginaPlantillas } from "./paginas/plantillas";
 import { PaginaVisitas } from "./paginas/visitas";
 import { PaginaLegajo } from "./paginas/legajo";
 import { PaginaLegajos } from "./paginas/legajos";
@@ -205,6 +207,7 @@ const MENU: { ruta: string; texto: string; permiso?: [string, string] }[] = [
   { ruta: "/mesa", texto: "Mesa de Entrada", permiso: ["mesa_entrada", "consultar"] },
   { ruta: "/expedientes", texto: "Expedientes", permiso: ["expedientes", "consultar"] },
   { ruta: "/fichas", texto: "Fichas en papel" },
+  { ruta: "/plantillas", texto: "Plantillas de informes", permiso: ["plantillas", "modificar"] },
   { ruta: "/auditoria", texto: "Auditoría", permiso: ["auditoria", "consultar"] },
   { ruta: "/admin", texto: "Administración", permiso: ["administracion", "administrar"] },
 ];
@@ -353,6 +356,10 @@ function Rutas({ ruta }: { ruta: string }) {
       return <PaginaVisitas />;
     case "contactos":
       return <PaginaContactos />;
+    case "informes":
+      return <PaginaInforme id={p[1]} key={p[1]} />;
+    case "plantillas":
+      return <PaginaPlantillas />;
     case "recursos":
       return p[1] ? <PaginaRecurso id={p[1]} key={p[1]} /> : <PaginaRecursos />;
     case "imprimir-caratulas":

@@ -661,3 +661,73 @@ class Articulacion(Base):
     contacto: Mapped["Contacto | None"] = relationship(lazy="joined")
     recurso: Mapped["Recurso | None"] = relationship(lazy="joined")
     usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
+# ---------------------------------------------------------------------------
+# Informes: plantillas editables y documentos redactados en SULAM.
+# ---------------------------------------------------------------------------
+
+
+class PlantillaInforme(Base):
+    """Estructura sugerida de un informe: qué datos de la persona se incluyen y
+    qué secciones lleva. Las editan Dirección y jefaturas (módulo «plantillas»)."""
+
+    __tablename__ = "plantillas_informe"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(200))
+    descripcion: Mapped[str | None] = mapped_column(Text)
+    # Área que la usa; sin área = para toda la Dirección.
+    area_id: Mapped[int | None] = mapped_column(ForeignKey("areas.id"))
+    tipo_documental_id: Mapped[int | None] = mapped_column(ForeignKey("tipos_documentales.id"))
+    # {"destinatario": bool, "datos": [clave...], "secciones": [{"titulo", "guia", "texto"}]}
+    estructura: Mapped[dict] = mapped_column(JSONB)
+    orden: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()
+
+    area: Mapped[Area | None] = relationship(lazy="joined")
+    tipo_documental: Mapped[TipoDocumental | None] = relationship(lazy="joined")
+
+
+class Informe(Base):
+    """Informe redactado en SULAM. Mientras es borrador se edita; al firmarlo se
+    genera el PDF (queda como documento del legajo) y no cambia más. Para
+    corregirlo se crea una versión nueva del mismo grupo."""
+
+    __tablename__ = "informes"
+    __table_args__ = (
+        UniqueConstraint("grupo_id", "version", name="uq_informes_grupo_version"),
+        CheckConstraint("estado IN ('borrador', 'firmado', 'reemplazado', 'descartado')", name="ck_informes_estado"),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    grupo_id: Mapped[uuid.UUID] = mapped_column(UUIDpk, index=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    persona_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("personas.id"), index=True)
+    caso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("casos.id"), index=True)
+    plantilla_id: Mapped[int | None] = mapped_column(ForeignKey("plantillas_informe.id"))
+    tipo_documental_id: Mapped[int | None] = mapped_column(ForeignKey("tipos_documentales.id"))
+    titulo: Mapped[str] = mapped_column(String(300))
+    lugar: Mapped[str | None] = mapped_column(String(200))
+    fecha: Mapped[date] = mapped_column(Date)
+    destinatario: Mapped[str | None] = mapped_column(Text)
+    # [{"clave", "etiqueta", "valor"}]
+    datos: Mapped[list] = mapped_column(JSONB)
+    # [{"titulo", "html"}]
+    secciones: Mapped[list] = mapped_column(JSONB)
+    # [{"nombre", "cargo"}]
+    firmantes: Mapped[list] = mapped_column(JSONB)
+    estado: Mapped[str] = mapped_column(String(20), default="borrador")
+    documento_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documentos.id"))
+    firmado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    firmado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()
+
+    autor: Mapped[Usuario | None] = relationship(foreign_keys=[creado_por], lazy="joined")
+    firmante_usuario: Mapped[Usuario | None] = relationship(foreign_keys=[firmado_por], lazy="joined")
+    tipo_documental: Mapped[TipoDocumental | None] = relationship(lazy="joined")

@@ -12,6 +12,7 @@ import { RecursosMovil } from "./recursos";
 import { VisitasMovil } from "./visitas";
 import { UbicacionDomicilio } from "../paginas/ubicacion";
 import type { Articulacion } from "../paginas/articulaciones";
+import { ElegirPlantilla, ESTADOS_INFORME, rutaInforme, PaginaInforme, type ResumenInforme } from "../paginas/informes";
 import { ContactoFormMovil, FormularioCasoMovil, FormularioLegajoMovil, IngresoMovil, RecursoFormMovil } from "./formularios";
 
 // ---------------------------------------------------------------- aviso entre pantallas
@@ -63,7 +64,7 @@ export function Movil({ ruta, alSalir, alCambiarPassword }: { ruta: string; alSa
   const seccion = p[0] ?? "";
   // En los formularios se ocultan las pestañas: más lugar y sin toques accidentales.
   const enFormulario =
-    p[0] === "nuevo" || p[0] === "ingreso" || p.length > 2 || ((p[0] === "recursos" || p[0] === "contactos") && p[1] === "nuevo");
+    p[0] === "nuevo" || p[0] === "ingreso" || p[0] === "informe" || p.length > 2 || ((p[0] === "recursos" || p[0] === "contactos") && p[1] === "nuevo");
   return (
     <div className={`m-app ${enFormulario ? "m-app-formulario" : ""}`}>
       <header className="m-barra">
@@ -152,13 +153,15 @@ function titulo(p: string[]): string {
       return p[1] === "nuevo" ? "Nuevo contacto" : "Editar contacto";
     case "ingreso":
       return "Mesa de Entrada";
+    case "informe":
+      return "Informe";
     case "visitas":
       return "Salida de visitas";
     case "nuevo":
       return "Nuevo caso";
     case "legajo":
       return (
-        { caratula: "Carátula", fotos: "Fotos", editar: "Datos personales", vinculado: "Vínculo", expediente: "Expediente" }[p[2] ?? ""] ??
+        { caratula: "Carátula", fotos: "Fotos", editar: "Datos personales", vinculado: "Vínculo", expediente: "Expediente", informe: "Redactar informe" }[p[2] ?? ""] ??
         "Legajo"
       );
     case "caso":
@@ -173,6 +176,7 @@ function titulo(p: string[]): string {
           editar: "Editar caso",
           caratula: "Carátula",
           articulacion: "Articulación",
+          informe: "Redactar informe",
         }[p[2] ?? ""] ?? "Caso"
       );
     default:
@@ -188,6 +192,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "recursos") return "/recursos";
   if (p[0] === "contactos") return "/contactos";
   if (p[0] === "ingreso") return "/mesa";
+  if (p[0] === "informe" && p[1]) return `/informes/${p[1]}`;
   if (p[0] === "visitas") return "/visitas";
   return "/";
 }
@@ -210,6 +215,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       return <Aviso error="Pantalla inexistente." />;
     case "ingreso":
       return <IngresoMovil />;
+    case "informe":
+      return <PaginaInforme id={p[1]} movil key={p[1]} />;
     case "visitas":
       return <VisitasMovil />;
     case "buscar":
@@ -219,6 +226,7 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
     case "legajo":
       if (p[2] === "caratula") return <CaratulaMovil personaId={p[1]} key={p[1]} />;
       if (p[2] === "fotos") return <FotosMovil personaId={p[1]} key={p[1]} />;
+      if (p[2] === "informe") return <NuevoInformeMovil personaId={p[1]} key={p[1]} />;
       if (p[2] === "editar" || p[2] === "vinculado" || p[2] === "expediente")
         return <FormularioLegajoMovil personaId={p[1]} que={p[2]} vinculadoId={parametro(ruta, "editar") || undefined} key={ruta} />;
       return <LegajoMovil id={p[1]} key={p[1]} />;
@@ -226,6 +234,7 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       if (p[2] === "evolucion") return <EvolucionMovil casoId={p[1]} key={p[1]} />;
       if (p[2] === "fotos") return <FotosMovil casoId={p[1]} demandaId={parametro(ruta, "demanda")} key={p[1]} />;
       if (p[2] === "reiteracion") return <ReiteracionMovil casoId={p[1]} key={p[1]} />;
+      if (p[2] === "informe") return <NuevoInformeMovil casoId={p[1]} key={p[1]} />;
       if (p[2]) return <FormularioCasoMovil casoId={p[1]} que={p[2]} demandaId={parametro(ruta, "editar") || undefined} key={ruta} />;
       return <CasoMovil id={p[1]} key={p[1]} />;
     default:
@@ -511,6 +520,11 @@ function LegajoMovil({ id }: { id: string }) {
             Agregar persona o institución vinculada
           </Accion>
         )}
+        {l.permisos.modificar && (
+          <Accion a={`/m/legajo/${id}/informe`} icono="▤">
+            Redactar informe o nota
+          </Accion>
+        )}
         {l.permisos.crear_expediente && (
           <Accion a={`/m/legajo/${id}/expediente`} icono="▤">
             Vincular expediente
@@ -536,6 +550,8 @@ function LegajoMovil({ id }: { id: string }) {
           ))}
         </>
       )}
+
+      <InformesMovil ruta={`/personas/${id}/informes`} />
 
       <h2 className="m-subtitulo">Ubicación del domicilio</h2>
       <UbicacionDomicilio persona={l} puedeModificar={l.permisos.modificar} alCambiar={recargar} />
@@ -626,6 +642,11 @@ function CasoMovil({ id }: { id: string }) {
           </Accion>
         )}
         {c.permisos.modificar && (
+          <Accion a={`/m/caso/${id}/informe`} icono="▤">
+            Redactar informe
+          </Accion>
+        )}
+        {c.permisos.modificar && (
           <Accion a={`/m/caso/${id}/articulacion`} icono="⇄">
             Registrar articulación con otra institución
           </Accion>
@@ -689,6 +710,7 @@ function CasoMovil({ id }: { id: string }) {
               ))}
             </>
           )}
+          <InformesMovil ruta={`/casos/${id}/informes`} />
           <ArticulacionesMovil casoId={id} />
           {c.documentos.length > 0 && (
             <>
@@ -726,6 +748,42 @@ function ArticulacionesMovil({ casoId }: { casoId: string }) {
           {a.contacto && <Llamar telefono={a.contacto.telefono} />}
         </Tarjeta>
       ))}
+    </>
+  );
+}
+
+function NuevoInformeMovil({ casoId, personaId }: { casoId?: string; personaId?: string }) {
+  return (
+    <div className="m-formulario m-formulario-completo">
+      <ElegirPlantilla casoId={casoId} personaId={personaId} alCrear={(i) => location.replace("#" + rutaInforme(i.id, true))} />
+    </div>
+  );
+}
+
+interface GrupoInformeMovil extends ResumenInforme {
+  vigente: ResumenInforme | null;
+  borrador: ResumenInforme | null;
+}
+
+function InformesMovil({ ruta }: { ruta: string }) {
+  const { datos } = useDatos(() => api.get<GrupoInformeMovil[]>(ruta), [ruta]);
+  if (!datos || datos.length === 0) return null;
+  return (
+    <>
+      <h2 className="m-subtitulo">Informes</h2>
+      {datos.map((g) => {
+        const abrir = g.borrador ?? g.vigente ?? g;
+        return (
+          <Tarjeta key={g.grupo_id} a={rutaInforme(abrir.id, true)}>
+            <strong>{g.titulo}</strong>
+            <span className="m-detalle">
+              {g.vigente ? `Firmado el ${fecha(g.vigente.firmado_en)}` : ESTADOS_INFORME[abrir.estado]}
+              {g.borrador && g.vigente ? " · hay un borrador de corrección" : ""}
+              {abrir.autor && ` · ${abrir.autor.nombre_completo}`}
+            </span>
+          </Tarjeta>
+        );
+      })}
     </>
   );
 }

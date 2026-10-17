@@ -78,13 +78,23 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Registro de la División de Participación y Sensibilización Ciudadana (talleres, campañas, capacitaciones, centros de jubilados) | ⏳ a relevar con la División |
 | Carga inicial de recursos (hoy en papel o dispersos) | ⏳ |
 
+## Informes
+
+| Funcionalidad | Estado |
+|---|---|
+| Editor de informes con plantilla y datos de la persona completados solos (computadora y celular) | ✅ |
+| Datos y secciones agregables, quitables y reordenables; insertar evoluciones, articulaciones y demanda | ✅ |
+| Firma con PDF con membrete en el legajo; versiones para corregir | ✅ |
+| Plantillas editables por Dirección y jefaturas | ✅ |
+| Validar las plantillas iniciales con los equipos técnicos | ⏳ |
+
 ## Digitalización de fichas — en curso
 
 | Funcionalidad | Estado |
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0014) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0015) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |

@@ -13,14 +13,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     SULAM_DATA_DIR=/datos \
     SULAM_FRONTEND_DIST=/app/frontend/dist
 
-# Cliente de PostgreSQL 16 (pg_dump / pg_restore, misma versión que el servidor) para respaldos.
+# Cliente de PostgreSQL 16 (pg_dump / pg_restore, misma versión que el servidor) para respaldos;
+# Liberation Sans (mismas medidas que Arial) para los informes en PDF.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates \
     && install -d /usr/share/postgresql-common/pgdg \
     && curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
     && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-16 \
+    && apt-get install -y --no-install-recommends postgresql-client-16 fonts-liberation \
     && apt-get purge -y curl && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 

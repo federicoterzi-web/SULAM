@@ -26,6 +26,9 @@ TIPOS_DOCUMENTALES = [
     "Carátula",
     "Registro de demanda",
     "Informe socioambiental",
+    "Informe social",
+    "Informe de seguimiento",
+    "Nota",
     "Memorándum",
     "Acta de acción o intervención",
     "Elevación",
@@ -56,6 +59,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Gestión de permisos, plantillas, configuraciones y operaciones institucionales autorizadas.",
         "permisos": [
+            ("plantillas", "modificar", T),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
             ("personas", "administrar", T),
@@ -72,6 +76,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Conducción de la Dirección: ve todos los casos y la auditoría, y puede derivar y asignar. No administra usuarios ni permisos.",
         "permisos": [
+            ("plantillas", "modificar", T),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", T), ("casos", "derivar", T),
@@ -86,6 +91,7 @@ ROLES: dict[str, dict] = {
         "inicio": "jefatura",
         "descripcion": "Conduce un departamento que maneja casos (Admisión o Promoción, según el área del usuario): abre carátulas y asigna técnicos en su área.",
         "permisos": [
+            ("plantillas", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AR),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AR), ("casos", "derivar", AR),
@@ -99,6 +105,7 @@ ROLES: dict[str, dict] = {
         "inicio": "jefatura",
         "descripcion": "Conduce una división (Participación y Sensibilización Ciudadana, Cuidados y Promoción de Autonomía) o cumple esa función en un departamento. Mismos permisos que un jefe de departamento, sobre el área del usuario.",
         "permisos": [
+            ("plantillas", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AR),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AR), ("casos", "derivar", AR),
@@ -181,6 +188,10 @@ def inicializar_catalogos(db: Session) -> None:
         rol = Rol(nombre=nombre, descripcion=d["descripcion"], inicio=d.get("inicio"))
         rol.permisos = [RolPermiso(modulo=m, accion=a, alcance=al) for m, a, al in d["permisos"]]
         db.add(rol)
+    db.flush()
+    from .informes import crear_plantillas_iniciales
+
+    crear_plantillas_iniciales(db)
     db.flush()
 
 

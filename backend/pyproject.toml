@@ -30,5 +30,8 @@ sulam = "sulam.cli:main"
 [tool.setuptools.packages.find]
 include = ["sulam*"]
 
+[tool.setuptools.package-data]
+sulam = ["recursos/*.jpg"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

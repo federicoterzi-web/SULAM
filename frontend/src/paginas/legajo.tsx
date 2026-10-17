@@ -1,3 +1,4 @@
+import { SeccionInformes } from "./informes";
 import { UbicacionDomicilio } from "./ubicacion";
 import { useState, type FormEvent } from "react";
 import { ApiError, api, type Caso, type EventoAuditoria, type Expediente, type Legajo, type PersonaResumen, type Vinculado } from "../api";
@@ -216,6 +217,8 @@ export function PaginaLegajo({ id }: { id: string }) {
           </table>
         )}
       </Seccion>
+
+      <SeccionInformes personaId={l.id} puedeCrear={l.permisos.modificar} />
 
       <Seccion
         id="s-docs"

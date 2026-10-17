@@ -86,6 +86,10 @@ Pedido de la Dirección para agilizar las cargas, también en visitas (con datos
 ### D-021 · Sin categoría de información reservada — *Vigente*
 Decisión de la Dirección (17/10/2026): se elimina la marca de reserva de casos, documentos, tipos documentales y personas vinculadas, y el permiso *Información reservada*. Quien puede consultar un caso ve todo su contenido, también en el mapa y las salidas. Lo que sigue limitando el acceso es el alcance de cada rol (consultar / modificar) y la auditoría, que registra cada consulta. La migración 0012 elimina las columnas.
 
+### D-022 · Informes redactados en SULAM: borrador editable, firmado inmodificable con versiones — *Vigente*
+
+Los informes se redactan dentro de SULAM a partir de plantillas que traen los datos de la persona. Mientras es borrador se edita (con guardado automático); al **firmarlo** se genera el PDF con membrete y queda como documento del legajo, sin cambios posteriores. Para corregir se abre una **nueva versión** del mismo informe; la anterior queda «reemplazada» y se conserva (pedido de la Dirección, 17/10/2026). El texto con formato se limpia en el servidor (solo párrafos, listas, negrita, cursiva y subrayado). Las plantillas las editan la Dirección (todas) y las jefaturas (las de su área). El modelo de informe aportado por la Dirección se usó solo como estructura; su contenido no se cargó en SULAM.
+
 ---
 
 ## Pendientes (no se inventan)
@@ -104,3 +108,4 @@ Decisión de la Dirección (17/10/2026): se elimina la marca de reserva de casos
 | P-009 | Alojamiento definitivo y almacenamiento de archivos | Informática (D-008, D-012) |
 | P-010 | Procedimiento de recuperación ante incidentes | Informática |
 | P-011 | Umbral de "sin actividad" del tablero (hoy 30 días) | Equipo técnico |
+

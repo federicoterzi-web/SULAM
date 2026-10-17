@@ -192,6 +192,18 @@ Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un
 - **Sin conexión**: aviso; no se guardan datos en el teléfono.
 - **QR de la carátula para carpeta**: lleva un enlace `#/c/<id interno del caso>`, sin datos personales. Escaneado con el celular abre el caso en la versión celular; desde una computadora, en la versión completa. Siempre pide iniciar sesión y respeta los permisos. La dirección del enlace es la oficial (`SULAM_URL_PUBLICA`, o `https://SULAM_DOMINIO`), sin importar desde qué computadora se imprima. Sin configurarla, se usa la dirección con que se abrió SULAM y, si es «localhost», la IP de red de la máquina; si tampoco se puede (Docker), la vista de impresión avisa que el QR no funcionará desde un celular.
 
+## 5 undecies. Informes redactados en SULAM
+
+- **Redactar informe** desde el caso (o desde el legajo, para notas sin caso), en computadora o celular. Se elige una plantilla: *Informe socioambiental*, *Informe social / de situación*, *Informe de seguimiento*, *Nota / oficio a otra institución* o *Documento en blanco*.
+- La hoja se ve como el papel: membrete, área, lugar y fecha, destinatario (si corresponde), título, **datos de la persona completados solos** (nombre, nacimiento, edad, DNI, obra social, estado civil, domicilio, CUD, legajo, actuación, referente, vivienda, etc., tomados del legajo, del caso y del último registro de demanda) y secciones con guía de qué escribir.
+- **Todo es agregable y quitable**: datos (de la lista o uno libre), secciones (las sugeridas de la plantilla o nuevas), firmantes. Las secciones se reordenan. Si el legajo cambió, *Actualizar datos con el legajo*.
+- Texto con formato básico (negrita, cursiva, subrayado, listas). Lo pegado de Word o de una página se pega como texto. Panel **Insertar del caso**: motivo de ingreso, registro de demanda, evoluciones y articulaciones, para no volver a escribirlos.
+- **Guardado automático** del borrador; si otra persona guardó cambios mientras tanto, no se pisan (se avisa).
+- **Firmar**: genera el PDF (Arial/Liberation Sans, membrete, pie institucional y «Página n de m») y lo guarda en los documentos del caso con el tipo documental de la plantilla. Avisa antes las secciones vacías (no se imprimen) y los datos en blanco. Firmado, **no se modifica**: *Corregir (nueva versión)* abre un borrador nuevo del mismo informe; al firmarlo, la versión anterior queda como «reemplazada» y se conserva con su PDF.
+- Vista previa en PDF del borrador en cualquier momento. Los borradores se pueden descartar.
+- Permisos: lo ve quien puede consultar el caso; lo redacta, firma o corrige quien puede modificarlo (los mismos que escriben evoluciones).
+- **Plantillas** (*Plantillas de informes*): la Dirección edita todas y crea generales; cada jefatura edita y crea las de su área (permiso `plantillas.modificar`, alcance «área»). Se definen datos, secciones con guía y texto inicial, título impreso, destinatario y tipo documental. Los cambios valen para informes nuevos.
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.
