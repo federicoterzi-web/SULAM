@@ -350,7 +350,7 @@ export function FormCaso({ personaId, ingresoId, alGuardar }: { personaId: strin
   return <FormCaratula personaId={personaId} ingresoId={ingresoId} alGuardar={alGuardar} />;
 }
 
-function FormExpediente({ personaId, casos, alGuardar }: { personaId: string; casos: Caso[]; alGuardar: () => void }) {
+export function FormExpediente({ personaId, casos, alGuardar }: { personaId: string; casos: Caso[]; alGuardar: () => void }) {
   const [d, setD] = useState({ numero: "", tipo: "administrativo", organismo: "", caratula: "", caso_id: "", observaciones: "" });
   const { enviando, error, ejecutar } = useEnvio();
   const cambia = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value });
@@ -411,7 +411,7 @@ function FormExpediente({ personaId, casos, alGuardar }: { personaId: string; ca
   );
 }
 
-function FormVinculado({ personaId, vinculado, alGuardar }: { personaId: string; vinculado?: Vinculado; alGuardar: () => void }) {
+export function FormVinculado({ personaId, vinculado, alGuardar }: { personaId: string; vinculado?: Vinculado; alGuardar: () => void }) {
   const { catalogos } = useSesion();
   const [d, setD] = useState({
     tipo_vinculo_id: String(vinculado?.tipo_vinculo.id ?? ""),

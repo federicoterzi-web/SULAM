@@ -71,6 +71,7 @@ export function MapaRecursos({
     mapa.current = crearMapa(div.current, cfg);
     capa.current = L.layerGroup().addTo(mapa.current);
     return () => {
+      mapa.current?.stop();
       mapa.current?.remove();
       mapa.current = null;
     };
@@ -131,6 +132,7 @@ export function MapaSelector({
     mapa.current = m;
     m.on("click", (e: any) => cambiar.current({ lat: redondear(e.latlng.lat), lng: redondear(e.latlng.lng) }));
     return () => {
+      m.stop();
       m.remove();
       mapa.current = null;
       mk.current = null;
@@ -151,11 +153,11 @@ export function MapaSelector({
         const p = mk.current.getLatLng();
         cambiar.current({ lat: redondear(p.lat), lng: redondear(p.lng) });
       });
-      m.setView([valor.lat, valor.lng], Math.max(m.getZoom(), 15));
+      m.setView([valor.lat, valor.lng], Math.max(m.getZoom(), 15), { animate: false });
     } else {
       mk.current.setLatLng([valor.lat, valor.lng]);
       mk.current.setIcon(icono(tipo, true));
-      m.panTo([valor.lat, valor.lng]);
+      m.panTo([valor.lat, valor.lng], { animate: false });
     }
   }, [valor, tipo]);
 

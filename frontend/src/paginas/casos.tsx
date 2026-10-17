@@ -441,7 +441,7 @@ export function PaginaCaso({ id }: { id: string }) {
   );
 }
 
-function FormEstado({ caso, alGuardar }: { caso: Caso; alGuardar: () => void }) {
+export function FormEstado({ caso, alGuardar }: { caso: Caso; alGuardar: () => void }) {
   const opciones = Object.keys(ESTADOS).filter((e) => e !== caso.estado);
   const [estado, setEstado] = useState(opciones[0]);
   const [motivo, setMotivo] = useState("");
@@ -480,7 +480,7 @@ function FormEstado({ caso, alGuardar }: { caso: Caso; alGuardar: () => void }) 
   );
 }
 
-function FormAsignar({
+export function FormAsignar({
   caso,
   usuarios,
   alGuardar,
@@ -535,7 +535,7 @@ function FormAsignar({
   );
 }
 
-function FormEditarCaso({ caso, alGuardar }: { caso: Caso; alGuardar: () => void }) {
+export function FormEditarCaso({ caso, alGuardar }: { caso: Caso; alGuardar: () => void }) {
   const { catalogos } = useSesion();
   const [areaId, setAreaId] = useState(String(caso.area?.id ?? ""));
   const [motivo, setMotivo] = useState(caso.motivo ?? "");

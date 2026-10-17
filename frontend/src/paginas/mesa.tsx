@@ -104,7 +104,7 @@ export function PaginaMesa() {
   );
 }
 
-function FormIngreso({ alGuardar }: { alGuardar: (i: Ingreso) => void }) {
+export function FormIngreso({ alGuardar }: { alGuardar: (i: Ingreso) => void }) {
   const { catalogos } = useSesion();
   const [d, setD] = useState({
     asunto: "",

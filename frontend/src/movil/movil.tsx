@@ -11,6 +11,8 @@ import { FotosMovil } from "./fotos";
 import { RecursosMovil } from "./recursos";
 import { VisitasMovil } from "./visitas";
 import { UbicacionDomicilio } from "../paginas/ubicacion";
+import type { Articulacion } from "../paginas/articulaciones";
+import { ContactoFormMovil, FormularioCasoMovil, FormularioLegajoMovil, IngresoMovil, RecursoFormMovil } from "./formularios";
 
 // ---------------------------------------------------------------- aviso entre pantallas
 
@@ -60,7 +62,8 @@ export function Movil({ ruta, alSalir, alCambiarPassword }: { ruta: string; alSa
 
   const seccion = p[0] ?? "";
   // En los formularios se ocultan las pestañas: más lugar y sin toques accidentales.
-  const enFormulario = p[0] === "nuevo" || p.length > 2;
+  const enFormulario =
+    p[0] === "nuevo" || p[0] === "ingreso" || p.length > 2 || ((p[0] === "recursos" || p[0] === "contactos") && p[1] === "nuevo");
   return (
     <div className={`m-app ${enFormulario ? "m-app-formulario" : ""}`}>
       <header className="m-barra">
@@ -144,15 +147,34 @@ function titulo(p: string[]): string {
     case "buscar":
       return "Buscar";
     case "recursos":
-      return "Recursos";
+      return p[1] === "nuevo" ? "Nuevo recurso" : p[2] === "editar" ? "Editar recurso" : "Recursos";
+    case "contactos":
+      return p[1] === "nuevo" ? "Nuevo contacto" : "Editar contacto";
+    case "ingreso":
+      return "Mesa de Entrada";
     case "visitas":
       return "Salida de visitas";
     case "nuevo":
       return "Nuevo caso";
     case "legajo":
-      return p[2] === "caratula" ? "Carátula" : p[2] === "fotos" ? "Fotos" : "Legajo";
+      return (
+        { caratula: "Carátula", fotos: "Fotos", editar: "Datos personales", vinculado: "Vínculo", expediente: "Expediente" }[p[2] ?? ""] ??
+        "Legajo"
+      );
     case "caso":
-      return { evolucion: "Evolución", fotos: "Fotos", reiteracion: "Reiteración" }[p[2] ?? ""] ?? "Caso";
+      return (
+        {
+          evolucion: "Evolución",
+          fotos: "Fotos",
+          reiteracion: "Reiteración",
+          demanda: "Registro de demanda",
+          estado: "Estado del caso",
+          asignar: "Asignar / derivar",
+          editar: "Editar caso",
+          caratula: "Carátula",
+          articulacion: "Articulación",
+        }[p[2] ?? ""] ?? "Caso"
+      );
     default:
       return "";
   }
@@ -162,7 +184,10 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "legajo" && p[1]) return `/legajos/${p[1]}`;
   if (p[0] === "caso" && p[1]) return `/casos/${p[1]}`;
   if (p[0] === "buscar" && p[1]) return `/buscar/${p[1]}`;
+  if (p[0] === "recursos" && p[1] && p[1] !== "nuevo") return `/recursos/${p[1]}`;
   if (p[0] === "recursos") return "/recursos";
+  if (p[0] === "contactos") return "/contactos";
+  if (p[0] === "ingreso") return "/mesa";
   if (p[0] === "visitas") return "/visitas";
   return "/";
 }
@@ -176,7 +201,15 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
     case undefined:
       return <InicioMovil />;
     case "recursos":
+      if (p[1] === "nuevo") return <RecursoFormMovil />;
+      if (p[1] && p[2] === "editar") return <RecursoFormMovil id={p[1]} key={p[1]} />;
       return <RecursosMovil />;
+    case "contactos":
+      if (p[1] === "nuevo") return <ContactoFormMovil />;
+      if (p[1] && p[2] === "editar") return <ContactoFormMovil id={p[1]} key={p[1]} />;
+      return <Aviso error="Pantalla inexistente." />;
+    case "ingreso":
+      return <IngresoMovil />;
     case "visitas":
       return <VisitasMovil />;
     case "buscar":
@@ -186,11 +219,14 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
     case "legajo":
       if (p[2] === "caratula") return <CaratulaMovil personaId={p[1]} key={p[1]} />;
       if (p[2] === "fotos") return <FotosMovil personaId={p[1]} key={p[1]} />;
+      if (p[2] === "editar" || p[2] === "vinculado" || p[2] === "expediente")
+        return <FormularioLegajoMovil personaId={p[1]} que={p[2]} vinculadoId={parametro(ruta, "editar") || undefined} key={ruta} />;
       return <LegajoMovil id={p[1]} key={p[1]} />;
     case "caso":
       if (p[2] === "evolucion") return <EvolucionMovil casoId={p[1]} key={p[1]} />;
       if (p[2] === "fotos") return <FotosMovil casoId={p[1]} demandaId={parametro(ruta, "demanda")} key={p[1]} />;
       if (p[2] === "reiteracion") return <ReiteracionMovil casoId={p[1]} key={p[1]} />;
+      if (p[2]) return <FormularioCasoMovil casoId={p[1]} que={p[2]} demandaId={parametro(ruta, "editar") || undefined} key={ruta} />;
       return <CasoMovil id={p[1]} key={p[1]} />;
     default:
       return <Aviso error="Pantalla inexistente." />;
@@ -288,8 +324,12 @@ function FichaCaso({ c, conPersona }: { c: Caso; conPersona?: boolean }) {
 // ---------------------------------------------------------------- inicio
 
 function InicioMovil() {
-  const { yo } = useSesion();
-  const mios = useDatos(() => api.get<Caso[]>("/casos", { asignados_a_mi: true, limite: 30 }), []);
+  const { yo, puede } = useSesion();
+  const consultaCasos = puede("casos", "consultar");
+  const mios = useDatos(
+    () => (consultaCasos ? api.get<Caso[]>("/casos", { asignados_a_mi: true, limite: 30 }) : Promise.resolve(null)),
+    [consultaCasos],
+  );
   const recientes = useDatos(
     () => (mios.datos && mios.datos.length === 0 ? api.get<Caso[]>("/casos", { limite: 15 }) : Promise.resolve(null)),
     [mios.datos],
@@ -299,13 +339,25 @@ function InicioMovil() {
       <p className="m-saludo">Hola, {yo.nombre_completo.split(" ")[0]}</p>
       <CajaBusqueda inicial="" />
       <div className="m-acciones">
-        <Accion a="/m/visitas" icono="⌖">
-          Mapa de casos y salida de visitas
-        </Accion>
+        {puede("mesa_entrada", "crear") && (
+          <Accion a="/m/ingreso" icono="⇲" principal={!consultaCasos}>
+            Registrar ingreso en Mesa de Entrada
+          </Accion>
+        )}
+        {consultaCasos && (
+          <Accion a="/m/visitas" icono="⌖">
+            Mapa de casos y salida de visitas
+          </Accion>
+        )}
+        {puede("recursos", "crear") && (
+          <Accion a="/m/recursos/nuevo" icono="＋">
+            Agregar un lugar al mapa de recursos
+          </Accion>
+        )}
       </div>
-      <h2 className="m-subtitulo">Mis casos</h2>
+      {consultaCasos && <h2 className="m-subtitulo">Mis casos</h2>}
       {mios.error && <Aviso error={mios.error} />}
-      {!mios.datos ? (
+      {!consultaCasos ? null : !mios.datos ? (
         <Cargando />
       ) : mios.datos.length === 0 ? (
         <p className="m-tenue">No tiene casos asignados.</p>
@@ -449,7 +501,41 @@ function LegajoMovil({ id }: { id: string }) {
             Sacar fotos de documentos
           </Accion>
         )}
+        {l.permisos.modificar && (
+          <Accion a={`/m/legajo/${id}/editar`} icono="✎">
+            Editar datos personales
+          </Accion>
+        )}
+        {l.permisos.modificar && (
+          <Accion a={`/m/legajo/${id}/vinculado`} icono="＋">
+            Agregar persona o institución vinculada
+          </Accion>
+        )}
+        {l.permisos.crear_expediente && (
+          <Accion a={`/m/legajo/${id}/expediente`} icono="▤">
+            Vincular expediente
+          </Accion>
+        )}
       </div>
+
+      {l.vinculados.length > 0 && (
+        <>
+          <h2 className="m-subtitulo">Vinculados</h2>
+          {l.vinculados.map((v) => (
+            <Tarjeta key={v.id} a={l.permisos.modificar ? `/m/legajo/${id}/vinculado?editar=${v.id}` : undefined} className={v.activo ? "" : "m-inactivo"}>
+              <strong>
+                {v.es_institucion ? v.nombre_institucion : `${(v.apellidos ?? "").toUpperCase()}, ${v.nombres ?? ""}`}
+              </strong>
+              <span className="m-detalle">
+                {v.tipo_vinculo.nombre}
+                {!v.activo && " (inactivo)"}
+                {v.telefono && ` · ${v.telefono}`}
+              </span>
+              {l.permisos.modificar && <span className="m-detalle m-enlace">Tocar para editar</span>}
+            </Tarjeta>
+          ))}
+        </>
+      )}
 
       <h2 className="m-subtitulo">Ubicación del domicilio</h2>
       <UbicacionDomicilio persona={l} puedeModificar={l.permisos.modificar} alCambiar={recargar} />
@@ -535,8 +621,38 @@ function CasoMovil({ id }: { id: string }) {
           </Accion>
         )}
         {c.permisos.modificar && (
+          <Accion a={`/m/caso/${id}/demanda`} icono="▦">
+            {c.demandas.length ? "Nuevo registro de demanda" : "Cargar registro de demanda"}
+          </Accion>
+        )}
+        {c.permisos.modificar && (
+          <Accion a={`/m/caso/${id}/articulacion`} icono="⇄">
+            Registrar articulación con otra institución
+          </Accion>
+        )}
+        {c.permisos.modificar && (
           <Accion a={`/m/caso/${id}/reiteracion`} icono="↻">
             Registrar reiteración
+          </Accion>
+        )}
+        {c.permisos.modificar && (
+          <Accion a={`/m/caso/${id}/estado`} icono="◐">
+            Cambiar estado
+          </Accion>
+        )}
+        {c.permisos.derivar && (
+          <Accion a={`/m/caso/${id}/asignar`} icono="⇢">
+            Asignar / derivar
+          </Accion>
+        )}
+        {c.permisos.modificar && (
+          <Accion a={`/m/caso/${id}/caratula`} icono="▭">
+            Editar carátula
+          </Accion>
+        )}
+        {c.permisos.modificar && (
+          <Accion a={`/m/caso/${id}/editar`} icono="✎">
+            Editar datos del caso
           </Accion>
         )}
       </div>
@@ -559,6 +675,21 @@ function CasoMovil({ id }: { id: string }) {
               Ver las {evol.length} entradas
             </button>
           )}
+          {c.demandas.length > 0 && (
+            <>
+              <h2 className="m-subtitulo">Registros de demanda</h2>
+              {c.demandas.map((d) => (
+                <Tarjeta key={d.id} a={c.permisos.modificar ? `/m/caso/${id}/demanda?editar=${d.id}` : undefined}>
+                  <strong>Registro del {fecha(d.fecha)}</strong>
+                  <span className="m-detalle">
+                    {d.escaneos.length ? "Con escaneo" : "Sin escaneo"}
+                    {c.permisos.modificar && " · tocar para editar"}
+                  </span>
+                </Tarjeta>
+              ))}
+            </>
+          )}
+          <ArticulacionesMovil casoId={id} />
           {c.documentos.length > 0 && (
             <>
               <h2 className="m-subtitulo">Documentos</h2>
@@ -573,6 +704,28 @@ function CasoMovil({ id }: { id: string }) {
             </>
           )}
       </>
+    </>
+  );
+}
+
+function ArticulacionesMovil({ casoId }: { casoId: string }) {
+  const { datos } = useDatos(() => api.get<Articulacion[]>(`/casos/${casoId}/articulaciones`), [casoId]);
+  if (!datos || datos.length === 0) return null;
+  return (
+    <>
+      <h2 className="m-subtitulo">Articulaciones</h2>
+      {datos.map((a) => (
+        <Tarjeta key={a.id}>
+          <strong>{a.contacto?.nombre ?? a.recurso?.nombre ?? "—"}</strong>
+          <span className="m-detalle">
+            {fecha(a.fecha)}
+            {a.contacto?.institucion && ` · ${a.contacto.institucion}`}
+          </span>
+          {a.motivo && <span className="m-detalle">{a.motivo}</span>}
+          {a.resultado && <span className="m-detalle">Resultado: {a.resultado}</span>}
+          {a.contacto && <Llamar telefono={a.contacto.telefono} />}
+        </Tarjeta>
+      ))}
     </>
   );
 }

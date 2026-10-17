@@ -4,6 +4,7 @@ import { api } from "../api";
 import { Aviso, Campo, Cargando, Enlace, Seccion, Vacio, fechaHora, navegar, useDatos, useEnvio, useSesion } from "../comun";
 import { MapaRecursos, MapaSelector, enlaceComoLlegar, type ConfigMapa, type Punto } from "../mapa";
 import { ContactosDelRecurso } from "./contactos";
+import { ubicacionActual } from "./ubicacion";
 
 export interface TipoRecurso {
   codigo: string;
@@ -325,7 +326,7 @@ export function PaginaRecurso({ id }: { id: string }) {
   );
 }
 
-function FormRecurso({
+export function FormRecurso({
   cat,
   recurso,
   alGuardar,
@@ -367,6 +368,16 @@ function FormRecurso({
   const set = (c: Partial<typeof d>) => setD({ ...d, ...c });
   const tipo = cat.tipos.find((t) => t.codigo === d.tipo);
   const cuidador = d.tipo === "cuidador";
+
+  const usarGps = async () => {
+    busqueda.setError(null);
+    try {
+      const u = await ubicacionActual();
+      setUbicacion({ lat: Math.round(u.lat * 1e6) / 1e6, lng: Math.round(u.lng * 1e6) / 1e6 });
+    } catch (e) {
+      busqueda.setError(e);
+    }
+  };
 
   const buscarDireccion = async () => {
     const texto = [d.direccion, d.localidad, d.departamento, "Tucumán"].filter(Boolean).join(", ");
@@ -499,18 +510,21 @@ function FormRecurso({
             Toque el mapa para marcar el lugar; el marcador se puede arrastrar.
             {cuidador && " Para cuidadores, marque su domicilio: sirve para ver quién vive cerca de cada caso."}
           </p>
-          {cat.geocodificador && (
-            <div className="fila-botones fila-izquierda">
+          <div className="fila-botones fila-izquierda">
+            <button type="button" className="boton boton-chico" onClick={usarGps}>
+              Estoy en el lugar: usar mi ubicación
+            </button>
+            {cat.geocodificador && (
               <button type="button" className="boton boton-chico" onClick={buscarDireccion} disabled={busqueda.enviando || !d.direccion}>
                 {busqueda.enviando ? "Buscando…" : "Buscar la dirección en el mapa"}
               </button>
-              {ubicacion && (
-                <button type="button" className="boton boton-chico" onClick={() => setUbicacion(null)}>
-                  Quitar ubicación
-                </button>
-              )}
-            </div>
-          )}
+            )}
+            {ubicacion && (
+              <button type="button" className="boton boton-chico" onClick={() => setUbicacion(null)}>
+                Quitar ubicación
+              </button>
+            )}
+          </div>
           <Aviso error={busqueda.error} />
           {resultados && resultados.length === 0 && <Aviso error="No se encontró la dirección. Marque el lugar tocando el mapa." tipo="info" />}
           {resultados && resultados.length > 1 && (

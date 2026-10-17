@@ -57,6 +57,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Pantallas para celular: inicio con mis casos, búsqueda, legajo, caso con llamadas | ✅ |
 | Evolución, reiteración, alta de legajo y carátula por pasos | ✅ |
 | Fotos de documentos (varias hojas → un PDF, sin galería ni metadatos) | ✅ |
+| Todo lo que se carga en la versión completa, también desde el celular (demanda, articulación, estado, asignación, carátula, vinculados, expedientes, Mesa de Entrada, recursos y contactos) | ✅ |
 | Instalable como app (PWA) sin guardar datos; sesión de 15 min; reingreso sin perder lo escrito | ✅ |
 | Publicación con HTTPS (Caddy, perfil `publico`) | ✅ preparado · ⏳ dominio y servidor a definir con informática |
 | Probar en teléfonos reales del equipo (Android e iPhone) | ⏳ |
@@ -70,7 +71,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Directorio de contactos (técnicos de gobiernos locales y otras instituciones) | ✅ |
 | Casos en el mapa (todos los técnicos) y salidas de visita con recorrido y hoja imprimible | ✅ |
 | Origen de cada dato (capacitaciones, articulaciones, relevamiento…) y articulaciones registradas en cada caso | ✅ |
-| Registrar articulaciones desde el celular | ⏳ |
+| Registrar articulaciones desde el celular | ✅ |
 | Carga en lote de lo relevado en una capacitación (planilla) | ⏳ |
 | Recursos cercanos a un caso (p. ej., cuidadores que viven cerca) | ⏳ |
 | Cuidadores de cada caso (vínculo del legajo con un cuidador, formado o no) | ⏳ |

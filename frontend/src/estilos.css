@@ -2642,3 +2642,59 @@ a.indicador:hover {
 .resultados-busqueda li {
   padding: 0.25rem 0;
 }
+
+/* Formularios de la versión completa dentro del celular */
+.m-formulario-completo {
+  padding-bottom: 24px;
+}
+
+.m-formulario-completo .formulario {
+  gap: 0;
+}
+
+.m-formulario-completo .fila-botones {
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.m-formulario-completo .boton {
+  min-height: 48px;
+  font-size: 1rem;
+  justify-content: center;
+}
+
+.m-formulario-completo .grupo-casillas,
+.m-formulario-completo fieldset {
+  margin-bottom: 16px;
+}
+
+.m-formulario-completo .casilla {
+  min-height: 40px;
+  align-items: center;
+}
+
+.m-formulario-completo .casilla input {
+  width: 22px;
+  height: 22px;
+  margin-top: 0;
+}
+
+.m-formulario-completo h3 {
+  margin: 18px 0 10px;
+  font-size: 1.05rem;
+}
+
+.m-formulario-completo .tabla {
+  display: block;
+  overflow-x: auto;
+}
+
+.m-inactivo {
+  opacity: 0.6;
+}
+
+.m-recurso-acciones .m-accion {
+  flex: 1 1 auto;
+}

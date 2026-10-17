@@ -1,9 +1,9 @@
 // Recursos en el celular: buscar, llamar y ver cómo llegar; el mapa, a un toque.
 import { useMemo, useState, type FormEvent } from "react";
 import { api } from "../api";
-import { Aviso, Cargando, useDatos } from "../comun";
+import { Aviso, Cargando, useDatos, useSesion } from "../comun";
 import { MapaRecursos, enlaceComoLlegar, type Punto } from "../mapa";
-import { telefonoLimpio, textoTipo, useCatalogoRecursos, type Recurso } from "../paginas/recursos";
+import { telefonoLimpio, textoTipo, useCatalogoRecursos, type CatalogoRecursos, type Recurso } from "../paginas/recursos";
 import { enlaceWhatsapp, type Contacto } from "../paginas/contactos";
 
 export function RecursosMovil() {
@@ -23,7 +23,16 @@ export function RecursosMovil() {
   );
 }
 
+/** Quién puede editar una ficha: todos, o solo quien la cargó. */
+function usePuedeEditar(cat: CatalogoRecursos | null) {
+  const { yo } = useSesion();
+  return (x: { creado_por?: string | null }) =>
+    !!cat && (cat.puede.modificar === "todos" || (cat.puede.modificar === "propios" && x.creado_por === yo.id));
+}
+
 function ContactosMovil() {
+  const cat = useCatalogoRecursos();
+  const puedeEditar = usePuedeEditar(cat.datos);
   const [q, setQ] = useState("");
   const [filtroQ, setFiltroQ] = useState("");
   const lista = useDatos(() => api.get<Contacto[]>("/contactos", { q: filtroQ }), [filtroQ]);
@@ -40,6 +49,14 @@ function ContactosMovil() {
         <input type="search" enterKeyHint="search" placeholder="Nombre, institución, localidad o tema" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar contacto" />
         <button aria-label="Buscar">⌕</button>
       </form>
+      {cat.datos?.puede.crear && (
+        <a className="m-accion" href="#/m/contactos/nuevo">
+          <span className="m-accion-icono" aria-hidden>
+            ＋
+          </span>
+          Agregar contacto
+        </a>
+      )}
       <Aviso error={lista.error} />
       {!lista.datos ? (
         <Cargando />
@@ -66,6 +83,14 @@ function ContactosMovil() {
                   WhatsApp
                 </a>
               )}
+              {puedeEditar(c) && (
+                <a className="m-accion" href={`#/m/contactos/${c.id}/editar`}>
+                  <span className="m-accion-icono" aria-hidden>
+                    ✎
+                  </span>
+                  Editar
+                </a>
+              )}
             </div>
           </div>
         ))
@@ -81,6 +106,7 @@ function LugaresMovil() {
   const [filtroQ, setFiltroQ] = useState("");
   const [verMapa, setVerMapa] = useState(false);
   const [elegido, setElegido] = useState<string | null>(null);
+  const puedeEditar = usePuedeEditar(cat.datos);
   const lista = useDatos(() => api.get<Recurso[]>("/recursos", { tipo: tipo || undefined, q: filtroQ }), [tipo, filtroQ]);
   const puntos = useMemo<Punto[]>(
     () => (lista.datos ?? []).filter((r) => r.lat !== null).map((r) => ({ id: r.id, lat: r.lat!, lng: r.lng!, tipo: r.tipo, titulo: r.nombre })),
@@ -111,6 +137,14 @@ function LugaresMovil() {
           </button>
         ))}
       </div>
+      {c.puede.crear && (
+        <a className="m-accion" href="#/m/recursos/nuevo">
+          <span className="m-accion-icono" aria-hidden>
+            ＋
+          </span>
+          Agregar un lugar (centro, residencia, cuidador…)
+        </a>
+      )}
       <button type="button" className="m-boton-texto" onClick={() => setVerMapa(!verMapa)}>
         {verMapa ? "Ver solo la lista" : "Ver en el mapa"}
       </button>
@@ -145,6 +179,14 @@ function LugaresMovil() {
                     ➜
                   </span>
                   Cómo llegar
+                </a>
+              )}
+              {puedeEditar(r) && (
+                <a className="m-accion" href={`#/m/recursos/${r.id}/editar`}>
+                  <span className="m-accion-icono" aria-hidden>
+                    ✎
+                  </span>
+                  Editar
                 </a>
               )}
             </div>
