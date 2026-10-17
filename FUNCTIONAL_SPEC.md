@@ -98,7 +98,7 @@ Implementados según los modelos institucionales («Modelo de carátula de legaj
 
 **Reserva**: en un caso reservado, quien no tiene acceso ve que existe un registro de demanda (fecha y receptor) pero no su contenido; tampoco ve indicadores, intervenciones ni la evolución.
 
-**Carátula para carpeta**: versión de lectura rápida para la carpeta física. Muestra solo lo cargado y destaca lo importante: N° de actuación grande, nombre, legajo (DNI), edad; indicadores en color (maltrato, negligencia y situación de calle en rojo), «caso reservado», antecedentes, reiteraciones; motivo, ingreso, intervención, domicilio, cobertura y responsables. Lleva un QR que abre el caso en SULAM (no contiene datos personales; requiere iniciar sesión).
+**Carátula para carpeta**: versión de lectura rápida para la carpeta física. Muestra solo lo cargado y destaca lo importante: N° de actuación grande, nombre, legajo (DNI), edad; en blanco y negro y sin rellenos (poca tinta): alertas graves —maltrato, negligencia, situación de calle— en mayúsculas, negrita, con ▲ y borde doble; «RESERVADO» con borde doble, antecedentes, reiteraciones; motivo, ingreso, intervención, domicilio, cobertura y responsables. Lleva un QR que abre el caso en SULAM (no contiene datos personales; requiere iniciar sesión).
 
 **Impresión**: la carátula y el registro de demanda (con la evolución) tienen una vista imprimible en A4 con la estructura de los modelos y las casillas marcadas (☒/☐).
 

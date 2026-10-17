@@ -395,7 +395,13 @@ function ImprimirDemanda({ demandaId }: { demandaId: string }) {
 const GRAVES = ["maltrato", "situacion_calle", "negligencia"];
 
 function Chip({ children, tono }: { children: ReactNode; tono: "grave" | "alerta" | "info" | "neutro" | "reservado" }) {
-  return <span className={`chip-imp chip-${tono}`}>{children}</span>;
+  const simbolo = tono === "grave" ? "▲ " : tono === "reservado" ? "" : tono === "alerta" ? "● " : "";
+  return (
+    <span className={`chip-imp chip-${tono}`}>
+      {simbolo}
+      {children}
+    </span>
+  );
 }
 
 function Tarjeta({ titulo, children, ancho }: { titulo: string; children: ReactNode; ancho?: boolean }) {
@@ -491,7 +497,7 @@ function CaratulaCarpeta({ casoId }: { casoId: string }) {
       </div>
 
       <div className="chips-carpeta">
-        {c.reservado && <Chip tono="reservado">CASO RESERVADO</Chip>}
+        {c.reservado && <Chip tono="reservado">RESERVADO</Chip>}
         {indicadores.map((g) => (
           <Chip key={g.codigo} tono={GRAVES.includes(g.codigo) ? "grave" : g.codigo === "no_califica" ? "neutro" : "alerta"}>
             {g.texto}
