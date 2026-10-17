@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, filtros
 from ..db import get_db
 from ..deps import contexto
 from ..duplicates import Coincidencia, buscar_posibles_duplicados
@@ -134,7 +134,9 @@ def _controlar_duplicados(
 @router.get("/personas")
 def listar_personas(
     q: str = Query("", max_length=200),
-    limite: int = Query(30, ge=1, le=100),
+    f: str | None = Query(None, max_length=20000),
+    limite: int = Query(30, ge=1, le=500),
+    con_total: bool = False,
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
@@ -161,8 +163,14 @@ def listar_personas(
         consulta = consulta.where(or_(*condiciones))
         audit.registrar(db, ctx, "busqueda", "persona", detalle={"q": q[:200]})
         db.commit()
+    consulta = filtros.aplicar("legajos", consulta, f)
+    if f:
+        audit.registrar(db, ctx, "filtro", "persona", detalle={"campos": filtros.resumen(f)})
+        db.commit()
+    cantidad = filtros.total(db, consulta) if con_total else None
     consulta = consulta.order_by(Persona.apellidos_norm, Persona.nombres_norm).limit(limite)
-    return [persona_resumen(p) for p in db.execute(consulta).scalars()]
+    items = [persona_resumen(p) for p in db.execute(consulta).scalars()]
+    return {"total": cantidad, "items": items} if con_total else items
 
 
 @router.post("/personas/verificar-duplicados")

@@ -1,5 +1,6 @@
 // Red de recursos: centros, instituciones y cuidadores, en lista y en el mapa.
 import { useMemo, useState, type FormEvent } from "react";
+import { BarraFiltros, parametroF, useFiltrosUrl } from "./filtros";
 import { api } from "../api";
 import { Aviso, Campo, Cargando, Enlace, Seccion, Vacio, fechaHora, navegar, useDatos, useEnvio, useSesion } from "../comun";
 import { MapaRecursos, MapaSelector, enlaceComoLlegar, type ConfigMapa, type Punto } from "../mapa";
@@ -109,10 +110,15 @@ export function PaginaRecursos() {
   const [q, setQ] = useState("");
   const [filtroQ, setFiltroQ] = useState("");
   const [elegido, setElegido] = useState<string | null>(null);
-  const lista = useDatos(
-    () => api.get<Recurso[]>("/recursos", { tipo: tipos.join(",") || undefined, departamento: departamento || undefined, q: filtroQ }),
-    [tipos.join(","), departamento, filtroQ],
-  );
+  const [filtros, setFiltros] = useFiltrosUrl();
+  const [total, setTotal] = useState<number | null>(null);
+  const lista = useDatos(async () => {
+    const r = await api.get<{ total: number; items: Recurso[] }>("/recursos", {
+      tipo: tipos.join(",") || undefined, departamento: departamento || undefined, q: filtroQ, con_total: true, f: parametroF(filtros),
+    });
+    setTotal(r.total);
+    return r.items;
+  }, [tipos.join(","), departamento, filtroQ, JSON.stringify(filtros)]);
   const puntos = useMemo<Punto[]>(
     () =>
       (lista.datos ?? [])
@@ -154,6 +160,7 @@ export function PaginaRecursos() {
         </select>
         <button className="boton">Buscar</button>
       </form>
+      <BarraFiltros lista="recursos" filtros={filtros} alCambiar={setFiltros} total={total} sustantivo={["recurso", "recursos"]} />
       <div className="chips" role="group" aria-label="Tipos de recurso">
         {c.tipos.map((t) => (
           <button key={t.codigo} type="button" className={`chip chip-${t.codigo} ${tipos.includes(t.codigo) ? "activo" : ""}`} onClick={() => alternar(t.codigo)} aria-pressed={tipos.includes(t.codigo)}>

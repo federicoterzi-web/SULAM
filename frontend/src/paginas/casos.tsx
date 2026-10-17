@@ -1,4 +1,5 @@
 import { CarpetaFisica } from "./archivo";
+import { BarraFiltros, parametroF, useFiltrosUrl } from "./filtros";
 import { SeccionInformes } from "./informes";
 import { FormEquipo } from "./equipo";
 import { SeccionArticulaciones } from "./articulaciones";
@@ -40,20 +41,25 @@ export function PaginaCasos() {
   const [sinResponsable, setSinResponsable] = useState(parametro("sin_responsable") === "1");
   const activos = parametro("activos") === "1";
   const [area, setArea] = useState(parametro("area"));
+  const [filtros, setFiltros] = useFiltrosUrl();
   const { catalogos } = useSesion();
-  const { datos, error } = useDatos(
+  const respuesta = useDatos(
     () =>
-      api.get<Caso[]>("/casos", {
+      api.get<{ total: number; items: Caso[] }>("/casos", {
         estado,
         asignados_a_mi: mios || undefined,
         q: filtroQ,
-        limite: 200,
+        limite: 300,
+        con_total: true,
+        f: parametroF(filtros),
         sin_responsable: sinResponsable || undefined,
         activos: (sinResponsable && activos) || undefined,
         area_id: area || undefined,
       }),
-    [estado, mios, filtroQ, sinResponsable, area],
+    [estado, mios, filtroQ, sinResponsable, area, JSON.stringify(filtros)],
   );
+  const datos = respuesta.datos?.items;
+  const error = respuesta.error;
   const nombreArea = catalogos.areas.find((a) => String(a.id) === area)?.nombre;
 
   return (
@@ -95,8 +101,9 @@ export function PaginaCasos() {
           <input type="checkbox" checked={mios} onChange={(e) => setMios(e.target.checked)} />
           Solo asignados a mí
         </label>
-        <button className="boton">Filtrar</button>
+        <button className="boton">Buscar</button>
       </form>
+      <BarraFiltros lista="casos" filtros={filtros} alCambiar={setFiltros} total={respuesta.datos?.total} mostrados={datos?.length} sustantivo={["caso", "casos"]} />
       <Aviso error={error} />
       {!datos ? <Cargando /> : <TablaCasos casos={datos} conPersona />}
       <p className="tenue">Para abrir un caso nuevo, ingrese al legajo de la persona.</p>

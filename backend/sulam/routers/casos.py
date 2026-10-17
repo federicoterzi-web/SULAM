@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, filtros
 from ..db import get_db
 from ..deps import contexto
 from ..models import (
@@ -99,7 +99,9 @@ def listar_casos(
     area_id: int | None = None,
     persona_id: uuid.UUID | None = None,
     q: str = Query("", max_length=200),
-    limite: int = Query(50, ge=1, le=200),
+    f: str | None = Query(None, max_length=20000),
+    limite: int = Query(50, ge=1, le=500),
+    con_total: bool = False,
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
@@ -136,8 +138,14 @@ def listar_casos(
             | Persona.apellidos_norm.like("%" + escapar_like(t) + "%")
             | Persona.nombres_norm.like("%" + escapar_like(t) + "%")
         )
+    consulta = filtros.aplicar("casos", consulta, f)
+    if f:
+        audit.registrar(db, ctx, "filtro", "caso", detalle={"campos": filtros.resumen(f)})
+        db.commit()
+    cantidad = filtros.total(db, consulta) if con_total else None
     consulta = consulta.order_by(Caso.ultima_actividad.desc()).limit(limite)
-    return [caso_out(c, p) for c, p in db.execute(consulta).all()]
+    items = [caso_out(c, p) for c, p in db.execute(consulta).all()]
+    return {"total": cantidad, "items": items} if con_total else items
 
 
 @router.post("/casos", status_code=201)

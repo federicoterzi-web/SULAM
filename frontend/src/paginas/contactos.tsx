@@ -1,5 +1,6 @@
 // Directorio de contactos: técnicos de gobiernos locales y referentes de instituciones.
 import { useState, type FormEvent } from "react";
+import { BarraFiltros, parametroF, useFiltrosUrl } from "./filtros";
 import { api } from "../api";
 import { Aviso, Campo, Cargando, Enlace, Modal, Vacio, useDatos, useEnvio, useSesion } from "../comun";
 import { CampoOrigen, telefonoLimpio, textoOrigen, useCatalogoRecursos, type CatalogoRecursos } from "./recursos";
@@ -42,10 +43,15 @@ export function PaginaContactos() {
   const [departamento, setDepartamento] = useState("");
   const [categoria, setCategoria] = useState("");
   const [editar, setEditar] = useState<Contacto | "nuevo" | null>(null);
-  const lista = useDatos(
-    () => api.get<Contacto[]>("/contactos", { q: filtroQ, departamento: departamento || undefined, categoria: categoria || undefined }),
-    [filtroQ, departamento, categoria],
-  );
+  const [filtros, setFiltros] = useFiltrosUrl();
+  const [total, setTotal] = useState<number | null>(null);
+  const lista = useDatos(async () => {
+    const r = await api.get<{ total: number; items: Contacto[] }>("/contactos", {
+      q: filtroQ, departamento: departamento || undefined, categoria: categoria || undefined, con_total: true, f: parametroF(filtros),
+    });
+    setTotal(r.total);
+    return r.items;
+  }, [filtroQ, departamento, categoria, JSON.stringify(filtros)]);
   if (cat.error) return <Aviso error={cat.error} />;
   if (!cat.datos) return <Cargando />;
   const c = cat.datos;
@@ -87,6 +93,7 @@ export function PaginaContactos() {
         </select>
         <button className="boton">Buscar</button>
       </form>
+      <BarraFiltros lista="contactos" filtros={filtros} alCambiar={setFiltros} total={total} sustantivo={["contacto", "contactos"]} />
       <Aviso error={lista.error} />
       {!lista.datos ? <Cargando /> : <TablaContactos contactos={lista.datos} cat={c} alEditar={setEditar} />}
       {editar && (

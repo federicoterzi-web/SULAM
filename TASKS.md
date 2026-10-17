@@ -105,6 +105,17 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Carpetas en papel: ubicación y pases (pedir, entregar, devolver), carga inicial por número de legajo | ✅ |
 | Nombre del área de archivo y quiénes la integran | ⏳ a confirmar con la Dirección |
 
+## Filtros y estadísticas
+
+| Funcionalidad | Estado |
+|---|---|
+| Filtros por cualquier campo en Casos, Legajos, Expedientes, Mesa de Entrada, Recursos y Contactos | ✅ |
+| Estadísticas de casos (con filtros, por área, tocar un número abre los casos) | ✅ |
+| Estadísticas de funcionamiento interno (carga y tiempos, asistencia, circuitos, comunicación) | ✅ |
+| Excel y PDF de estadísticas | ✅ |
+| Rol para el Departamento Planificación y Estadística | ⏳ a definir (hoy se asigna el permiso «Estadísticas» desde Administración) |
+| Estadísticas en la versión para celular | ⏳ |
+
 ## Personal y asistencia
 
 | Funcionalidad | Estado |
@@ -117,7 +128,8 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Pedidos de licencia, comisión y cambio de horario (persona → jefatura → Personal) | ✅ |
 | «Quién está hoy» en equipo de casos, carpetas e inicio | ✅ |
 | Significado de CT, CE, CS, VAO, DF, C3, SESOP y reglas por tipo de licencia | ⏳ a confirmar con Personal |
-| Informe mensual en PDF y Excel de incidencias | ⏳ etapa 2 |
+| Excel de incidencias | ✅ |
+| Informe mensual en PDF por persona | ⏳ etapa 2 |
 | Importar los datos de la app de Google (en el servidor de la Dirección) | ⏳ etapa 2 |
 
 ## Digitalización de fichas — en curso
@@ -126,7 +138,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0019) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0020) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |

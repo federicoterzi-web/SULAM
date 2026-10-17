@@ -1,11 +1,18 @@
 import { useState } from "react";
+import { BarraFiltros, parametroF, useFiltrosUrl } from "./filtros";
 import { api, type Expediente } from "../api";
 import { Aviso, Cargando, Enlace, Vacio, fecha, nombre, useDatos } from "../comun";
 
 export function PaginaExpedientes() {
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState("");
-  const { datos, error } = useDatos(() => api.get<Expediente[]>("/expedientes", { q: filtro, limite: 100 }), [filtro]);
+  const [filtros, setFiltros] = useFiltrosUrl();
+  const [total, setTotal] = useState<number | null>(null);
+  const { datos, error } = useDatos(async () => {
+    const r = await api.get<{ total: number; items: Expediente[] }>("/expedientes", { q: filtro, limite: 300, con_total: true, f: parametroF(filtros) });
+    setTotal(r.total);
+    return r.items;
+  }, [filtro, JSON.stringify(filtros)]);
   return (
     <>
       <h1>Expedientes</h1>
@@ -19,6 +26,7 @@ export function PaginaExpedientes() {
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Número de expediente" aria-label="Número de expediente" />
         <button className="boton">Buscar</button>
       </form>
+      <BarraFiltros lista="expedientes" filtros={filtros} alCambiar={setFiltros} total={total} mostrados={datos?.length} sustantivo={["expediente", "expedientes"]} />
       <Aviso error={error} />
       {!datos ? (
         <Cargando />

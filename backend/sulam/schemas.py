@@ -401,7 +401,7 @@ class RolIn(Entrada):
     nombre: str = Field(min_length=2, max_length=120)
     descripcion: str | None = Field(default=None, max_length=2000)
     activo: bool = True
-    inicio: Literal["direccion", "jefatura", "tecnico", "carga", "mesa", "administrativo_area"] | None = None
+    inicio: Literal["direccion", "jefatura", "tecnico", "carga", "mesa", "administrativo_area", "personal"] | None = None
     permisos: list[PermisoIn] = []
 
 

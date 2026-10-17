@@ -14,7 +14,7 @@ from pydantic import Field, field_validator
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, filtros
 from ..config import get_settings
 from ..db import get_db
 from ..deps import contexto
@@ -170,11 +170,13 @@ def listar(
     q: str = Query("", max_length=200),
     departamento: str | None = None,
     inactivos: bool = False,
+    f: str | None = Query(None, max_length=20000),
+    con_total: bool = False,
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
     ctx.requerir("recursos", "consultar")
-    consulta = select(Recurso)
+    consulta = filtros.aplicar("recursos", select(Recurso), f)
     if not inactivos:
         consulta = consulta.where(Recurso.activo)
     if tipo:
@@ -194,8 +196,10 @@ def listar(
                 Recurso.servicios.ilike("%" + escapar_like(q.strip()) + "%"),
             )
         )
+    cantidad = filtros.total(db, consulta) if con_total else None
     consulta = consulta.order_by(Recurso.nombre_norm).limit(1000)
-    return [recurso_out(r) for r in db.execute(consulta).scalars()]
+    items = [recurso_out(r) for r in db.execute(consulta).scalars()]
+    return {"total": cantidad, "items": items} if con_total else items
 
 
 @router.post("/recursos", status_code=201)

@@ -260,6 +260,9 @@ function Resumen({ cat, agentes }: { cat: CatalogoPersonal; agentes: Agente[] })
           ))}
         </select>
         <input type="search" placeholder="Buscar nombre" value={buscar} onChange={(e) => setBuscar(e.target.value)} aria-label="Buscar nombre" />
+        <a className="boton" href={`/api/personal/incidencias.xlsx?desde=${desde}&hasta=${hasta}${agente ? `&agente_id=${agente}` : ""}`}>
+          Excel de incidencias
+        </a>
       </div>
       <div className="indicadores indicadores-chicos">
         {Object.entries(ESTADOS_JORNADA).map(([k, t]) => (

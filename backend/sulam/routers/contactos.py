@@ -14,7 +14,7 @@ from datetime import date
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, filtros
 from ._comun import obtener_caso, registrar_actividad_caso
 from ..db import get_db
 from ..deps import contexto
@@ -115,11 +115,13 @@ def listar(
     categoria: str | None = None,
     recurso_id: uuid.UUID | None = None,
     inactivos: bool = False,
+    f: str | None = Query(None, max_length=20000),
+    con_total: bool = False,
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
     ctx.requerir("recursos", "consultar")
-    consulta = select(Contacto)
+    consulta = filtros.aplicar("contactos", select(Contacto), f)
     if not inactivos:
         consulta = consulta.where(Contacto.activo)
     if departamento:
@@ -141,6 +143,7 @@ def listar(
             )
         )
     consulta = consulta.order_by(Contacto.departamento.nulls_last(), Contacto.institucion_norm, Contacto.nombre_norm).limit(1000)
+    cantidad = filtros.total(db, consulta) if con_total else None
     contactos = list(db.execute(consulta).unique().scalars())
     usos = dict(
         db.execute(
@@ -149,7 +152,8 @@ def listar(
             .group_by(Articulacion.contacto_id)
         ).all()
     )
-    return [contacto_out(c, usos.get(c.id, 0)) for c in contactos]
+    items = [contacto_out(c, usos.get(c.id, 0)) for c in contactos]
+    return {"total": cantidad, "items": items} if con_total else items
 
 
 @router.post("/contactos", status_code=201)

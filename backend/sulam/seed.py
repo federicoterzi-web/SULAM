@@ -62,7 +62,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Gestión de permisos, plantillas, configuraciones y operaciones institucionales autorizadas.",
         "permisos": [
-            ("personal", "consultar", T), ("personal", "administrar", T), ("personal", "aprobar", T),
+            ("personal", "consultar", T), ("personal", "administrar", T), ("personal", "aprobar", T), ("estadisticas", "consultar", T),
             ("novedades", "publicar", T),
             ("plantillas", "modificar", T),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
@@ -81,7 +81,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Conducción de la Dirección: ve todos los casos y la auditoría, y puede derivar y asignar. No administra usuarios ni permisos.",
         "permisos": [
-            ("personal", "consultar", T), ("personal", "aprobar", T),
+            ("personal", "consultar", T), ("personal", "aprobar", T), ("estadisticas", "consultar", T),
             ("novedades", "publicar", T),
             ("plantillas", "modificar", T),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
@@ -98,7 +98,7 @@ ROLES: dict[str, dict] = {
         "inicio": "jefatura",
         "descripcion": "Conduce un departamento que maneja casos (Admisión o Promoción, según el área del usuario): abre carátulas y asigna técnicos en su área.",
         "permisos": [
-            ("personal", "aprobar", AR),
+            ("personal", "aprobar", AR), ("estadisticas", "consultar", AR),
             ("novedades", "publicar", AR),
             ("plantillas", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
@@ -114,7 +114,7 @@ ROLES: dict[str, dict] = {
         "inicio": "jefatura",
         "descripcion": "Conduce una división (Participación y Sensibilización Ciudadana, Cuidados y Promoción de Autonomía) o cumple esa función en un departamento. Mismos permisos que un jefe de departamento, sobre el área del usuario.",
         "permisos": [
-            ("personal", "aprobar", AR),
+            ("personal", "aprobar", AR), ("estadisticas", "consultar", AR),
             ("novedades", "publicar", AR),
             ("plantillas", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),

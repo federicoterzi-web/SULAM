@@ -1,6 +1,7 @@
 import { PaginaPases, usePasesPendientes } from "./paginas/archivo";
 import { PaginaNovedades, usePendientes } from "./paginas/novedades";
 import { PaginaPersonal } from "./paginas/personal";
+import { PaginaEstadisticas } from "./paginas/estadisticas";
 import { PaginaMiAsistencia, usePendientesPersonal } from "./paginas/miasistencia";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, api, configurarSesion, type Catalogos, type Formularios, type Yo } from "./api";
@@ -216,6 +217,7 @@ const MENU: { ruta: string; texto: string; permiso?: [string, string] }[] = [
   { ruta: "/expedientes", texto: "Expedientes", permiso: ["expedientes", "consultar"] },
   { ruta: "/fichas", texto: "Fichas en papel" },
   { ruta: "/plantillas", texto: "Plantillas de informes", permiso: ["plantillas", "modificar"] },
+  { ruta: "/estadisticas", texto: "Estadísticas", permiso: ["estadisticas", "consultar"] },
   { ruta: "/auditoria", texto: "Auditoría", permiso: ["auditoria", "consultar"] },
   { ruta: "/admin", texto: "Administración", permiso: ["administracion", "administrar"] },
 ];
@@ -324,7 +326,7 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
       </header>
       <div className="cuerpo">
         <nav className={`menu ${menuAbierto ? "abierto" : ""}`} aria-label="Secciones">
-          {MENU.filter((m) => !m.permiso || puede(...m.permiso)).map((m) => (
+          {MENU.filter((m) => !m.permiso || puede(...m.permiso) || (m.ruta === "/estadisticas" && puede("personal", "consultar"))).map((m) => (
             <Enlace key={m.ruta} a={m.ruta} className={seccion === m.ruta ? "activo" : ""}>
               {m.texto}
               {m.ruta === "/novedades" && <InsigniaNovedades ruta={ruta} />}
@@ -378,6 +380,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return <PaginaPases />;
     case "personal":
       return <PaginaPersonal />;
+    case "estadisticas":
+      return <PaginaEstadisticas />;
     case "mi-asistencia":
       return <PaginaMiAsistencia />;
     case "recursos":

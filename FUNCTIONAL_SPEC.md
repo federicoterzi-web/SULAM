@@ -258,6 +258,24 @@ La app de asistencia en Google pasa a SULAM con **las mismas reglas fijas** (`su
 - Nuevo rol **Personal**, con su inicio: pedidos para registrar, jornadas pendientes, horarios sin confirmar, personas sin ID del reloj y quién no está hoy. Las jefaturas ven en su inicio los pedidos para aprobar.
 - Datos reales: **no van al repositorio**. Se importan en el servidor de la Dirección (etapa 2: importador desde la app de Google, informe mensual en PDF y Excel de incidencias).
 
+## 5 septdecies. Filtros por cualquier campo
+
+- En **Casos, Legajos, Expedientes, Mesa de Entrada, Recursos y Contactos** se puede filtrar por cualquier dato cargado: «+ Filtro» → campo → comparación → valor.
+- Comparaciones según el tipo de dato: texto (contiene / no contiene / sin dato / con algún dato), opción (es / no es), listas como indicadores o coberturas (incluye alguno / incluye todos / no incluye), fechas y números (entre, con atajos: este mes, este año, 60 a 69 años…), sí/no.
+- En casos se combinan datos del caso, del registro de demanda y de la persona (edad, género, departamento, coberturas, CUD, discapacidad, negativa de ANSES, dónde está la carpeta). En legajos, además, datos de sus casos (casos activos, área, técnico/a a cargo, indicadores).
+- Los filtros se suman («y»), quedan como etiquetas que se tocan para cambiarlas y viajan en la dirección de la página: se pueden compartir y se usan desde Estadísticas. Se muestra el total de resultados.
+- El catálogo de campos está en `sulam/filtros.py` (`GET /api/filtros/{lista}`); cada lista recibe los filtros en el parámetro `f`. Filtrar casos o legajos queda en la auditoría (qué campos, no los valores).
+
+## 5 octodecies. Estadísticas
+
+Menú **Estadísticas**, con dos pestañas, un período (con atajos) y, para la Dirección, el área:
+
+- **Casos** (casos con fecha de ingreso en el período; admite todos los filtros de casos): ingresados, personas distintas, con maltrato, cerrados, activos hoy, reiteraciones; ingresos y cierres por mes; estado, área, técnico/a, tipo de ingreso, derivación; indicadores e intervenciones (grupo y detalle); edad, género, departamento, coberturas, CUD, discapacidad; vivienda, estado funcional, autonomía, estado civil e hijos según el último registro de demanda. Cada barra o número abre la lista de esos casos con los filtros equivalentes.
+- **Funcionamiento interno**: carga de trabajo y tiempos (por técnico/a y por área, días hasta asignar, duración de los casos, sin movimiento), asistencia del personal (jornadas, incidencias por tipo, por área y por persona, licencias y comisiones, justificativos; hasta un año), circuitos administrativos (Mesa de Entrada y tiempo hasta vincular, pases de carpetas y demoras, dónde están las carpetas, informes firmados, documentos digitalizados) y comunicación interna (novedades y porcentaje de lectura confirmada).
+- Alcance: Dirección y Directora ven todo; cada jefatura, su área. Personal ve solo la asistencia.
+- **Descargas**: Excel (resumen, una hoja por bloque con fórmulas de totales y porcentajes, y el detalle caso por caso con autofiltro) e informe PDF con membrete. Quedan en la auditoría.
+- En Personal › Resumen, **Excel de incidencias** con las 16 columnas de la app «Asistencia DAM».
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.

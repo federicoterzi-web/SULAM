@@ -629,6 +629,33 @@ def ver_informe(
     return [f for f in filas if not estado or f["estado"] == estado]
 
 
+@router.get("/personal/incidencias.xlsx")
+def excel_incidencias(
+    desde: date,
+    hasta: date,
+    agente_id: int | None = None,
+    ctx: Contexto = Depends(contexto),
+    db: Session = Depends(get_db),
+):
+    """Excel de incidencias, con las mismas columnas que la app «Asistencia DAM»."""
+    from ..estadisticas_salida import excel_incidencias as armar
+
+    _requerir_consulta(ctx)
+    if hasta < desde or (hasta - desde).days > 370:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Elegí un período de hasta un año.")
+    filas = _informe(db, desde, hasta, agente_id)
+    ids = {j["id"] for f in filas for j in f["justificativos"]}
+    referencias = {j.id: j.referencia for j in db.execute(select(Justificativo).where(Justificativo.id.in_(ids))).scalars() if j.referencia}
+    estados = {"pendiente": "Pendiente", "revisado": "Revisado", "justificado": "Justificado", "auto_aprobado": "Aprobado automáticamente", "sin_datos": "Sin datos"}
+    contenido = armar(filas, INCIDENCIAS, estados, referencias, desde, hasta)
+    audit.registrar(db, ctx, "exportar_incidencias", "reloj", None, None, {"desde": desde, "hasta": hasta, "agente": agente_id})
+    db.commit()
+    return StreamingResponse(
+        io.BytesIO(contenido), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=incidencias-{desde.isoformat()}-{hasta.isoformat()}.xlsx", "Cache-Control": "no-store"},
+    )
+
+
 class RevisionIn(Entrada):
     agente_id: int
     dia: date

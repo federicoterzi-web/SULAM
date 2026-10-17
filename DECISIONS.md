@@ -99,6 +99,9 @@ SULAM no consulta ANSES desde el servidor: el servicio está pensado para uso de
 
 ### D-025 · Asistencia dentro de SULAM, con las reglas de la app original y sin datos reales en el repositorio — *Vigente*
 Las reglas de cálculo se portan tal cual (segundos ignorados, ventana de 30 min, tolerancia de 10 min recuperada el mismo día, cobertura por tramos, CAMBIO reemplaza el turno) y se prueban con los mismos casos que la app original. SULAM no ejecuta descuentos: solo revisa y propone. El repositorio es público, así que la planta real, los ID del reloj, los horarios y los archivos del reloj nunca se copian a él: se cargan en el servidor de la Dirección. La ficha de personal es la fuente del área de cada usuario y la baja desactiva su acceso. Los pedidos siguen el circuito persona → jefatura → Personal. Los motivos de salud quedan reservados a la persona, Personal y la Dirección.
+
+### D-026 · Un solo catálogo de filtros para listas y estadísticas — *Vigente*
+Los campos filtrables se declaran una vez (`sulam/filtros.py`) y los usan las seis listas y las estadísticas. Así, cada número de una estadística trae el filtro que lo reproduce y «tocar el número» abre exactamente esos casos (lo verifica una prueba). Los filtros viajan en la dirección de la página (`?f=`), no se guardan en el navegador. Las estadísticas se calculan en el momento, sobre la base, con el alcance de quien consulta (Dirección: todo; jefaturas: su área; Personal: solo asistencia). Las descargas quedan en la auditoría. La edad se calcula a hoy, igual que en el filtro.
 ---
 
 ## Pendientes (no se inventan)

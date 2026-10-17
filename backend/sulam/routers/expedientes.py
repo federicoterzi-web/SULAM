@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, filtros
 from ..db import get_db
 from ..deps import contexto
 from ..models import Expediente, Persona
@@ -27,7 +27,9 @@ router = APIRouter(tags=["expedientes"])
 @router.get("/expedientes")
 def listar_expedientes(
     q: str = Query("", max_length=100),
-    limite: int = Query(50, ge=1, le=200),
+    limite: int = Query(50, ge=1, le=500),
+    f: str | None = Query(None, max_length=20000),
+    con_total: bool = False,
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
@@ -39,11 +41,14 @@ def listar_expedientes(
     )
     if q.strip():
         consulta = consulta.where(Expediente.numero.ilike("%" + escapar_like(q.strip()) + "%"))
+    consulta = filtros.aplicar("expedientes", consulta, f)
+    cantidad = filtros.total(db, consulta) if con_total else None
     consulta = consulta.order_by(Expediente.creado_en.desc()).limit(limite)
-    return [
+    items = [
         {**expediente_out(e), "persona": persona_resumen(p)}
         for e, p in db.execute(consulta).all()
     ]
+    return {"total": cantidad, "items": items} if con_total else items
 
 
 @router.post("/expedientes", status_code=201)

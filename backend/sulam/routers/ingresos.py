@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_, select, true
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, filtros
 from ..db import get_db
 from ..deps import contexto
 from ..models import Caso, Documento, Ingreso, Persona, TipoDocumental, Usuario
@@ -48,7 +48,9 @@ def _obtener(db: Session, ctx: Contexto, ingreso_id: uuid.UUID, accion: str) -> 
 def listar_ingresos(
     pendientes: bool = False,
     q: str = Query("", max_length=200),
-    limite: int = Query(50, ge=1, le=200),
+    limite: int = Query(50, ge=1, le=500),
+    f: str | None = Query(None, max_length=20000),
+    con_total: bool = False,
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
@@ -67,6 +69,8 @@ def listar_ingresos(
                 Ingreso.numero_expediente_externo.ilike(patron),
             )
         )
+    consulta = filtros.aplicar("ingresos", consulta, f)
+    cantidad = filtros.total(db, consulta) if con_total else None
     consulta = consulta.order_by(Ingreso.fecha_ingreso.desc()).limit(limite)
     ingresos = list(db.execute(consulta).scalars())
     personas = {
@@ -75,7 +79,8 @@ def listar_ingresos(
             select(Persona).where(Persona.id.in_([i.persona_id for i in ingresos if i.persona_id]))
         ).scalars()
     }
-    return [ingreso_out(i, personas.get(i.persona_id)) for i in ingresos]
+    items = [ingreso_out(i, personas.get(i.persona_id)) for i in ingresos]
+    return {"total": cantidad, "items": items} if con_total else items
 
 
 @router.post("/ingresos", status_code=201)

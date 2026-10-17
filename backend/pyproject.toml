@@ -19,6 +19,8 @@ dependencies = [
     "pillow>=10",
     # Lectura del PDF de la certificación negativa de ANSES.
     "pypdfium2>=4",
+    # Excel de estadísticas y de incidencias de asistencia.
+    "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]

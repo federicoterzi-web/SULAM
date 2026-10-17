@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { BarraFiltros, parametroF, useFiltrosUrl } from "./filtros";
 import { api, type Ingreso, type PersonaResumen } from "../api";
 import {
   Aviso,
@@ -26,10 +27,15 @@ export function PaginaMesa() {
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState("");
   const [nuevo, setNuevo] = useState(false);
-  const { datos, error } = useDatos(
-    () => api.get<Ingreso[]>("/ingresos", { pendientes: pendientes || undefined, q: filtro, limite: 100 }),
-    [pendientes, filtro],
-  );
+  const [filtros, setFiltros] = useFiltrosUrl();
+  const [total, setTotal] = useState<number | null>(null);
+  const { datos, error } = useDatos(async () => {
+    const r = await api.get<{ total: number; items: Ingreso[] }>("/ingresos", {
+      pendientes: pendientes || undefined, q: filtro, limite: 300, con_total: true, f: parametroF(filtros),
+    });
+    setTotal(r.total);
+    return r.items;
+  }, [pendientes, filtro, JSON.stringify(filtros)]);
 
   return (
     <>
@@ -53,8 +59,9 @@ export function PaginaMesa() {
           <input type="checkbox" checked={pendientes} onChange={(e) => setPendientes(e.target.checked)} />
           Solo sin legajo asociado
         </label>
-        <button className="boton">Filtrar</button>
+        <button className="boton">Buscar</button>
       </form>
+      <BarraFiltros lista="ingresos" filtros={filtros} alCambiar={setFiltros} total={total} mostrados={datos?.length} sustantivo={["ingreso", "ingresos"]} />
       <Aviso error={error} />
       {!datos ? (
         <Cargando />

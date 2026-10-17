@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { BarraFiltros, parametroF, useFiltrosUrl } from "./filtros";
 import { ApiError, api, type Coincidencia, type PersonaDetalle, type PersonaResumen } from "../api";
 import {
   Aviso,
@@ -20,13 +21,34 @@ export function PaginaLegajos() {
   const { puede } = useSesion();
   const [q, setQ] = useState("");
   const [resultados, setResultados] = useState<PersonaResumen[] | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
   const [nuevo, setNuevo] = useState(false);
+  const [filtros, setFiltros] = useFiltrosUrl();
   const { enviando, error, ejecutar } = useEnvio();
 
+  const consultar = async (texto: string, f: typeof filtros) => {
+    if (!texto.trim() && f.length === 0) {
+      setResultados(null);
+      setTotal(null);
+      return;
+    }
+    const r = await ejecutar(() => api.get<{ total: number; items: PersonaResumen[] }>("/personas", { q: texto, limite: 300, con_total: true, f: parametroF(f) }));
+    if (r) {
+      setResultados(r.items);
+      setTotal(r.total);
+    }
+  };
   const buscar = async (e?: FormEvent) => {
     e?.preventDefault();
-    const r = await ejecutar(() => api.get<PersonaResumen[]>("/personas", { q, limite: 50 }));
-    if (r) setResultados(r);
+    await consultar(q, filtros);
+  };
+  useEffect(() => {
+    if (filtros.length) consultar(q, filtros);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const cambiarFiltros = (f: typeof filtros) => {
+    setFiltros(f);
+    consultar(q, f);
   };
 
   return (
@@ -52,6 +74,7 @@ export function PaginaLegajos() {
           Buscar
         </button>
       </form>
+      <BarraFiltros lista="legajos" filtros={filtros} alCambiar={cambiarFiltros} total={total} mostrados={resultados?.length} sustantivo={["legajo", "legajos"]} />
       <Aviso error={error} />
       {resultados && <ListaPersonas personas={resultados} />}
       {nuevo && (
