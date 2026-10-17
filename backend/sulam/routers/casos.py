@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -242,6 +242,22 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
     db.commit()
     db.refresh(caso)
     return caso_out(caso, True, persona, detalle=True)
+
+
+@router.get("/casos/{caso_id}/qr.svg", include_in_schema=False)
+def qr_del_caso(caso_id: uuid.UUID, request: Request, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """QR que abre el caso en SULAM (para la carátula de la carpeta). No contiene datos personales."""
+    import io
+
+    import segno
+    from fastapi.responses import Response
+
+    caso = obtener_caso(db, caso_id)
+    requerir_caso(db, ctx, caso, "casos", "consultar")
+    url = str(request.base_url).rstrip("/") + f"/#/casos/{caso.id}"
+    buf = io.BytesIO()
+    segno.make(url, error="m").save(buf, kind="svg", scale=4, border=1, xmldecl=False)
+    return Response(buf.getvalue(), media_type="image/svg+xml")
 
 
 @router.get("/casos/{caso_id}")

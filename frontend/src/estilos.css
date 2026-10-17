@@ -1190,3 +1190,205 @@ a.indicador:hover {
     max-width: none;
   }
 }
+
+
+/* ---------------------------------------------------------------- carátula de carpeta */
+
+.hoja-carpeta {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 11pt;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.banda-carpeta {
+  display: flex;
+  align-items: center;
+  gap: 6mm;
+  background: #1f4e79;
+  color: #fff;
+  margin: -16mm -15mm 0;
+  padding: 7mm 15mm;
+}
+
+.banda-org {
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+.banda-titulo {
+  font-size: 18pt;
+  font-weight: 800;
+}
+
+.banda-actuacion {
+  margin-left: auto;
+  text-align: center;
+  background: #fff;
+  color: #1f4e79;
+  border-radius: 3mm;
+  padding: 2mm 6mm;
+}
+
+.banda-actuacion span {
+  display: block;
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+.banda-actuacion strong {
+  font-size: 24pt;
+  line-height: 1.1;
+}
+
+.banda-qr {
+  width: 24mm;
+  height: 24mm;
+  background: #fff;
+  border-radius: 1.5mm;
+}
+
+.persona-carpeta {
+  border-bottom: 3px solid #1f4e79;
+  padding: 6mm 0 4mm;
+}
+
+.persona-nombre {
+  font-size: 22pt;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.persona-ids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2mm 7mm;
+  margin-top: 2mm;
+  font-size: 12pt;
+  color: #333;
+}
+
+.legajo-grande strong {
+  font-size: 15pt;
+  color: #000;
+}
+
+.chips-carpeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2mm;
+  margin: 4mm 0;
+}
+
+.chip-imp {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 1.2mm 4mm;
+  font-weight: 700;
+  font-size: 10.5pt;
+  border: 1.5px solid;
+}
+
+.chip-grave {
+  background: #fde8e7;
+  border-color: #b3261e;
+  color: #8c1d18;
+}
+
+.chip-alerta {
+  background: #fff4dc;
+  border-color: #c58a00;
+  color: #6b4a00;
+}
+
+.chip-info {
+  background: #e8f1fb;
+  border-color: #1f4e79;
+  color: #163a5b;
+}
+
+.chip-neutro {
+  background: #f1f2f4;
+  border-color: #8a929e;
+  color: #333;
+}
+
+.chip-reservado {
+  background: #6b2f8a;
+  border-color: #6b2f8a;
+  color: #fff;
+}
+
+.grilla-carpeta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4mm;
+}
+
+.tarjeta-imp {
+  border: 1.2px solid #c7ccd4;
+  border-radius: 2.5mm;
+  padding: 3mm 4mm;
+  break-inside: avoid;
+}
+
+.tarjeta-ancha {
+  grid-column: 1 / -1;
+  margin-bottom: 4mm;
+}
+
+.grilla-carpeta .tarjeta-ancha {
+  margin-bottom: 0;
+}
+
+.tarjeta-imp h3 {
+  margin: 0 0 2mm;
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1f4e79;
+}
+
+.fila-dato {
+  display: flex;
+  gap: 3mm;
+  padding: 0.6mm 0;
+}
+
+.fila-dato span {
+  color: #555;
+  min-width: 24mm;
+}
+
+.motivo-carpeta {
+  margin: 0;
+  font-size: 12.5pt;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.lista-carpeta {
+  margin: 0;
+  padding-left: 5mm;
+}
+
+.responsables-carpeta {
+  margin: 0;
+  font-size: 12pt;
+  font-weight: 600;
+}
+
+.tenue-imp {
+  margin: 0;
+  color: #777;
+}
+
+.aviso-imp {
+  border: 2px solid #6b2f8a;
+  padding: 4mm;
+  font-weight: 700;
+}

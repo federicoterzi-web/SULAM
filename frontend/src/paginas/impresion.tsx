@@ -20,7 +20,13 @@ export function Impresion({ ruta }: { ruta: string }) {
           Cerrar
         </button>
       </div>
-      {tipo === "caratula" ? <ImprimirCaratula casoId={id} /> : tipo === "demanda" ? <ImprimirDemanda demandaId={id} /> : null}
+      {tipo === "caratula" ? (
+        <ImprimirCaratula casoId={id} />
+      ) : tipo === "carpeta" ? (
+        <CaratulaCarpeta casoId={id} />
+      ) : tipo === "demanda" ? (
+        <ImprimirDemanda demandaId={id} />
+      ) : null}
     </div>
   );
 }
@@ -383,3 +389,179 @@ function ImprimirDemanda({ demandaId }: { demandaId: string }) {
   );
 }
 
+
+// ---------------------------------------------------------------- carátula de carpeta (lectura rápida)
+
+const GRAVES = ["maltrato", "situacion_calle", "negligencia"];
+
+function Chip({ children, tono }: { children: ReactNode; tono: "grave" | "alerta" | "info" | "neutro" | "reservado" }) {
+  return <span className={`chip-imp chip-${tono}`}>{children}</span>;
+}
+
+function Tarjeta({ titulo, children, ancho }: { titulo: string; children: ReactNode; ancho?: boolean }) {
+  return (
+    <section className={`tarjeta-imp ${ancho ? "tarjeta-ancha" : ""}`}>
+      <h3>{titulo}</h3>
+      {children}
+    </section>
+  );
+}
+
+function Fila({ etiqueta, valor }: { etiqueta: string; valor: ReactNode }) {
+  if (valor === null || valor === undefined || valor === "" || valor === false) return null;
+  return (
+    <div className="fila-dato">
+      <span>{etiqueta}</span>
+      <strong>{valor}</strong>
+    </div>
+  );
+}
+
+interface CasoCarpeta extends CasoImpresion {
+  reiteraciones?: { id: number; fecha: string }[];
+}
+
+function CaratulaCarpeta({ casoId }: { casoId: string }) {
+  const { formularios: f } = useSesion();
+  const { datos: c, error } = useDatos(() => api.get<CasoCarpeta>(`/casos/${casoId}`), [casoId]);
+  if (error) return <Aviso error={error} />;
+  if (!c) return <Cargando />;
+  const p = c.persona;
+  const k = c.caratula;
+  const restringido = c.contenido_restringido;
+  const edadHoy = p.fecha_nacimiento ? edadAl(p.fecha_nacimiento, new Date().toISOString().slice(0, 10)) : null;
+  const texto = (lista: Opcion[], cod: string | null | undefined) => {
+    for (const o of lista) {
+      if (o.codigo === cod) return o.texto;
+      for (const s of o.subopciones ?? []) if (s.codigo === cod) return s.texto;
+    }
+    return cod ?? "";
+  };
+  const grupos = (lista: Opcion[], valores: string[]) =>
+    lista
+      .filter((o) => valores.includes(o.codigo))
+      .map((o) => ({
+        codigo: o.codigo,
+        texto: o.texto,
+        subs: (o.subopciones ?? []).filter((s) => valores.includes(s.codigo)).map((s) => s.texto),
+      }));
+  const indicadores = restringido ? [] : grupos(f.indicadores, k.indicadores);
+  const intervenciones = restringido ? [] : grupos(f.intervenciones, k.intervenciones);
+  const reiteraciones = c.reiteraciones?.length ?? 0;
+  const ingreso = [texto(f.tipos_ingreso, k.tipo_ingreso), k.tipo_ingreso_detalle ? texto(f.tipos_ingreso, `${k.tipo_ingreso}.${k.tipo_ingreso_detalle}`) : ""]
+    .filter(Boolean)
+    .join(" · ");
+  const coberturas = [
+    ...f.cobertura_salud.filter((o) => p.cobertura_salud.includes(o.codigo) && o.codigo !== "obra_social").map((o) => o.texto),
+    p.obra_social,
+  ].filter(Boolean);
+
+  return (
+    <article className="hoja hoja-carpeta">
+      <header className="banda-carpeta">
+        <div>
+          <div className="banda-org">Dirección de Adultos Mayores · Tucumán</div>
+          <div className="banda-titulo">Carátula de legajo</div>
+        </div>
+        <div className="banda-actuacion">
+          <span>Actuación</span>
+          <strong>
+            {k.numero_actuacion ?? "—"}/{k.anio_actuacion ?? ""}
+          </strong>
+        </div>
+        <img className="banda-qr" src={`/api/casos/${c.id}/qr.svg`} alt="QR del caso" />
+      </header>
+
+      <div className="persona-carpeta">
+        <div className="persona-nombre">
+          {p.apellidos.toUpperCase()}, {p.nombres}
+        </div>
+        <div className="persona-ids">
+          <span className="legajo-grande">
+            Legajo <strong>{/^\d+$/.test(p.numero_legajo) ? Number(p.numero_legajo).toLocaleString("es-AR") : p.numero_legajo}</strong>
+          </span>
+          {edadHoy !== null && (
+            <span>
+              {edadHoy} años <small>(nac. {fecha(p.fecha_nacimiento)})</small>
+            </span>
+          )}
+          {p.genero && <span>{texto(f.generos, p.genero)}</span>}
+          {p.telefono && <span>Tel. {p.telefono}</span>}
+        </div>
+      </div>
+
+      <div className="chips-carpeta">
+        {c.reservado && <Chip tono="reservado">CASO RESERVADO</Chip>}
+        {indicadores.map((g) => (
+          <Chip key={g.codigo} tono={GRAVES.includes(g.codigo) ? "grave" : g.codigo === "no_califica" ? "neutro" : "alerta"}>
+            {g.texto}
+            {g.subs.length > 0 && `: ${g.subs.join(", ")}`}
+          </Chip>
+        ))}
+        {k.antecedentes && (
+          <Chip tono="info">Con antecedentes{k.fecha_ultimo_ingreso ? ` · último ingreso ${fecha(k.fecha_ultimo_ingreso)}` : ""}</Chip>
+        )}
+        {reiteraciones > 0 && <Chip tono="info">Reiteraciones: {reiteraciones}</Chip>}
+        {p.cud === "si" && <Chip tono="neutro">Con CUD</Chip>}
+      </div>
+
+      {restringido ? (
+        <p className="aviso-imp">Contenido reservado: solo puede imprimirlo quien tiene acceso al caso.</p>
+      ) : (
+        <>
+          {c.motivo && (
+            <Tarjeta titulo="Motivo de ingreso" ancho>
+              <p className="motivo-carpeta">{c.motivo}</p>
+            </Tarjeta>
+          )}
+          <div className="grilla-carpeta">
+            <Tarjeta titulo="Ingreso">
+              <Fila etiqueta="Fecha" valor={fecha(k.fecha_ingreso)} />
+              <Fila etiqueta="Tipo" valor={ingreso} />
+              <Fila
+                etiqueta="Derivado por"
+                valor={[texto(f.derivado_por, k.derivado_por), k.derivado_por_detalle].filter(Boolean).join(" · ")}
+              />
+              <Fila etiqueta="Área" valor={c.area?.nombre} />
+            </Tarjeta>
+            <Tarjeta titulo="Intervención">
+              {intervenciones.length === 0 ? (
+                <p className="tenue-imp">Sin definir</p>
+              ) : (
+                <ul className="lista-carpeta">
+                  {intervenciones.map((g) => (
+                    <li key={g.codigo}>
+                      <strong>{g.texto}</strong>
+                      {g.subs.length > 0 && ` (${g.subs.join(", ")})`}
+                      {g.codigo === "derivacion" && k.intervencion_derivacion && `: ${k.intervencion_derivacion}`}
+                      {g.codigo === "otro" && k.intervencion_otro && `: ${k.intervencion_otro}`}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Tarjeta>
+            <Tarjeta titulo="Domicilio">
+              <Fila etiqueta="Dirección" valor={p.domicilio} />
+              <Fila etiqueta="Barrio" valor={p.barrio} />
+              <Fila etiqueta="Localidad" valor={p.localidad} />
+              <Fila etiqueta="Departamento" valor={p.departamento} />
+            </Tarjeta>
+            <Tarjeta titulo="Cobertura">
+              <Fila etiqueta="Salud" valor={coberturas.join(", ")} />
+              <Fila etiqueta="CUD" valor={p.cud ? texto(f.cud, p.cud) : ""} />
+              {!coberturas.length && !p.cud && <p className="tenue-imp">Sin datos</p>}
+            </Tarjeta>
+            <Tarjeta titulo="Responsables" ancho>
+              <p className="responsables-carpeta">
+                {c.responsables.length ? c.responsables.map((r) => r.nombre_completo).join(" · ") : "Sin asignar"}
+              </p>
+            </Tarjeta>
+          </div>
+        </>
+      )}
+      <footer className="pie-imp">
+        Caso {c.numero} · abierto el {fecha(c.abierto_en)} · impreso el {fechaHora(new Date().toISOString())} · Escanee el QR para abrir el caso en SULAM
+      </footer>
+    </article>
+  );
+}

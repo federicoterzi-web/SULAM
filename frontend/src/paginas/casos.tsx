@@ -154,8 +154,11 @@ export function PaginaCaso({ id }: { id: string }) {
                 Adjuntar escaneo
               </button>
             )}
+            <a className="boton boton-primario" href={`#/imprimir/carpeta/${c.id}`} target="_blank" rel="noreferrer">
+              Carátula para carpeta
+            </a>
             <a className="boton" href={`#/imprimir/caratula/${c.id}`} target="_blank" rel="noreferrer">
-              Imprimir
+              Formato oficial
             </a>
           </>
         }

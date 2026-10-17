@@ -204,3 +204,10 @@ def test_reiteraciones(admin):
     assert r.status_code == 200 and r.json()["reiteracion"] is True and r.json()["caso_id"] == caso["id"]
     c = admin.get(f"/api/casos/{caso['id']}").json()
     assert len(c["reiteraciones"]) == 2 and c["reiteraciones"][1]["ingreso_id"] == ing["id"]
+
+
+def test_qr_del_caso(admin):
+    p = nueva_persona(admin)
+    caso = nuevo_caso(admin, p["id"])
+    r = admin.get(f"/api/casos/{caso['id']}/qr.svg")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg+xml") and b"<svg" in r.content
