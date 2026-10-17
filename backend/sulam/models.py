@@ -175,6 +175,12 @@ class Persona(Base):
             postgresql_where=text("numero_documento IS NOT NULL AND unificada_en_id IS NULL"),
         ),
         Index("ix_personas_apellidos_norm", "apellidos_norm"),
+        Index(
+            "uq_personas_legajo_activo",
+            "numero_legajo",
+            unique=True,
+            postgresql_where=text("unificada_en_id IS NULL"),
+        ),
         CheckConstraint(
             "(numero_documento IS NULL) OR (sin_documento = false)",
             name="ck_personas_documento_coherente",
@@ -182,7 +188,11 @@ class Persona(Base):
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    numero_legajo: Mapped[str] = mapped_column(String(20), unique=True)
+    # Número de legajo visible = DNI (o "LC 1234567", etc.); "SD-000001" si no tiene documento.
+    numero_legajo: Mapped[str] = mapped_column(String(40))
+    # Número provisorio asignado cuando ingresó sin DNI; se conserva para seguir
+    # encontrando la carpeta y los papeles rotulados con él.
+    legajo_provisorio: Mapped[str | None] = mapped_column(String(20), index=True)
     tipo_documento: Mapped[str | None] = mapped_column(String(20))
     numero_documento: Mapped[str | None] = mapped_column(String(30))
     sin_documento: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))

@@ -149,7 +149,7 @@ def cmd_datos_demo(_args) -> None:
         personas = []
         for apellidos, nombres, tipo_doc, numero, nac, localidad in PERSONAS_DEMO:
             p = Persona(
-                numero_legajo=numero_legajo(db),
+                numero_legajo=numero_legajo(db, tipo_doc, numero),
                 apellidos=apellidos, nombres=nombres,
                 apellidos_norm=normalizar(apellidos), nombres_norm=normalizar(nombres),
                 tipo_documento=tipo_doc, numero_documento=numero,
@@ -159,6 +159,8 @@ def cmd_datos_demo(_args) -> None:
                 localidad=localidad, domicilio="Domicilio ficticio s/n",
                 creado_por=usuarios["carga"].id,
             )
+            if p.numero_legajo.startswith("SD-"):
+                p.legajo_provisorio = p.numero_legajo
             db.add(p)
             personas.append(p)
         db.flush()

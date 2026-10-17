@@ -94,6 +94,7 @@ export interface UsuarioBreve {
 export interface PersonaResumen {
   id: string;
   numero_legajo: string;
+  legajo_provisorio: string | null;
   apellidos: string;
   nombres: string;
   tipo_documento: string | null;

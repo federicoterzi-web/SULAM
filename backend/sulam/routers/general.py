@@ -45,7 +45,7 @@ def buscar(
 
     if ctx.tiene("personas", "consultar"):
         alcance = ctx.alcance("personas", "consultar")
-        condiciones = [Persona.numero_legajo == exacto]
+        condiciones = [Persona.numero_legajo == exacto, Persona.legajo_provisorio == exacto]
         if doc:
             condiciones.append(Persona.numero_documento == doc)
         palabras = texto.split()

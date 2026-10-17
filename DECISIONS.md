@@ -13,7 +13,7 @@ Una aplicación, una base, módulos con responsabilidades separadas. Más simple
 Elegido por madurez, costo cero de licencias y facilidad para encontrar quien lo mantenga. **Queda sujeto a la evaluación del área informática** (ver D-012), en particular hosting, versión de PostgreSQL y política de actualizaciones.
 
 ### D-003 · Identificador interno independiente del documento — *Vigente*
-UUID interno + número de legajo visible. Permite personas sin documento, correcciones de DNI y unificación sin perder historial.
+UUID interno + número de legajo visible **igual al DNI** (documento de diseño §3.1); «SD-NNNNNN» provisorio para quien no tiene documento, conservado para búsquedas cuando se obtiene el DNI. Permite personas sin documento, correcciones de DNI y unificación sin perder historial.
 
 ### D-004 · Persona, caso y expediente como entidades distintas — *Vigente*
 Según el documento de diseño (§3.3).

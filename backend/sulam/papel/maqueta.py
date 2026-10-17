@@ -181,8 +181,13 @@ class Fila:
         self.x += mm_
         return self
 
-    def digitos(self, campo: str, n: int, separadores: tuple[int, ...] = (), simbolo: str = "/"):
-        ancho = n * CELDA_ANCHO + len(separadores) * 2.8
+    def digitos(self, campo: str, n: int, separadores: tuple[int, ...] = (), simbolo: str = "/",
+                prefijos: dict[int, str] | None = None):
+        """Cuadrícula de un dígito por celda. `prefijos` imprime texto fijo antes de
+        una celda (por ejemplo, el «20» de los años)."""
+        prefijos = prefijos or {}
+        ancho_pref = sum(self.h.ancho_texto(t, 9.5, NEGRITA) + 1.2 for t in prefijos.values())
+        ancho = n * CELDA_ANCHO + len(separadores) * 2.8 + ancho_pref
         self._cabe(ancho + 1)
         y = self.h.y + 0.6
         celdas = []
@@ -191,18 +196,27 @@ class Fila:
             if i in separadores:
                 self.h.texto(x + 0.7, self._base() + 0.3, simbolo, 9)
                 x += 2.8
+            if i in prefijos:
+                x += self.h.texto(x + 0.3, self._base() + 0.3, prefijos[i], 9.5, NEGRITA) + 1.2
             self.h.rect(x, y, CELDA_ANCHO, CELDA_ALTO, 0.5)
             celdas.append({"x": round(x, 3), "y": round(y, 3), "w": CELDA_ANCHO, "h": CELDA_ALTO})
             x += CELDA_ANCHO
-        self.h.elementos.append({
+        elemento = {
             "id": campo, "tipo": "digitos", "campo": campo, "celdas": celdas,
             "x": self.x, "y": y, "w": x - self.x, "h": CELDA_ALTO,
-        })
+        }
+        if prefijos:
+            elemento["prefijos"] = {str(k): v for k, v in prefijos.items()}
+        self.h.elementos.append(elemento)
         self.x = x + 1.5
         return self
 
-    def fecha(self, campo: str):
-        return self.digitos(campo, 8, separadores=(2, 4))
+    def fecha(self, campo: str, siglo: str = "20"):
+        """DD / MM / 20AA: el siglo va impreso y se completan dos dígitos del año."""
+        return self.digitos(campo, 6, separadores=(2, 4), prefijos={4: siglo})
+
+    def anio(self, campo: str, siglo: str = "20"):
+        return self.digitos(campo, 2, prefijos={0: siglo})
 
     def caja(self, campo: str, ancho: float | None = None, minimo: float = 30):
         """Recuadro de una línea para texto. Sin ancho, ocupa lo que queda de la línea."""

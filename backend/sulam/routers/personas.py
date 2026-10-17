@@ -23,7 +23,7 @@ from ..models import (
     TipoVinculo,
     Usuario,
 )
-from ..numbering import numero_legajo
+from ..numbering import legajo_de_documento, legajo_provisorio, numero_legajo
 from ..permissions import (
     Contexto,
     filtro_casos,
@@ -146,6 +146,7 @@ def listar_personas(
         if doc:
             condiciones.append(Persona.numero_documento == doc)
             condiciones.append(Persona.numero_legajo == q.strip().upper())
+            condiciones.append(Persona.legajo_provisorio == q.strip().upper())
         palabras = texto.split()
         if palabras:
             por_palabra = [
@@ -202,11 +203,14 @@ def crear_persona(datos: PersonaIn, ctx: Contexto = Depends(contexto), db: Sessi
     validar_datos_persona(valores)
     persona = Persona(
         **valores,
-        numero_legajo=numero_legajo(db),
+        numero_legajo=numero_legajo(db, tipo, numero),
+        legajo_provisorio=None,
         apellidos_norm=normalizar(datos.apellidos),
         nombres_norm=normalizar(datos.nombres),
         creado_por=ctx.id,
     )
+    if persona.numero_legajo.startswith("SD-"):
+        persona.legajo_provisorio = persona.numero_legajo
     db.add(persona)
     db.flush()
     detalle = {"numero_legajo": persona.numero_legajo}
@@ -340,6 +344,15 @@ def modificar_persona(
         return persona_detalle(persona)
     persona.apellidos_norm = normalizar(persona.apellidos)
     persona.nombres_norm = normalizar(persona.nombres)
+    if {"numero_documento", "tipo_documento"} & diff.keys():
+        nuevo = legajo_de_documento(persona.tipo_documento, persona.numero_documento)
+        if nuevo is None:
+            if not persona.legajo_provisorio:
+                persona.legajo_provisorio = legajo_provisorio(db)
+            nuevo = persona.legajo_provisorio
+        if nuevo != persona.numero_legajo:
+            diff["numero_legajo"] = [persona.numero_legajo, nuevo]
+            persona.numero_legajo = nuevo
     if "numero_documento" in diff and diff["numero_documento"][0] and not datos.motivo_cambio:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,

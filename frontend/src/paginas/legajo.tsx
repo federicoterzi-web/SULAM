@@ -54,7 +54,11 @@ export function PaginaLegajo({ id }: { id: string }) {
     <>
       <div className="ficha">
         <div>
-          <span className="ficha-legajo">Legajo {l.numero_legajo}</span>
+          <span className="ficha-legajo">
+            Legajo {l.numero_legajo}
+            {l.legajo_provisorio && l.legajo_provisorio !== l.numero_legajo && ` (antes ${l.legajo_provisorio})`}
+            {l.legajo_provisorio === l.numero_legajo && " · provisorio hasta tener DNI"}
+          </span>
           <h1>{nombre(l)}</h1>
           <p className="ficha-datos">
             {documento(l)}

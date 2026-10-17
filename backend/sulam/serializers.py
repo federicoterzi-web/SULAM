@@ -24,6 +24,7 @@ def persona_resumen(p: Persona) -> dict:
     return {
         "id": str(p.id),
         "numero_legajo": p.numero_legajo,
+        "legajo_provisorio": p.legajo_provisorio,
         "apellidos": p.apellidos,
         "nombres": p.nombres,
         "tipo_documento": p.tipo_documento,

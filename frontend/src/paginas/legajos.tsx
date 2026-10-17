@@ -279,7 +279,7 @@ export function FormPersona({
                 ))}
               </select>
             </Campo>
-            <Campo etiqueta="Número de documento" ayuda="Sin puntos ni espacios (se quitan solos).">
+            <Campo etiqueta="Número de documento" ayuda="Es también el número de legajo. Sin puntos (se quitan solos).">
               <input value={d.numero_documento} onChange={cambia("numero_documento")} inputMode="numeric" maxLength={30} />
             </Campo>
           </>

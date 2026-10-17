@@ -6,7 +6,8 @@ Reglas que el sistema **implementa hoy**. Lo que falta definir está en [DECISIO
 
 1. Cada persona mayor tiene **un único legajo** con:
    - identificador interno permanente (UUID), invisible para el usuario;
-   - **número de legajo** visible y correlativo (`L-000001`).
+   - **número de legajo = DNI** (para otros documentos, con el tipo adelante: «LC 3456789»).
+   - **Sin DNI**: el sistema asigna un número provisorio «SD-000001». Cuando se carga el DNI, el legajo pasa a ser el DNI y el número provisorio se conserva: sigue sirviendo para buscarlo (carpetas o papeles rotulados con él). Los cambios quedan en la auditoría.
 2. Datos de identificación de la 0.1: apellidos, nombres, tipo y número de documento, situación sin documento (con motivo), fecha de nacimiento (exacta o aproximada), domicilio, localidad, teléfono y observaciones.
 3. **Personas sin documento**: se registran marcando *sin documento*; no puede cargarse un número a la vez.
 4. **Corrección de documento**: cambiar un número ya cargado exige indicar el motivo; queda en la auditoría con el valor anterior y el nuevo.
@@ -105,7 +106,8 @@ SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `su
 
 - Mismos campos y textos que los modelos de la Dirección; las opciones se imprimen desde el mismo catálogo que usa la pantalla.
 - Cada hoja lleva **cuatro marcas de esquina**, un **QR** (ficha, versión y hoja), **casillas** para marcar con X y **cuadrículas de un dígito por casilla** para DNI, fechas, teléfonos y números de legajo y actuación.
-- Todas las hojas llevan Legajo N° y Actuación N°/año, para asociarlas al caso.
+- Todas las hojas llevan **Legajo N° (DNI)** con 8 casilleros y la casilla «Sin DNI», y **Actuación N° / año**, para asociarlas al caso.
+- En años y fechas, el siglo va preimpreso («20» para fechas del trámite, «19» para la fecha de nacimiento): se completan solo los dos últimos dígitos.
 - **Lectura** (`sulam/papel/lectura.py`): ubica las marcas, endereza la foto (perspectiva y giro, incluso al revés), identifica la hoja por el QR y mide cada casilla. Las casillas con poca tinta o los grupos de opción única con más de una marca se marcan como **dudosos** para revisión. Recorta cada celda de dígitos y cada recuadro de texto para la revisión humana.
 - Validación con 60 fotos simuladas (perspectiva, giros, sombra, ruido, desenfoque): 60/60 hojas leídas y 0 errores en 1.815 casillas.
 - **Pendiente**: captura con el celular por QR, pantalla de revisión campo por campo, reconocimiento de dígitos y de texto (solo local, D-018), y lectura de las fichas anteriores sin marcas.

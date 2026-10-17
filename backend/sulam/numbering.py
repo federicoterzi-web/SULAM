@@ -23,8 +23,20 @@ def _anio() -> int:
     return datetime.now(timezone.utc).astimezone().year
 
 
-def numero_legajo(db: Session) -> str:
-    return f"L-{siguiente(db, 'legajo'):06d}"
+def legajo_de_documento(tipo: str | None, numero: str | None) -> str | None:
+    """El número de legajo es el DNI (u otro documento, con su tipo adelante)."""
+    if not numero:
+        return None
+    return numero if tipo in (None, "DNI") else f"{tipo} {numero}"
+
+
+def numero_legajo(db: Session, tipo: str | None = None, numero: str | None = None) -> str:
+    """Legajo = DNI. Para personas sin documento, número provisorio «SD-000001»."""
+    return legajo_de_documento(tipo, numero) or legajo_provisorio(db)
+
+
+def legajo_provisorio(db: Session) -> str:
+    return f"SD-{siguiente(db, 'legajo'):06d}"
 
 
 def formato_caso(anio: int, numero: int) -> str:

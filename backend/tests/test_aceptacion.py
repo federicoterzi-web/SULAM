@@ -20,7 +20,7 @@ def test_registrar_persona_sin_duplicados_evidentes(admin):
     p = nueva_persona(admin, apellidos="Pérez", nombres="Rosa Elvira", numero_documento="4.123.456",
                       fecha_nacimiento="1941-03-12")
     assert p["numero_documento"] == "4123456"
-    assert p["numero_legajo"].startswith("L-")
+    assert p["numero_legajo"] == "4123456"  # el número de legajo es el DNI
 
     # Mismo documento: bloquea siempre.
     r = admin.post("/api/personas", json={"apellidos": "Otra", "nombres": "Persona",
@@ -51,6 +51,9 @@ def test_registrar_persona_sin_duplicados_evidentes(admin):
 def test_persona_sin_documento_y_correccion_de_dni(admin):
     p = nueva_persona(admin, numero_documento=None, sin_documento=True, motivo_sin_documento="Extraviado")
     assert p["numero_documento"] is None and p["sin_documento"] is True
+    # Sin DNI: legajo provisorio.
+    assert p["numero_legajo"].startswith("SD-") and p["legajo_provisorio"] == p["numero_legajo"]
+    provisorio = p["numero_legajo"]
 
     # No puede declararse sin documento y a la vez cargar un número.
     r = admin.post("/api/personas", json={"apellidos": "X", "nombres": "Y", "sin_documento": True, "numero_documento": "123"})
@@ -65,6 +68,10 @@ def test_persona_sin_documento_y_correccion_de_dni(admin):
     r = admin.patch(f"/api/personas/{p['id']}", json={"numero_documento": "30111223", "motivo_cambio": "Error de tipeo"})
     assert r.status_code == 200
     assert r.json()["numero_documento"] == "30111223"
+    # El legajo sigue al DNI, y el número provisorio sigue sirviendo para encontrarlo.
+    assert r.json()["numero_legajo"] == "30111223"
+    assert [x["id"] for x in admin.get("/api/personas", params={"q": provisorio}).json()] == [p["id"]]
+    assert [x["id"] for x in admin.get("/api/buscar", params={"q": provisorio}).json()["personas"]] == [p["id"]]
 
 
 # ---------------------------------------------------------------- 2. ingreso previo

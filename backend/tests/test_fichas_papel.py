@@ -93,7 +93,7 @@ def test_lectura_de_casillas_en_foto_simulada(codigo, pagina, giro, semilla):
             _x_a_mano(hoja, e, ppmm, rng)
     numeros = {}
     for e in elementos:
-        if e["tipo"] == "digitos" and e["campo"] in ("numero_actuacion", "persona.numero_documento", "fecha_ingreso"):
+        if e["tipo"] == "digitos" and e["campo"] in ("numero_actuacion", "numero_legajo", "fecha_ingreso"):
             numeros[e["id"]] = [rng.randint(0, 9) for _ in e["celdas"]]
             for celda, d in zip(e["celdas"], numeros[e["id"]]):
                 _digito(hoja, celda, d, ppmm)

@@ -18,11 +18,12 @@ from .maqueta import Hoja, generar
 VERSION = 1
 
 
-def _identificacion(h: Hoja, con_legajo: bool = True):
+def _identificacion(h: Hoja):
+    """Legajo N° = DNI de la persona. Actuación N° / año = número de caso."""
     f = h.fila()
-    if con_legajo:
-        f.etiqueta("LEGAJO N°").digitos("numero_legajo", 6).separador(4)
-    f.etiqueta("ACTUACIÓN N°").digitos("numero_actuacion", 5).etiqueta("/ AÑO").digitos("anio_actuacion", 4)
+    f.etiqueta("LEGAJO N° (DNI)").digitos("numero_legajo", 8)
+    f.casilla("sin_dni", "si", "Sin DNI").separador(1)
+    f.etiqueta("ACTUACIÓN N°").digitos("numero_actuacion", 5).etiqueta("/ AÑO").anio("anio_actuacion")
     f.fin()
 
 
@@ -91,8 +92,7 @@ def _caratula(h: Hoja):
     h.seccion("Datos de la persona mayor")
     h.fila().etiqueta("Apellido y nombre:").caja("persona.apellido_nombre").fin()
     f = h.fila()
-    f.etiqueta("DNI").digitos("persona.numero_documento", 8).separador(3)
-    f.etiqueta("Fecha de nacimiento").fecha("persona.fecha_nacimiento").separador(3)
+    f.etiqueta("Fecha de nacimiento").fecha("persona.fecha_nacimiento", siglo="19").separador(3)
     f.etiqueta("Edad").digitos("edad", 3)
     f.fin()
     f = h.fila().etiqueta("Género:")
@@ -144,8 +144,7 @@ def _registro_1(h: Hoja):
     h.seccion("2. Datos de la persona mayor")
     h.fila().etiqueta("Apellido y nombre:").caja("persona.apellido_nombre").fin()
     f = h.fila()
-    f.etiqueta("DNI").digitos("persona.numero_documento", 8).separador(3)
-    f.etiqueta("Fecha de nacimiento").fecha("persona.fecha_nacimiento").separador(3)
+    f.etiqueta("Fecha de nacimiento").fecha("persona.fecha_nacimiento", siglo="19").separador(3)
     f.etiqueta("Edad").digitos("edad", 3)
     f.fin()
     f = h.fila().etiqueta("Género:")
