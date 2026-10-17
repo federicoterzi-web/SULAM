@@ -23,7 +23,9 @@ const opciones = {
   target: ["es2020"],
   sourcemap: dev,
   minify: !dev,
-  loader: { ".svg": "file" },
+  loader: { ".svg": "file", ".jpg": "file", ".png": "file" },
+  assetNames: "[name]-[hash]",
+  publicPath: "/assets/",
   define: { "process.env.NODE_ENV": JSON.stringify(dev ? "development" : "production") },
   logLevel: "info",
 };

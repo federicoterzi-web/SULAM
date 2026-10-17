@@ -122,6 +122,10 @@ SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `su
 - Validación con 60 fotos simuladas (perspectiva, giros, sombra, ruido, desenfoque): 60/60 hojas leídas y 0 errores en 1.815 casillas.
 - **Pendiente**: captura con el celular por QR, pantalla de revisión campo por campo, reconocimiento de dígitos y de texto (solo local, D-018), y lectura de las fichas anteriores sin marcas.
 
+## 5 sexies. Membrete institucional
+
+Las impresiones en **formato oficial** (carátula de legajo y registro de demanda) llevan el membrete de la Dirección (Ministerio de Desarrollo Social · Dirección de Adultos Mayores · Gobierno de Tucumán), centrado y del mismo tamaño que en el modelo de Word (11,3 × 2,5 cm). La carátula para carpeta y las fichas para escanear no lo llevan: la primera es de bajo consumo de tinta y en las fichas el logo podría confundir la lectura automática. Para actualizar el membrete se reemplaza `frontend/src/recursos/membrete-2024.jpg`.
+
 ## 5 quinquies. Impresión de carátulas en tanda
 
 - Todo caso nuevo (cargado en la computadora o en el celular) queda **pendiente de impresión** de su carátula.

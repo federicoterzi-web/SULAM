@@ -3,6 +3,7 @@ import { type ReactNode } from "react";
 import { api, type Caso, type Demanda, type Evolucion, type Opcion, type PersonaDetalle } from "../api";
 import { Aviso, Cargando, fecha, fechaHora, useDatos, useSesion } from "../comun";
 import { ConfirmarImpresion } from "./cola";
+import membrete from "../recursos/membrete-2024.jpg";
 
 interface CasoImpresion extends Omit<Caso, "persona"> {
   persona: PersonaDetalle;
@@ -109,7 +110,8 @@ function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode })
 function Encabezado({ titulo }: { titulo: string }) {
   return (
     <header className="encabezado-imp">
-      <div>Dirección de Adultos Mayores · Provincia de Tucumán</div>
+      {/* Membrete institucional (el mismo de las notas de la Dirección). */}
+      <img className="membrete-imp" src={membrete} alt="Ministerio de Desarrollo Social · Dirección de Adultos Mayores · Gobierno de Tucumán" />
       <h1>{titulo}</h1>
     </header>
   );

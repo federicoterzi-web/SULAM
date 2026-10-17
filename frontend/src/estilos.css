@@ -1104,6 +1104,17 @@ a.indicador:hover {
   letter-spacing: 0.05em;
 }
 
+/* Mismo tamaño que en el modelo de Word: 11,3 × 2,5 cm, centrado. */
+.membrete-imp {
+  display: block;
+  width: 113mm;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 2mm;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 .encabezado-imp h1 {
   font-size: 15pt;
   margin: 0.2rem 0 0;
