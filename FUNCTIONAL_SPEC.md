@@ -133,7 +133,7 @@ Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un
 - **Fotos**: una o varias hojas con la cámara (o elegidas del teléfono), reordenables; se guardan como **un PDF** asociado al legajo, al caso y, si corresponde, al registro de demanda como escaneo del original. Las fotos se reducen a 2000 px y se envían sin metadatos; el servidor vuelve a procesarlas (máx. 2400 px, sin EXIF) y muestra el avance del envío.
 - **Sesión**: las iniciadas desde el celular vencen a los 15 minutos sin uso. Al vencer cualquier sesión con la pantalla abierta, se pide la contraseña encima y se conserva lo escrito.
 - **Sin conexión**: aviso; no se guardan datos en el teléfono.
-- **QR de la carátula para carpeta**: lleva un enlace `#/c/<id interno del caso>`, sin datos personales. Escaneado con el celular abre el caso en la versión celular; desde una computadora, en la versión completa. Siempre pide iniciar sesión y respeta los permisos. Imprimir las carátulas desde la dirección definitiva de SULAM, porque el enlace usa la dirección desde la que se imprime.
+- **QR de la carátula para carpeta**: lleva un enlace `#/c/<id interno del caso>`, sin datos personales. Escaneado con el celular abre el caso en la versión celular; desde una computadora, en la versión completa. Siempre pide iniciar sesión y respeta los permisos. La dirección del enlace es la oficial (`SULAM_URL_PUBLICA`, o `https://SULAM_DOMINIO`), sin importar desde qué computadora se imprima. Sin configurarla, se usa la dirección con que se abrió SULAM y, si es «localhost», la IP de red de la máquina; si tampoco se puede (Docker), la vista de impresión avisa que el QR no funcionará desde un celular.
 
 ## 6. Expedientes
 

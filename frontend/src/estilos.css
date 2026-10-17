@@ -2104,3 +2104,8 @@ a.indicador:hover {
 .m-app-formulario .m-aviso-flotante {
   bottom: calc(96px + env(safe-area-inset-bottom));
 }
+
+.aviso-qr {
+  max-width: 210mm;
+  margin: 0 auto 12px;
+}

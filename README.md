@@ -77,6 +77,8 @@ SULAM tiene una versión para celular en la misma dirección: al ingresar desde 
 - **No guarda datos en el teléfono**: ni fichas, ni fotos (no pasan por la galería), ni respuestas del servidor. Sin señal muestra un aviso; lo que se estaba escribiendo sigue en pantalla para guardarlo al volver la conexión.
 - **Sesión corta**: desde el celular la sesión se cierra tras 15 minutos sin uso (`SULAM_SESSION_IDLE_MINUTES_MOVIL`). Al volver se pide solo la contraseña, sin perder lo cargado.
 
+**Dirección oficial.** Conviene fijarla en `.env` con `SULAM_URL_PUBLICA` (por ejemplo `http://192.168.0.20:8000`): es la que llevan los QR de las carátulas impresas, así funcionan aunque se imprima desde la máquina donde corre SULAM. Con Docker es necesaria; con `SULAM_DOMINIO` no hace falta.
+
 **Dentro de la oficina** alcanza con que el celular esté en la misma red wifi que la computadora donde corre SULAM: hay que iniciarlo escuchando en la red (`python -m sulam.cli servidor --host 0.0.0.0`, o en Docker cambiar el puerto a `"8000:8000"`) y abrir `http://IP-DE-LA-COMPUTADORA:8000`. Sin HTTPS la cámara funciona, pero no se puede instalar como app.
 
 **Fuera de la oficina (datos móviles)** SULAM tiene que estar publicado con HTTPS. Es una decisión del área informática (D-012, D-020). Con Docker:

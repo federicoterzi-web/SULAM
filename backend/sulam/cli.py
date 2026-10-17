@@ -261,6 +261,8 @@ def cmd_fichas(args) -> None:
 def cmd_servidor(args) -> None:
     import uvicorn
 
+    # Para saber si otros dispositivos pueden llegar a esta máquina (QR impresos).
+    os.environ["SULAM_ESCUCHA"] = args.host
     uvicorn.run("sulam.main:app", host=args.host, port=args.puerto, proxy_headers=True)
 
 

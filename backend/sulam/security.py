@@ -122,3 +122,49 @@ def revocar_sesiones_usuario(db: Session, usuario_id, excepto=None) -> None:
         q = q.filter(Sesion.id != excepto)
     for s in q:
         s.revocada_en = ahora()
+
+
+# ---------------------------------------------------------------- dirección pública
+
+_LOCALES = {"localhost", "127.0.0.1", "::1", "0.0.0.0"}
+
+
+def _ip_de_red() -> str | None:
+    """IP de esta máquina en la red local (sin enviar nada: UDP no conecta)."""
+    import socket
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("10.255.255.255", 1))
+            ip = s.getsockname()[0]
+        return None if ip.startswith("127.") else ip
+    except OSError:
+        return None
+
+
+def url_publica(request) -> tuple[str, bool]:
+    """Dirección para los QR y si sirve desde otro dispositivo.
+
+    1. SULAM_URL_PUBLICA (o https://SULAM_DOMINIO) si está configurada.
+    2. La dirección con la que se abrió SULAM, si no es «localhost».
+    3. Abierto como «localhost», fuera de Docker y escuchando en la red: la IP de esta máquina.
+    Si nada de eso sirve, devuelve la dirección local y False.
+    """
+    from pathlib import Path
+
+    cfg = get_settings()
+    if cfg.url_publica:
+        return cfg.url_publica, True
+    base = str(request.base_url).rstrip("/")
+    host = request.url.hostname or ""
+    if host not in _LOCALES:
+        return base, True
+    import os
+
+    # Solo si SULAM escucha en la red (servidor --host 0.0.0.0) y no está dentro de Docker.
+    escucha_en_red = os.environ.get("SULAM_ESCUCHA", "127.0.0.1") not in _LOCALES - {"0.0.0.0"}
+    ip = _ip_de_red() if escucha_en_red and not Path("/.dockerenv").exists() else None
+    if ip:
+        puerto = f":{request.url.port}" if request.url.port else ""
+        return f"{request.url.scheme}://{ip}{puerto}", True
+    return base, False

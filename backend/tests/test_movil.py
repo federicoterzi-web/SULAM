@@ -131,3 +131,32 @@ def test_app_instalable(tmp_path, monkeypatch):
     finally:
         monkeypatch.undo()
         get_settings.cache_clear()
+
+
+def test_qr_usa_la_direccion_oficial(admin, monkeypatch):
+    from sulam.config import get_settings
+    from sulam.security import url_publica
+
+    class Pedido:
+        def __init__(self, url):
+            from starlette.datastructures import URL
+
+            self.url = URL(url)
+            self.base_url = URL(url)
+
+    # Sin configurar: una dirección que no es local se usa tal cual.
+    assert url_publica(Pedido("http://192.168.0.20:8000/")) == ("http://192.168.0.20:8000", True)
+    # Configurada: manda, aunque se imprima desde «localhost».
+    monkeypatch.setenv("SULAM_URL_PUBLICA", "http://sulam.oficina:8000/")
+    get_settings.cache_clear()
+    try:
+        assert url_publica(Pedido("http://localhost:8000/")) == ("http://sulam.oficina:8000", True)
+        r = admin.get("/api/auth/direccion-publica")
+        assert r.json() == {"url": "http://sulam.oficina:8000", "sirve_desde_otros_dispositivos": True}
+        monkeypatch.delenv("SULAM_URL_PUBLICA")
+        monkeypatch.setenv("SULAM_DOMINIO", "sulam.ejemplo.gob.ar")
+        get_settings.cache_clear()
+        assert url_publica(Pedido("http://localhost:8000/"))[0] == "https://sulam.ejemplo.gob.ar"
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()

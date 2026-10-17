@@ -48,6 +48,7 @@ class Settings:
     lockout_minutes: int
     frontend_dist: Path | None
     environment: str
+    url_publica: str | None
     allowed_mime: tuple[str, ...] = field(
         default=("application/pdf", "image/jpeg", "image/png")
     )
@@ -55,6 +56,18 @@ class Settings:
     @property
     def max_upload_bytes(self) -> int:
         return self.max_upload_mb * 1024 * 1024
+
+
+def _url_publica() -> str | None:
+    """Dirección con la que se llega a SULAM desde otras computadoras y celulares.
+
+    Se usa en los QR impresos. SULAM_URL_PUBLICA manda; si no está y SULAM se
+    publica con un dominio (SULAM_DOMINIO), se usa https://<dominio>.
+    """
+    url = os.environ.get("SULAM_URL_PUBLICA", "").strip()
+    if not url and os.environ.get("SULAM_DOMINIO", "").strip():
+        url = "https://" + os.environ["SULAM_DOMINIO"].strip()
+    return url.rstrip("/") or None
 
 
 @lru_cache
@@ -78,4 +91,5 @@ def get_settings() -> Settings:
         lockout_minutes=int(os.environ.get("SULAM_LOCKOUT_MINUTES", "15")),
         frontend_dist=Path(dist).resolve() if dist else default_dist,
         environment=os.environ.get("SULAM_ENV", "desarrollo"),
+        url_publica=_url_publica(),
     )

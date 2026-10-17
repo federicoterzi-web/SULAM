@@ -138,3 +138,12 @@ def cambiar_password(
     audit.registrar(db, ctx, "cambio_password", "usuario", usuario.id)
     db.commit()
     return _yo(usuario, ctx.sesion.csrf_token, ctx.sesion.movil)
+
+
+@router.get("/direccion-publica")
+def direccion_publica(request: Request, ctx: Contexto = Depends(contexto_sin_exigir_cambio)):
+    """Dirección que llevan los QR impresos y si funciona desde un celular."""
+    from ..security import url_publica
+
+    url, sirve = url_publica(request)
+    return {"url": url, "sirve_desde_otros_dispositivos": sirve}

@@ -430,6 +430,10 @@ interface CasoCarpeta extends CasoImpresion {
 function CaratulaCarpeta({ casoId }: { casoId: string }) {
   const { formularios: f } = useSesion();
   const { datos: c, error } = useDatos(() => api.get<CasoCarpeta>(`/casos/${casoId}`), [casoId]);
+  const { datos: dir } = useDatos(
+    () => api.get<{ url: string; sirve_desde_otros_dispositivos: boolean }>("/auth/direccion-publica"),
+    [],
+  );
   if (error) return <Aviso error={error} />;
   if (!c) return <Cargando />;
   const p = c.persona;
@@ -463,6 +467,13 @@ function CaratulaCarpeta({ casoId }: { casoId: string }) {
   ].filter(Boolean);
 
   return (
+    <>
+    {dir && !dir.sirve_desde_otros_dispositivos && (
+      <div className="aviso aviso-advertencia no-imprimir aviso-qr">
+        El QR de esta carátula apunta a «{dir.url}» y no va a abrir el caso desde un celular. Pida a quien administra SULAM
+        que configure la dirección oficial (SULAM_URL_PUBLICA) antes de imprimir.
+      </div>
+    )}
     <article className="hoja hoja-carpeta">
       <header className="banda-carpeta">
         <div>
@@ -569,5 +580,6 @@ function CaratulaCarpeta({ casoId }: { casoId: string }) {
         Caso {c.numero} · abierto el {fecha(c.abierto_en)} · impreso el {fechaHora(new Date().toISOString())} · Escanee el QR para abrir el caso en SULAM
       </footer>
     </article>
+    </>
   );
 }

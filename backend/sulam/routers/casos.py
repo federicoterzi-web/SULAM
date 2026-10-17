@@ -255,7 +255,9 @@ def qr_del_caso(caso_id: uuid.UUID, request: Request, ctx: Contexto = Depends(co
     caso = obtener_caso(db, caso_id)
     requerir_caso(db, ctx, caso, "casos", "consultar")
     # "/c/" abre la pantalla del caso de la versión celular o de la completa, según el dispositivo.
-    url = str(request.base_url).rstrip("/") + f"/#/c/{caso.id}"
+    from ..security import url_publica
+
+    url = url_publica(request)[0] + f"/#/c/{caso.id}"
     buf = io.BytesIO()
     segno.make(url, error="m").save(buf, kind="svg", scale=4, border=1, xmldecl=False)
     return Response(buf.getvalue(), media_type="image/svg+xml")
