@@ -2181,3 +2181,139 @@ a.indicador:hover {
     background: #fff !important;
   }
 }
+
+/* ---------------------------------------------------------------- página de inicio por rol */
+
+.inicio-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.inicio-cabecera h1 {
+  margin: 0;
+}
+
+.inicio-area {
+  margin: 0 0 1rem;
+  color: var(--texto-tenue);
+  font-weight: 600;
+}
+
+.inicio-subtitulo {
+  margin: 0.5rem 0 0.75rem;
+  color: var(--texto-tenue);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.inicio-accesos {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0 0 1.25rem;
+}
+
+.inicio-columnas {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .inicio-columnas {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inicio-numero {
+  font-size: 1.05rem;
+}
+
+.inicio-numero strong {
+  font-size: 1.6rem;
+  color: var(--peligro);
+}
+
+.lista-casos-inicio {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.lista-casos-inicio li {
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--borde-fuerte);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: var(--superficie);
+}
+
+.lista-casos-inicio li.caso-grave {
+  border-left-color: var(--peligro);
+}
+
+.caso-inicio-titulo {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.caso-inicio-marcas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.35rem 0;
+}
+
+.marca {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+}
+
+.marca-grave {
+  background: var(--peligro-claro);
+  color: var(--peligro);
+}
+
+.marca-alerta {
+  background: var(--advertencia-claro);
+  color: var(--advertencia);
+}
+
+.marca-info {
+  background: var(--info-claro);
+  color: var(--primario);
+}
+
+.caso-inicio-evolucion {
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.barra-carga {
+  display: inline-block;
+  width: 120px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--primario-claro);
+  vertical-align: middle;
+  overflow: hidden;
+}
+
+.barra-carga span {
+  display: block;
+  height: 100%;
+  background: var(--primario);
+}

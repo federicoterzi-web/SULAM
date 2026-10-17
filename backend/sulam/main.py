@@ -11,6 +11,7 @@ from . import __version__
 from .config import get_settings
 from .db import get_engine
 from .routers import admin, auth, casos, demandas, documentos, expedientes, general, ingresos, personas
+from .routers import inicio as inicio_por_rol
 
 API = "/api"
 
@@ -26,7 +27,7 @@ def crear_app() -> FastAPI:
         openapi_url=f"{API}/openapi.json" if cfg.environment != "produccion" else None,
     )
 
-    for r in (auth, personas, casos, demandas, expedientes, ingresos, documentos, general, admin):
+    for r in (auth, personas, casos, demandas, expedientes, ingresos, documentos, general, inicio_por_rol, admin):
         app.include_router(r.router, prefix=API)
 
     @app.get(f"{API}/salud", tags=["general"])

@@ -53,6 +53,7 @@ T, AR, AS, P = "todos", "area", "asignados", "propios"
 # institucionalmente; estos valores son editables desde Administración.
 ROLES: dict[str, dict] = {
     "Dirección y Administración del Sistema": {
+        "inicio": "direccion",
         "descripcion": "Gestión de permisos, plantillas, configuraciones y operaciones institucionales autorizadas.",
         "permisos": [
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
@@ -67,7 +68,35 @@ ROLES: dict[str, dict] = {
             ("administracion", "administrar", T),
         ],
     },
+    "Directora": {
+        "inicio": "direccion",
+        "descripcion": "Conducción de la Dirección: ve todos los casos, la información reservada y la auditoría, y puede derivar y asignar. No administra usuarios ni permisos.",
+        "permisos": [
+            ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
+            ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", T), ("casos", "derivar", T),
+            ("expedientes", "consultar", T), ("expedientes", "crear", T), ("expedientes", "modificar", T),
+            ("mesa_entrada", "consultar", T),
+            ("documentos", "consultar", T), ("documentos", "crear", T), ("documentos", "descargar", T),
+            ("documentos", "modificar", T),
+            ("reservados", "consultar", T),
+            ("auditoria", "consultar", T),
+        ],
+    },
+    "Jefe/a de departamento": {
+        "inicio": "jefatura",
+        "descripcion": "Conduce un departamento que maneja casos (Admisión o Promoción, según el área del usuario): abre carátulas, asigna técnicos y ve la información reservada de su área.",
+        "permisos": [
+            ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AR),
+            ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AR), ("casos", "derivar", AR),
+            ("expedientes", "consultar", T), ("expedientes", "crear", AR), ("expedientes", "modificar", AR),
+            ("mesa_entrada", "consultar", T),
+            ("documentos", "consultar", T), ("documentos", "crear", AR), ("documentos", "descargar", AR),
+            ("documentos", "modificar", AR),
+            ("reservados", "consultar", AR),
+        ],
+    },
     "Carga de Datos": {
+        "inicio": "carga",
         "descripcion": "Acceso transversal a los legajos y herramientas de incorporación y actualización de información.",
         "permisos": [
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
@@ -80,6 +109,7 @@ ROLES: dict[str, dict] = {
         ],
     },
     "Técnico": {
+        "inicio": "tecnico",
         "descripcion": "Consulta general de legajos, con tablero centrado en sus casos asignados.",
         "permisos": [
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AS),
@@ -90,6 +120,7 @@ ROLES: dict[str, dict] = {
         ],
     },
     "Mesa de Entrada": {
+        "inicio": "mesa",
         "descripcion": "Registro de ingresos, números de expedientes y movimientos administrativos.",
         "permisos": [
             ("mesa_entrada", "consultar", T), ("mesa_entrada", "crear", T), ("mesa_entrada", "modificar", T),
@@ -99,6 +130,7 @@ ROLES: dict[str, dict] = {
         ],
     },
     "Administrativo de Área": {
+        "inicio": "administrativo_area",
         "descripcion": "Funciones específicas del área, como documentación y gestión administrativa.",
         "permisos": [
             ("personas", "consultar", AR),
@@ -129,7 +161,7 @@ def inicializar_catalogos(db: Session) -> None:
     for nombre, d in ROLES.items():
         if nombre in existentes:
             continue
-        rol = Rol(nombre=nombre, descripcion=d["descripcion"])
+        rol = Rol(nombre=nombre, descripcion=d["descripcion"], inicio=d.get("inicio"))
         rol.permisos = [RolPermiso(modulo=m, accion=a, alcance=al) for m, a, al in d["permisos"]]
         db.add(rol)
     db.flush()
@@ -162,6 +194,9 @@ USUARIOS_DEMO = [
     ("carga", "Carga de Datos (demo)", "Carga de Datos", "Departamento Admisión de Casos y Recepción de Denuncias"),
     ("tecnica1", "Técnica Uno (demo)", "Técnico", "Departamento Admisión de Casos y Recepción de Denuncias"),
     ("tecnico2", "Técnico Dos (demo)", "Técnico", "Departamento Promoción Integral de Derechos"),
+    ("directora", "Directora (demo)", "Directora", "Dirección de Adultos Mayores"),
+    ("jefa_admision", "Jefa de Admisión (demo)", "Jefe/a de departamento", "Departamento Admisión de Casos y Recepción de Denuncias"),
+    ("jefe_promocion", "Jefe de Promoción (demo)", "Jefe/a de departamento", "Departamento Promoción Integral de Derechos"),
     ("mesa", "Mesa de Entrada (demo)", "Mesa de Entrada", "División Asistencia Administrativa"),
     ("adminarea", "Administrativo de Área (demo)", "Administrativo de Área", "División Cuidados y Promoción de Autonomía"),
 ]

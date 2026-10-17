@@ -116,6 +116,8 @@ class Rol(Base):
     nombre: Mapped[str] = mapped_column(String(120), unique=True)
     descripcion: Mapped[str | None] = mapped_column(Text)
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    # Página de inicio de quienes tienen este rol (ver sulam/inicio.py).
+    inicio: Mapped[str | None] = mapped_column(String(30))
 
     permisos: Mapped[list["RolPermiso"]] = relationship(
         back_populates="rol", cascade="all, delete-orphan", lazy="selectin"

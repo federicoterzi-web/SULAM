@@ -45,7 +45,9 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Legajo = DNI (SD provisorio sin documento) | ✅ |
 | Una actuación por persona por año; reiteraciones | ✅ |
 | Circuito: Mesa deriva al departamento → jefe/a de departamento crea la carátula en pantalla (número automático) → Registro digitaliza | ⏳ a definir con la Dirección |
-| Roles «Jefe/a de departamento» (Admisión, Promoción) y «Oficina de Registro» | ⏳ |
+| Roles «Jefe/a de departamento» y «Directora» (propuesta) | ✅ |
+| Página de inicio por rol | ✅ |
+| Rol «Oficina de Registro» | ⏳ a definir con la Dirección |
 
 ## Versión para celular
 
@@ -65,7 +67,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0009) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0010) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |

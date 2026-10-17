@@ -205,10 +205,28 @@ def asignado_a_persona(db: Session, ctx: Contexto, persona_id: uuid.UUID) -> boo
     return db.execute(q).first() is not None
 
 
+def _reservados_de_toda_la_direccion(ctx: Contexto) -> bool:
+    """«reservados.consultar» con alcance amplio: ve toda la información reservada.
+
+    Con alcance «area» (jefes de departamento) solo ve la de los casos de su área.
+    """
+    alc = ctx.alcance("reservados", "consultar")
+    return alc is not None and alc != "area"
+
+
+def _reservados_del_area(ctx: Contexto) -> int | None:
+    if ctx.alcance("reservados", "consultar") == "area":
+        return ctx.usuario.area_id
+    return None
+
+
 def ve_caso_reservado(db: Session, ctx: Contexto, caso: Caso) -> bool:
     if not caso.reservado:
         return True
-    if ctx.tiene("reservados", "consultar") or caso.creado_por == ctx.id:
+    if _reservados_de_toda_la_direccion(ctx) or caso.creado_por == ctx.id:
+        return True
+    area = _reservados_del_area(ctx)
+    if area is not None and caso.area_id == area:
         return True
     return esta_asignado(db, ctx, caso.id)
 
@@ -217,8 +235,14 @@ def ve_reservado_de_persona(
     db: Session, ctx: Contexto, persona_id: uuid.UUID, caso_id: uuid.UUID | None = None
 ) -> bool:
     """Para documentos o vinculados reservados de una persona."""
-    if ctx.tiene("reservados", "consultar"):
+    if _reservados_de_toda_la_direccion(ctx):
         return True
+    area = _reservados_del_area(ctx)
+    if area is not None:
+        q = select(Caso.id).where(Caso.area_id == area)
+        q = q.where(Caso.id == caso_id) if caso_id is not None else q.where(Caso.persona_id == persona_id)
+        if db.execute(q).first() is not None:
+            return True
     if caso_id is not None:
         return esta_asignado(db, ctx, caso_id)
     return asignado_a_persona(db, ctx, persona_id)
@@ -226,11 +250,15 @@ def ve_reservado_de_persona(
 
 def filtro_casos_visibles_reservados(ctx: Contexto):
     """Condición SQL: el caso no es reservado o el usuario puede verlo."""
-    if ctx.tiene("reservados", "consultar"):
+    if _reservados_de_toda_la_direccion(ctx):
         return true()
-    return or_(
+    condiciones = [
         Caso.reservado.is_(False),
         Caso.creado_por == ctx.id,
         Caso.id.in_(_casos_asignados(ctx.id)),
-    )
+    ]
+    area = _reservados_del_area(ctx)
+    if area is not None:
+        condiciones.append(Caso.area_id == area)
+    return or_(*condiciones)
 

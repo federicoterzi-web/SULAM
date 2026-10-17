@@ -26,8 +26,18 @@ interface RolAdmin {
   nombre: string;
   descripcion: string | null;
   activo: boolean;
+  inicio: string | null;
   permisos: Permiso[];
 }
+
+const INICIOS: Record<string, string> = {
+  direccion: "Dirección (resumen general)",
+  jefatura: "Jefatura de departamento (su área y su equipo)",
+  tecnico: "Técnico/a (sus casos por urgencia)",
+  carga: "Carga de datos (lo que falta digitalizar)",
+  mesa: "Mesa de Entrada (ingresos)",
+  administrativo_area: "Administrativo de área",
+};
 
 interface CatalogoPermisos {
   modulos: { modulo: string; nombre: string; acciones: string[] }[];
@@ -281,7 +291,9 @@ function Roles() {
           <article key={r.id} className={`tarjeta ${r.activo ? "" : "fila-inactiva"}`}>
             <h3>{r.nombre}</h3>
             <p className="tenue">{r.descripcion}</p>
-            <p>{r.permisos.length} permisos</p>
+            <p>
+              {r.permisos.length} permisos · Inicio: {r.inicio ? INICIOS[r.inicio]?.split(" (")[0] ?? r.inicio : "general"}
+            </p>
             <button className="boton boton-chico" onClick={() => setEditar(r)}>
               Ver y editar permisos
             </button>
@@ -308,6 +320,7 @@ function FormRol({ rol, catalogo, alGuardar }: { rol?: RolAdmin; catalogo: Catal
   const [nombre, setNombre] = useState(rol?.nombre ?? "");
   const [descripcion, setDescripcion] = useState(rol?.descripcion ?? "");
   const [activo, setActivo] = useState(rol?.activo ?? true);
+  const [inicio, setInicio] = useState(rol?.inicio ?? "");
   const [permisos, setPermisos] = useState<Record<string, string>>(
     Object.fromEntries((rol?.permisos ?? []).map((p) => [`${p.modulo}.${p.accion}`, p.alcance])),
   );
@@ -321,7 +334,7 @@ function FormRol({ rol, catalogo, alGuardar }: { rol?: RolAdmin; catalogo: Catal
         const [modulo, accion] = k.split(".");
         return { modulo, accion, alcance };
       });
-    const cuerpo = { nombre, descripcion: descripcion || null, activo, permisos: lista };
+    const cuerpo = { nombre, descripcion: descripcion || null, activo, inicio: inicio || null, permisos: lista };
     const r = await ejecutar(() => (rol ? api.put(`/admin/roles/${rol.id}`, cuerpo) : api.post("/admin/roles", cuerpo)));
     if (r) alGuardar();
   };
@@ -338,6 +351,16 @@ function FormRol({ rol, catalogo, alGuardar }: { rol?: RolAdmin; catalogo: Catal
         </label>
         <Campo etiqueta="Descripción" ancho="completo">
           <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+        </Campo>
+        <Campo etiqueta="Página de inicio" ayuda="Lo que ve al entrar quien tiene este rol.">
+          <select value={inicio} onChange={(e) => setInicio(e.target.value)}>
+            <option value="">General</option>
+            {Object.entries(INICIOS).map(([k, t]) => (
+              <option key={k} value={k}>
+                {t}
+              </option>
+            ))}
+          </select>
         </Campo>
       </div>
       <p className="tenue">

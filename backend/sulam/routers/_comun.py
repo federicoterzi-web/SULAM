@@ -74,7 +74,8 @@ def ve_documento(db: Session, ctx, d) -> bool:
             return False
     if d.reservado or d.tipo_documental.reservado:
         if d.persona_id is None:
-            return ctx.tiene("reservados", "consultar")
+            alc = ctx.alcance("reservados", "consultar")
+            return alc is not None and alc != "area"
         return ve_reservado_de_persona(db, ctx, d.persona_id, d.caso_id)
     return True
 

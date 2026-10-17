@@ -32,6 +32,7 @@ def _rol_out(r: Rol) -> dict:
         "nombre": r.nombre,
         "descripcion": r.descripcion,
         "activo": r.activo,
+        "inicio": r.inicio,
         "permisos": [
             {"modulo": p.modulo, "accion": p.accion, "alcance": p.alcance}
             for p in sorted(r.permisos, key=lambda p: (p.modulo, p.accion))
@@ -81,6 +82,13 @@ def catalogo_permisos(ctx: Contexto = Depends(_admin)):
     }
 
 
+@router.get("/inicios")
+def inicios_disponibles(ctx: Contexto = Depends(_admin)):
+    from .inicio import PERFILES
+
+    return [{"codigo": k, "nombre": v} for k, v in PERFILES.items()]
+
+
 @router.get("/roles")
 def listar_roles(ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
     return [_rol_out(r) for r in db.execute(select(Rol).order_by(Rol.nombre)).scalars()]
@@ -97,6 +105,8 @@ def _aplicar_rol(db: Session, rol: Rol, datos: RolIn) -> None:
     rol.nombre = datos.nombre
     rol.descripcion = datos.descripcion
     rol.activo = datos.activo
+    if "inicio" in datos.model_fields_set:
+        rol.inicio = datos.inicio
     rol.permisos.clear()
     db.flush()
     for p in datos.permisos:

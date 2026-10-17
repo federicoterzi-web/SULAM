@@ -122,6 +122,21 @@ SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `su
 - Validación con 60 fotos simuladas (perspectiva, giros, sombra, ruido, desenfoque): 60/60 hojas leídas y 0 errores en 1.815 casillas.
 - **Pendiente**: captura con el celular por QR, pantalla de revisión campo por campo, reconocimiento de dígitos y de texto (solo local, D-018), y lectura de las fichas anteriores sin marcas.
 
+## 5 septies. Página de inicio por rol
+
+Cada rol tiene una página de inicio (se elige en *Administración › Roles*). Quien tiene varios roles puede cambiar de inicio; SULAM recuerda el último elegido en ese navegador. Todo respeta los permisos habituales y el contenido reservado.
+
+| Inicio | Roles iniciales | Qué muestra |
+|---|---|---|
+| Dirección | Directora; Dirección y Administración | Año en curso: actuaciones nuevas, reiteraciones, activos y cerrados, en total y por departamento; maltrato del mes por tipo; reservados activos; casos sin responsable y sin movimiento; actividad reciente |
+| Jefatura | Jefe/a de departamento | Su área: casos sin responsable (para asignar), equipo con su carga de casos, casos sin movimiento, actuaciones y reiteraciones del mes, carátulas por imprimir |
+| Técnico/a | Técnico | Sus casos por urgencia (maltrato, volvió a consultar en los últimos 30 días, sin movimiento, asignado esta semana) con la última evolución |
+| Carga de datos | Carga de Datos | Casos sin registro de demanda, registros desde papel sin escaneo, carátulas por imprimir, lo cargado hoy |
+| Mesa de Entrada | Mesa de Entrada | Ingresos de hoy, ingresos sin vincular, sus últimos ingresos |
+| Administrativo de área | Administrativo de Área | Casos del área, expedientes recientes, documentos que cargó, carátulas por imprimir |
+
+Roles nuevos (propuesta, editables): **Directora** (ve todo, incluida la información reservada y la auditoría; no administra usuarios) y **Jefe/a de departamento** (un solo rol; el departamento sale del área del usuario). La información reservada con alcance «Su área» permite ver solo la de los casos del área propia.
+
 ## 5 sexies. Membrete institucional
 
 Las impresiones en **formato oficial** (carátula de legajo y registro de demanda) llevan el membrete de la Dirección (Ministerio de Desarrollo Social · Dirección de Adultos Mayores · Gobierno de Tucumán), centrado y del mismo tamaño que en el modelo de Word (11,3 × 2,5 cm). La carátula para carpeta y las fichas para escanear no lo llevan: la primera es de bajo consumo de tinta y en las fichas el logo podría confundir la lectura automática. Para actualizar el membrete se reemplaza `frontend/src/recursos/membrete-2024.jpg`.
