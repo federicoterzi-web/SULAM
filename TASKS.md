@@ -47,6 +47,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Circuito: Mesa deriva al departamento → jefe/a de departamento crea la carátula en pantalla (número automático) → Registro digitaliza | ⏳ a definir con la Dirección |
 | Roles «Jefe/a de departamento» y «Directora» (propuesta) | ✅ |
 | Página de inicio por rol | ✅ |
+| Rol «Jefe/a de división» (mismos permisos que jefe de departamento) | ✅ |
 | Rol «Oficina de Registro» | ⏳ a definir con la Dirección |
 
 ## Versión para celular
@@ -61,13 +62,24 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Probar en teléfonos reales del equipo (Android e iPhone) | ⏳ |
 | Cola de impresión: carátulas nuevas pendientes, impresión en tanda (una por hoja) | ✅ |
 
+## Red de recursos
+
+| Funcionalidad | Estado |
+|---|---|
+| Mapa de recursos: centros de día, centros de jubilados, residencias, instituciones, cuidadores formados | ✅ |
+| Directorio de contactos (técnicos de gobiernos locales y otras instituciones) | ⏳ próximo |
+| Casos en el mapa (solo Directora y jefaturas; técnicos sus casos; sin reservados) y recursos cercanos | ⏳ |
+| Cuidadores de cada caso (vínculo del legajo con un cuidador, formado o no) | ⏳ |
+| Registro de la División de Participación y Sensibilización Ciudadana (talleres, campañas, capacitaciones, centros de jubilados) | ⏳ a relevar con la División |
+| Carga inicial de recursos (hoy en papel o dispersos) | ⏳ |
+
 ## Digitalización de fichas — en curso
 
 | Funcionalidad | Estado |
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0010) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0011) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |

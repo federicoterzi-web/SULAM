@@ -122,6 +122,16 @@ SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `su
 - Validación con 60 fotos simuladas (perspectiva, giros, sombra, ruido, desenfoque): 60/60 hojas leídas y 0 errores en 1.815 casillas.
 - **Pendiente**: captura con el celular por QR, pantalla de revisión campo por campo, reconocimiento de dígitos y de texto (solo local, D-018), y lectura de las fichas anteriores sin marcas.
 
+## 5 octies. Red de recursos y mapa
+
+*Recursos y mapa* reúne centros de día, centros de jubilados, residencias de larga estadía, instituciones con las que se articula (salud, municipios y comunas, desarrollo social, justicia, seguridad, educación, organizaciones sociales) y cuidadores domiciliarios formados.
+
+- Cada recurso tiene tipo, nombre, dirección, localidad, departamento, ubicación en el mapa, teléfonos, correo, horario, referente, servicios y observaciones. Los cuidadores, además, los departamentos donde trabajan, su formación y su disponibilidad; para ellos se marca la zona aproximada, no el domicilio.
+- Mapa con un color y una letra por tipo; lista al costado con llamar y «cómo llegar». Filtros por tipo, departamento (un cuidador aparece también donde trabaja) y texto.
+- La ubicación se marca tocando el mapa o con «Buscar la dirección», que consulta OpenStreetMap (Nominatim) **solo para recursos**; los domicilios de los casos nunca se envían a servicios externos. Configurable (`SULAM_MAPA_TESELAS`, `SULAM_GEOCODIFICADOR_URL`, vacío = desactivado).
+- En el celular: pestaña *Recursos* con búsqueda, filtros, llamar, cómo llegar y mapa.
+- Permisos (módulo «recursos»): consultan todos los roles iniciales; cargan Dirección, jefaturas, Carga de Datos, técnicos y administrativos de área; técnicos y administrativos de área modifican solo lo que cargaron. Las bajas son lógicas y todo cambio queda en la auditoría.
+
 ## 5 septies. Página de inicio por rol
 
 Cada rol tiene una página de inicio (se elige en *Administración › Roles*). Quien tiene varios roles puede cambiar de inicio; SULAM recuerda el último elegido en ese navegador. Todo respeta los permisos habituales y el contenido reservado.
@@ -129,13 +139,13 @@ Cada rol tiene una página de inicio (se elige en *Administración › Roles*). 
 | Inicio | Roles iniciales | Qué muestra |
 |---|---|---|
 | Dirección | Directora; Dirección y Administración | Año en curso: actuaciones nuevas, reiteraciones, activos y cerrados, en total y por departamento; maltrato del mes por tipo; reservados activos; casos sin responsable y sin movimiento; actividad reciente |
-| Jefatura | Jefe/a de departamento | Su área: casos sin responsable (para asignar), equipo con su carga de casos, casos sin movimiento, actuaciones y reiteraciones del mes, carátulas por imprimir |
+| Jefatura | Jefe/a de departamento; Jefe/a de división | Su área: casos sin responsable (para asignar), equipo con su carga de casos, casos sin movimiento, actuaciones y reiteraciones del mes, carátulas por imprimir |
 | Técnico/a | Técnico | Sus casos por urgencia (maltrato, volvió a consultar en los últimos 30 días, sin movimiento, asignado esta semana) con la última evolución |
 | Carga de datos | Carga de Datos | Casos sin registro de demanda, registros desde papel sin escaneo, carátulas por imprimir, lo cargado hoy |
 | Mesa de Entrada | Mesa de Entrada | Ingresos de hoy, ingresos sin vincular, sus últimos ingresos |
 | Administrativo de área | Administrativo de Área | Casos del área, expedientes recientes, documentos que cargó, carátulas por imprimir |
 
-Roles nuevos (propuesta, editables): **Directora** (ve todo, incluida la información reservada y la auditoría; no administra usuarios) y **Jefe/a de departamento** (un solo rol; el departamento sale del área del usuario). La información reservada con alcance «Su área» permite ver solo la de los casos del área propia.
+Roles nuevos (propuesta, editables): **Directora** (ve todo, incluida la información reservada y la auditoría; no administra usuarios), **Jefe/a de departamento** y **Jefe/a de división** (mismos permisos; el departamento o la división sale del área del usuario: Participación y Sensibilización Ciudadana, Cuidados y Promoción de Autonomía, o quien cumple esa función en un departamento). La información reservada con alcance «Su área» permite ver solo la de los casos del área propia.
 
 ## 5 sexies. Membrete institucional
 

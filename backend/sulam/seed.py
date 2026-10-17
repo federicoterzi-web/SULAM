@@ -56,6 +56,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Gestión de permisos, plantillas, configuraciones y operaciones institucionales autorizadas.",
         "permisos": [
+            ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
             ("personas", "administrar", T),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", T), ("casos", "derivar", T),
@@ -72,6 +73,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Conducción de la Dirección: ve todos los casos, la información reservada y la auditoría, y puede derivar y asignar. No administra usuarios ni permisos.",
         "permisos": [
+            ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", T), ("casos", "derivar", T),
             ("expedientes", "consultar", T), ("expedientes", "crear", T), ("expedientes", "modificar", T),
@@ -86,6 +88,21 @@ ROLES: dict[str, dict] = {
         "inicio": "jefatura",
         "descripcion": "Conduce un departamento que maneja casos (Admisión o Promoción, según el área del usuario): abre carátulas, asigna técnicos y ve la información reservada de su área.",
         "permisos": [
+            ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
+            ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AR),
+            ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AR), ("casos", "derivar", AR),
+            ("expedientes", "consultar", T), ("expedientes", "crear", AR), ("expedientes", "modificar", AR),
+            ("mesa_entrada", "consultar", T),
+            ("documentos", "consultar", T), ("documentos", "crear", AR), ("documentos", "descargar", AR),
+            ("documentos", "modificar", AR),
+            ("reservados", "consultar", AR),
+        ],
+    },
+    "Jefe/a de división": {
+        "inicio": "jefatura",
+        "descripcion": "Conduce una división (Participación y Sensibilización Ciudadana, Cuidados y Promoción de Autonomía) o cumple esa función en un departamento. Mismos permisos que un jefe de departamento, sobre el área del usuario.",
+        "permisos": [
+            ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AR),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AR), ("casos", "derivar", AR),
             ("expedientes", "consultar", T), ("expedientes", "crear", AR), ("expedientes", "modificar", AR),
@@ -99,6 +116,7 @@ ROLES: dict[str, dict] = {
         "inicio": "carga",
         "descripcion": "Acceso transversal a los legajos y herramientas de incorporación y actualización de información.",
         "permisos": [
+            ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
             # "modificar" permite transcribir carátulas, registros de demanda y evoluciones en papel.
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", T),
@@ -112,6 +130,7 @@ ROLES: dict[str, dict] = {
         "inicio": "tecnico",
         "descripcion": "Consulta general de legajos, con tablero centrado en sus casos asignados.",
         "permisos": [
+            ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", P),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AS),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AS),
             ("expedientes", "consultar", T), ("expedientes", "crear", AS),
@@ -123,6 +142,7 @@ ROLES: dict[str, dict] = {
         "inicio": "mesa",
         "descripcion": "Registro de ingresos, números de expedientes y movimientos administrativos.",
         "permisos": [
+            ("recursos", "consultar", T),
             ("mesa_entrada", "consultar", T), ("mesa_entrada", "crear", T), ("mesa_entrada", "modificar", T),
             ("personas", "consultar", T),
             ("expedientes", "consultar", T), ("expedientes", "crear", T),
@@ -133,6 +153,7 @@ ROLES: dict[str, dict] = {
         "inicio": "administrativo_area",
         "descripcion": "Funciones específicas del área, como documentación y gestión administrativa.",
         "permisos": [
+            ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", P),
             ("personas", "consultar", AR),
             ("casos", "consultar", AR),
             ("expedientes", "consultar", AR), ("expedientes", "crear", AR),
@@ -197,6 +218,7 @@ USUARIOS_DEMO = [
     ("directora", "Directora (demo)", "Directora", "Dirección de Adultos Mayores"),
     ("jefa_admision", "Jefa de Admisión (demo)", "Jefe/a de departamento", "Departamento Admisión de Casos y Recepción de Denuncias"),
     ("jefe_promocion", "Jefe de Promoción (demo)", "Jefe/a de departamento", "Departamento Promoción Integral de Derechos"),
+    ("jefa_cuidados", "Jefa de Cuidados (demo)", "Jefe/a de división", "División Cuidados y Promoción de Autonomía"),
     ("mesa", "Mesa de Entrada (demo)", "Mesa de Entrada", "División Asistencia Administrativa"),
     ("adminarea", "Administrativo de Área (demo)", "Administrativo de Área", "División Cuidados y Promoción de Autonomía"),
 ]

@@ -21,6 +21,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -573,3 +574,40 @@ class Auditoria(Base):
     ip: Mapped[str | None] = mapped_column(String(64))
 
     usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
+# ---------------------------------------------------------------------------
+# Red de recursos: instituciones, centros y cuidadores, con ubicación.
+# ---------------------------------------------------------------------------
+
+
+class Recurso(Base):
+    __tablename__ = "recursos"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    tipo: Mapped[str] = mapped_column(String(30), index=True)
+    categoria: Mapped[str | None] = mapped_column(String(40))
+    nombre: Mapped[str] = mapped_column(String(300))
+    nombre_norm: Mapped[str] = mapped_column(String(300), index=True)
+    direccion: Mapped[str | None] = mapped_column(String(500))
+    localidad: Mapped[str | None] = mapped_column(String(200))
+    departamento: Mapped[str | None] = mapped_column(String(100), index=True)
+    lat: Mapped[float | None] = mapped_column(Float)
+    lng: Mapped[float | None] = mapped_column(Float)
+    telefono: Mapped[str | None] = mapped_column(String(100))
+    telefono_alternativo: Mapped[str | None] = mapped_column(String(100))
+    email: Mapped[str | None] = mapped_column(String(200))
+    horario: Mapped[str | None] = mapped_column(String(300))
+    referente: Mapped[str | None] = mapped_column(String(200))
+    referente_cargo: Mapped[str | None] = mapped_column(String(200))
+    servicios: Mapped[str | None] = mapped_column(Text)
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    # Cuidadores formados
+    zonas: Mapped[list | None] = mapped_column(JSONB)
+    formacion: Mapped[str | None] = mapped_column(Text)
+    disponibilidad: Mapped[str | None] = mapped_column(String(300))
+
+    activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()

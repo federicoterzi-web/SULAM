@@ -56,6 +56,10 @@ CATALOGO: dict[str, dict] = {
         "nombre": "Auditoría",
         "acciones": ["consultar"],
     },
+    "recursos": {
+        "nombre": "Red de recursos (instituciones, centros, cuidadores)",
+        "acciones": ["consultar", "crear", "modificar"],
+    },
     "administracion": {
         "nombre": "Administración del sistema",
         "acciones": ["administrar"],

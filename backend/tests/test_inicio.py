@@ -93,3 +93,18 @@ def test_inicio_del_rol_se_puede_cambiar(admin):
     cuerpo = {k: rol[k] for k in ("nombre", "descripcion", "activo", "permisos")}
     assert admin.put(f"/api/admin/roles/{rol['id']}", json=cuerpo).json()["inicio"] == "tecnico"  # sin el campo, se conserva
     assert admin.put(f"/api/admin/roles/{rol['id']}", json={**cuerpo, "inicio": "carga"}).json()["inicio"] == "carga"
+
+
+def test_jefe_de_division_igual_que_jefe_de_departamento_en_su_area(admin, cliente):
+    areas = _areas(admin)
+    cuidados = "División Cuidados y Promoción de Autonomía"
+    crear_usuario("jefa_div", "Jefe/a de división", cuidados)
+    p = nueva_persona(admin, apellidos="CUIDADOS", numero_documento="9999999")
+    caso = nuevo_caso(admin, p["id"], area_id=areas[cuidados], reservado=True, motivo="reservado de la división")
+    jefa = cliente("jefa_div")
+    r = jefa.get("/api/inicio").json()
+    assert r["perfil"] == "jefatura" and r["datos"]["area"]["nombre"] == cuidados
+    assert [c["id"] for c in r["datos"]["sin_responsable"]] == [caso["id"]]
+    assert jefa.get(f"/api/casos/{caso['id']}").json()["motivo"] == "reservado de la división"
+    roles = {x["nombre"]: x for x in admin.get("/api/admin/roles").json()}
+    assert roles["Jefe/a de división"]["permisos"] == roles["Jefe/a de departamento"]["permisos"]

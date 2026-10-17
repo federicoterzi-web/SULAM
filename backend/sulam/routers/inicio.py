@@ -38,7 +38,7 @@ router = APIRouter(tags=["inicio"])
 # Orden de prioridad cuando una persona tiene varios roles.
 PERFILES = {
     "direccion": "Dirección",
-    "jefatura": "Jefatura de departamento",
+    "jefatura": "Jefatura",
     "tecnico": "Técnico/a",
     "carga": "Carga de datos",
     "mesa": "Mesa de Entrada",

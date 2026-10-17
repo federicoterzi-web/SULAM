@@ -101,6 +101,7 @@ Creados por `datos-demo`. Contraseña de todos: `demo-sulam-2026`.
 | `tecnico2` | Técnico (Promoción) | Ver cómo se oculta el contenido de un caso reservado ajeno |
 | `directora` | Directora | Inicio con el resumen general de la Dirección |
 | `jefa_admision` / `jefe_promocion` | Jefe/a de departamento | Inicio de su departamento: casos para asignar y carga del equipo |
+| `jefa_cuidados` | Jefe/a de división | Inicio de la División Cuidados y Promoción de Autonomía |
 | `mesa` | Mesa de Entrada | Ingresos sin legajo y su vinculación posterior |
 | `adminarea` | Administrativo de Área | Alcance limitado a su área |
 

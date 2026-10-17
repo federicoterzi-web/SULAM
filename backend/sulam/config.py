@@ -49,6 +49,9 @@ class Settings:
     frontend_dist: Path | None
     environment: str
     url_publica: str | None
+    mapa_teselas: str
+    mapa_atribucion: str
+    geocodificador_url: str | None
     allowed_mime: tuple[str, ...] = field(
         default=("application/pdf", "image/jpeg", "image/png")
     )
@@ -92,4 +95,11 @@ def get_settings() -> Settings:
         frontend_dist=Path(dist).resolve() if dist else default_dist,
         environment=os.environ.get("SULAM_ENV", "desarrollo"),
         url_publica=_url_publica(),
+        # Mapa base. Por defecto, OpenStreetMap (requiere internet en el navegador).
+        mapa_teselas=os.environ.get("SULAM_MAPA_TESELAS", "https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+        mapa_atribucion=os.environ.get("SULAM_MAPA_ATRIBUCION", "© colaboradores de OpenStreetMap"),
+        # Búsqueda de direcciones de instituciones (nunca de casos). Vacío = desactivada.
+        geocodificador_url=os.environ.get(
+            "SULAM_GEOCODIFICADOR_URL", "https://nominatim.openstreetmap.org/search"
+        ).strip() or None,
     )

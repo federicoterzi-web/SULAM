@@ -8,6 +8,7 @@ import { textoLista } from "../paginas/formularios";
 import { CaratulaMovil, NuevaPersonaMovil, ReiteracionMovil } from "./carga";
 import { EvolucionMovil } from "./evolucion";
 import { FotosMovil } from "./fotos";
+import { RecursosMovil } from "./recursos";
 
 // ---------------------------------------------------------------- aviso entre pantallas
 
@@ -96,6 +97,7 @@ export function Movil({ ruta, alSalir, alCambiarPassword }: { ruta: string; alSa
           <span aria-hidden>⌕</span>Buscar
         </a>
         <PestanaNuevo activo={seccion === "nuevo"} />
+        <PestanaRecursos activo={seccion === "recursos"} />
       </nav>
       )}
     </div>
@@ -108,6 +110,16 @@ function PestanaNuevo({ activo }: { activo: boolean }) {
   return (
     <a href="#/m/nuevo" className={activo ? "activo" : ""}>
       <span aria-hidden>＋</span>Nuevo caso
+    </a>
+  );
+}
+
+function PestanaRecursos({ activo }: { activo: boolean }) {
+  const { puede } = useSesion();
+  if (!puede("recursos", "consultar")) return null;
+  return (
+    <a href="#/m/recursos" className={activo ? "activo" : ""}>
+      <span aria-hidden>⌖</span>Recursos
     </a>
   );
 }
@@ -129,6 +141,8 @@ function titulo(p: string[]): string {
       return "";
     case "buscar":
       return "Buscar";
+    case "recursos":
+      return "Recursos";
     case "nuevo":
       return "Nuevo caso";
     case "legajo":
@@ -144,6 +158,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "legajo" && p[1]) return `/legajos/${p[1]}`;
   if (p[0] === "caso" && p[1]) return `/casos/${p[1]}`;
   if (p[0] === "buscar" && p[1]) return `/buscar/${p[1]}`;
+  if (p[0] === "recursos") return "/recursos";
   return "/";
 }
 
@@ -155,6 +170,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
   switch (p[0]) {
     case undefined:
       return <InicioMovil />;
+    case "recursos":
+      return <RecursosMovil />;
     case "buscar":
       return <BuscarMovil q={decodeURIComponent(p[1] ?? "")} key={p[1] ?? ""} />;
     case "nuevo":

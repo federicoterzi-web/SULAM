@@ -2317,3 +2317,204 @@ a.indicador:hover {
   height: 100%;
   background: var(--primario);
 }
+
+/* ---------------------------------------------------------------- recursos y mapa */
+
+.mapa {
+  width: 100%;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: #e8eef3;
+  z-index: 0;
+}
+
+.mapa-selector {
+  height: 360px;
+}
+
+.recursos-vista {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.recursos-lista {
+  max-height: 520px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-right: 4px;
+}
+
+@media (max-width: 1000px) {
+  .recursos-vista {
+    grid-template-columns: 1fr;
+  }
+  .recursos-lista {
+    max-height: none;
+  }
+}
+
+.recurso {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+}
+
+.recurso-elegido {
+  border-color: var(--primario);
+  box-shadow: 0 0 0 2px var(--primario-claro);
+}
+
+.recurso-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.recurso-acciones {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.3rem;
+  font-size: 0.92rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: -0.4rem 0 1rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: 999px;
+  background: var(--superficie);
+  cursor: pointer;
+}
+
+.chip.activo {
+  border-color: var(--primario);
+  background: var(--primario-claro);
+  font-weight: 600;
+}
+
+/* Marcadores: un color y una letra por tipo (D, J, R, I, C). */
+.pin {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 35%);
+  color: #fff;
+  font: 700 13px/1 system-ui, sans-serif;
+}
+
+.pin-chico {
+  width: 14px;
+  height: 14px;
+  border-width: 1px;
+  flex-shrink: 0;
+}
+
+.pin-elegido {
+  transform: scale(1.35);
+  z-index: 1000 !important;
+  border-color: #1d2430;
+}
+
+.pin-centro_dia { background: #2e7d6b; }
+.pin-centro_jubilados { background: #1f4e79; }
+.pin-residencia { background: #6b2f8a; }
+.pin-institucion { background: #8a5a00; }
+.pin-cuidador { background: #b3261e; }
+
+.datos-recurso {
+  margin: 0;
+}
+
+.dato-recurso {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.dato-recurso dt {
+  color: var(--texto-tenue);
+  font-weight: 600;
+}
+
+.dato-recurso dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.fila-izquierda {
+  justify-content: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.resultados-geo {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.m-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin: 10px -16px 4px;
+  padding: 0 16px 4px;
+}
+
+.m-chips button {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--borde-fuerte);
+  background: var(--superficie);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.m-chips button.activo {
+  border-color: var(--primario);
+  background: var(--primario-claro);
+  font-weight: 700;
+}
+
+.m-recurso-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.m-recurso-acciones .m-llamar,
+.m-recurso-acciones .m-accion {
+  margin: 0;
+  min-height: 48px;
+}
+
+.m-app .mapa {
+  margin-bottom: 12px;
+}

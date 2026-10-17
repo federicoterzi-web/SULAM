@@ -10,7 +10,7 @@ from sqlalchemy import text
 from . import __version__
 from .config import get_settings
 from .db import get_engine
-from .routers import admin, auth, casos, demandas, documentos, expedientes, general, ingresos, personas
+from .routers import admin, auth, casos, demandas, documentos, expedientes, general, ingresos, personas, recursos
 from .routers import inicio as inicio_por_rol
 
 API = "/api"
@@ -27,7 +27,7 @@ def crear_app() -> FastAPI:
         openapi_url=f"{API}/openapi.json" if cfg.environment != "produccion" else None,
     )
 
-    for r in (auth, personas, casos, demandas, expedientes, ingresos, documentos, general, inicio_por_rol, admin):
+    for r in (auth, personas, casos, demandas, expedientes, ingresos, documentos, general, inicio_por_rol, recursos, admin):
         app.include_router(r.router, prefix=API)
 
     @app.get(f"{API}/salud", tags=["general"])
@@ -48,7 +48,8 @@ def crear_app() -> FastAPI:
         else:
             respuesta.headers.setdefault(
                 "Content-Security-Policy",
-                "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; "
+                f"default-src 'self'; img-src 'self' data: blob: {_origen(cfg.mapa_teselas)}; "
+                "style-src 'self' 'unsafe-inline'; "
                 "frame-src 'self' blob:; object-src 'self' blob:; frame-ancestors 'none'",
             )
         return respuesta
@@ -85,6 +86,17 @@ def crear_app() -> FastAPI:
             return _index(dist)
 
     return app
+
+
+def _origen(url: str) -> str:
+    """Origen (esquema://host) de la URL de las teselas del mapa, para permitirlo en la CSP."""
+    from urllib.parse import urlsplit
+
+    partes = urlsplit(url.replace("{s}", "a"))
+    if not partes.scheme or not partes.netloc:
+        return ""
+    host = partes.netloc.replace("{s}.", "*.")
+    return f"{partes.scheme}://{host}"
 
 
 def _index(dist: Path | None):

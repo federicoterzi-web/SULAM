@@ -32,7 +32,7 @@ interface RolAdmin {
 
 const INICIOS: Record<string, string> = {
   direccion: "Dirección (resumen general)",
-  jefatura: "Jefatura de departamento (su área y su equipo)",
+  jefatura: "Jefatura de departamento o división (su área y su equipo)",
   tecnico: "Técnico/a (sus casos por urgencia)",
   carga: "Carga de datos (lo que falta digitalizar)",
   mesa: "Mesa de Entrada (ingresos)",
