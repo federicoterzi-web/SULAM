@@ -29,7 +29,8 @@ router = APIRouter(prefix="/auth", tags=["autenticación"])
 CREDENCIALES_INVALIDAS = "Usuario o contraseña incorrectos."
 
 
-def _yo(usuario: Usuario, csrf: str) -> dict:
+def _yo(usuario: Usuario, csrf: str, movil: bool = False) -> dict:
+    cfg = get_settings()
     permisos = permisos_efectivos(usuario)
     return {
         "id": str(usuario.id),
@@ -41,6 +42,8 @@ def _yo(usuario: Usuario, csrf: str) -> dict:
         "debe_cambiar_password": usuario.debe_cambiar_password,
         "csrf_token": csrf,
         "modulos": {k: v["nombre"] for k, v in CATALOGO.items()},
+        "sesion_movil": movil,
+        "inactividad_minutos": cfg.session_idle_minutes_movil if movil else cfg.session_idle_minutes,
     }
 
 
@@ -80,8 +83,13 @@ def login(datos: LoginIn, request: Request, response: Response, db: Session = De
     usuario.intentos_fallidos = 0
     usuario.bloqueado_hasta = None
     usuario.ultimo_acceso = momento
-    token, sesion = crear_sesion(db, usuario, ip, request.headers.get("user-agent"))
-    audit.registrar(db, None, "login", "usuario", usuario.id, usuario_id=usuario.id, ip=ip)
+    token, sesion = crear_sesion(
+        db, usuario, ip, request.headers.get("user-agent"), movil=datos.dispositivo == "movil"
+    )
+    audit.registrar(
+        db, None, "login", "usuario", usuario.id, usuario_id=usuario.id, ip=ip,
+        detalle={"dispositivo": datos.dispositivo},
+    )
     db.commit()
 
     response.set_cookie(
@@ -93,7 +101,7 @@ def login(datos: LoginIn, request: Request, response: Response, db: Session = De
         max_age=cfg.session_hours * 3600,
         path="/",
     )
-    return _yo(usuario, sesion.csrf_token)
+    return _yo(usuario, sesion.csrf_token, sesion.movil)
 
 
 @router.post("/logout")
@@ -107,7 +115,7 @@ def logout(response: Response, ctx: Contexto = Depends(contexto_sin_exigir_cambi
 
 @router.get("/me")
 def me(ctx: Contexto = Depends(contexto_sin_exigir_cambio)):
-    return _yo(ctx.usuario, ctx.sesion.csrf_token)
+    return _yo(ctx.usuario, ctx.sesion.csrf_token, ctx.sesion.movil)
 
 
 @router.post("/password")
@@ -129,4 +137,4 @@ def cambiar_password(
     revocar_sesiones_usuario(db, usuario.id, excepto=ctx.sesion.id)
     audit.registrar(db, ctx, "cambio_password", "usuario", usuario.id)
     db.commit()
-    return _yo(usuario, ctx.sesion.csrf_token)
+    return _yo(usuario, ctx.sesion.csrf_token, ctx.sesion.movil)

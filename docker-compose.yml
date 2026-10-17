@@ -1,5 +1,7 @@
 # SULAM con Docker:  docker compose up -d   ->  http://localhost:8000
 # Configuración en el archivo .env (copiar desde .env.example).
+# Publicado con HTTPS (uso desde el celular):  docker compose --profile publico up -d
+# (ver README › Uso desde el celular).
 services:
   db:
     image: postgres:16
@@ -29,12 +31,32 @@ services:
       SULAM_DATOS_DEMO: ${SULAM_DATOS_DEMO:-0}
       SULAM_ENV: ${SULAM_ENV:-desarrollo}
       SULAM_COOKIE_SECURE: ${SULAM_COOKIE_SECURE:-0}
+      SULAM_SESSION_IDLE_MINUTES_MOVIL: ${SULAM_SESSION_IDLE_MINUTES_MOVIL:-15}
+      # La IP real de cada acceso (para la auditoría) llega del proxy HTTPS.
+      # El puerto 8000 solo escucha en esta máquina, así que nadie más puede falsearla.
+      FORWARDED_ALLOW_IPS: "*"
       TZ: America/Argentina/Tucuman
     volumes:
       - archivos:/datos
     ports:
       - "127.0.0.1:8000:8000"
 
+  https:
+    image: caddy:2
+    profiles: ["publico"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      SULAM_DOMINIO: ${SULAM_DOMINIO:?Definir SULAM_DOMINIO en .env para publicar con HTTPS}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificados:/data
+
 volumes:
   base:
   archivos:
+  certificados:

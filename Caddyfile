@@ -1,0 +1,17 @@
+# Publicación de SULAM con HTTPS (para usarlo desde el celular fuera de la oficina).
+# Lo usa el servicio "https" de docker-compose (perfil "publico").
+# Caddy obtiene y renueva solo el certificado de Let's Encrypt para el dominio
+# indicado en SULAM_DOMINIO; el dominio debe apuntar a esta máquina y los
+# puertos 80 y 443 deben estar abiertos.
+{$SULAM_DOMINIO} {
+	encode gzip
+	# Fotos de varias hojas tomadas con el celular.
+	request_body {
+		max_size 120MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy app:8000
+}

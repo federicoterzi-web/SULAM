@@ -7,6 +7,11 @@ export function rutaActual(): string {
   return window.location.hash.replace(/^#/, "") || "/";
 }
 
+/** Pantalla chica o táctil: se ofrece la versión para celular. */
+export function esCelular(): boolean {
+  return window.matchMedia("(max-width: 700px), (pointer: coarse) and (max-width: 1000px)").matches;
+}
+
 export function navegar(ruta: string) {
   window.location.hash = ruta;
 }

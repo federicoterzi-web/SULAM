@@ -75,7 +75,9 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def crear_sesion(db: Session, usuario: Usuario, ip: str | None, user_agent: str | None) -> tuple[str, Sesion]:
+def crear_sesion(
+    db: Session, usuario: Usuario, ip: str | None, user_agent: str | None, movil: bool = False
+) -> tuple[str, Sesion]:
     cfg = get_settings()
     token = secrets.token_urlsafe(32)
     momento = ahora()
@@ -87,6 +89,7 @@ def crear_sesion(db: Session, usuario: Usuario, ip: str | None, user_agent: str 
         ultimo_uso=momento,
         ip=ip,
         user_agent=(user_agent or "")[:300],
+        movil=movil,
     )
     db.add(sesion)
     db.flush()
@@ -101,7 +104,8 @@ def buscar_sesion_valida(db: Session, token: str) -> Sesion | None:
     momento = ahora()
     if sesion.expira_en <= momento:
         return None
-    if sesion.ultimo_uso + timedelta(minutes=cfg.session_idle_minutes) <= momento:
+    inactividad = cfg.session_idle_minutes_movil if sesion.movil else cfg.session_idle_minutes
+    if sesion.ultimo_uso + timedelta(minutes=inactividad) <= momento:
         return None
     if not sesion.usuario.activo:
         return None

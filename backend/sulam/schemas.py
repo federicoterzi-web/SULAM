@@ -27,6 +27,8 @@ def _vacio_a_none(v):
 class LoginIn(Entrada):
     usuario: str = Field(min_length=1, max_length=80)
     password: str = Field(min_length=1, max_length=200)
+    # "movil": la sesión se cierra antes por inactividad (teléfonos que se pierden o se prestan).
+    dispositivo: Literal["escritorio", "movil"] = "escritorio"
 
 
 class CambioPasswordIn(Entrada):

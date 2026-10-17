@@ -47,13 +47,24 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Circuito: Mesa deriva al departamento → jefe/a de departamento crea la carátula en pantalla (número automático) → Registro digitaliza | ⏳ a definir con la Dirección |
 | Roles «Jefe/a de departamento» (Admisión, Promoción) y «Oficina de Registro» | ⏳ |
 
+## Versión para celular
+
+| Funcionalidad | Estado |
+|---|---|
+| Pantallas para celular: inicio con mis casos, búsqueda, legajo, caso con llamadas | ✅ |
+| Evolución, reiteración, alta de legajo y carátula por pasos | ✅ |
+| Fotos de documentos (varias hojas → un PDF, sin galería ni metadatos) | ✅ |
+| Instalable como app (PWA) sin guardar datos; sesión de 15 min; reingreso sin perder lo escrito | ✅ |
+| Publicación con HTTPS (Caddy, perfil `publico`) | ✅ preparado · ⏳ dominio y servidor a definir con informática |
+| Probar en teléfonos reales del equipo (Android e iPhone) | ⏳ |
+
 ## Digitalización de fichas — en curso
 
 | Funcionalidad | Estado |
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0008) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |
@@ -76,7 +87,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 - [ ] Prueba de restauración en un servidor distinto.
 
 ### Fase 2 en adelante (documento de diseño §16)
-- [ ] Captura por QR desde el celular.
+- [ ] Captura por QR desde el celular para la lectura automática de fichas.
 - [ ] Optimización de imágenes (perspectiva, recorte, compresión) y OCR asistido.
 - [ ] Plantillas institucionales e informes con estados (borrador, finalizado, copia física firmada).
 - [ ] Archivo físico: ubicaciones, movimientos, préstamos.

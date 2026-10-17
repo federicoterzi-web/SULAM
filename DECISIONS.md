@@ -74,6 +74,15 @@ Según la Dirección, la Actuación N° es el número de caso iniciado / carátu
 ### D-019 · Una actuación por persona por año; los nuevos ingresos son reiteraciones — *Vigente*
 Definido por la Dirección. Áreas que manejan casos: Departamento de Admisión de Casos y Recepción de Denuncias y Departamento de Promoción Integral de Derechos (roles por área: pendiente P-003).
 
+### D-020 · Versión para celular: la misma aplicación, sin datos en el teléfono — *Vigente*
+Pedido de la Dirección para agilizar las cargas, también en visitas (con datos móviles).
+- Es la misma SULAM con pantallas propias para el celular (`#/m`), instalable como app web (PWA), no una app de tienda: un solo sistema, los mismos permisos y la misma auditoría.
+- Tareas: consulta de legajos y casos, evolución, reiteración, alta de legajo y carátula por pasos, fotos de documentos y fichas. Lo demás (registro de demanda, administración, Mesa de Entrada) queda en la versión completa.
+- **Nada queda en el teléfono**: el service worker no guarda respuestas; las fotos se toman desde SULAM (no van a la galería), se reducen y se les quitan los metadatos (ubicación) antes de enviarlas, y el servidor las vuelve a procesar.
+- Sesiones iniciadas desde el celular: cierre por inactividad a los 15 minutos (configurable). Al vencer se pide la contraseña sin perder lo escrito.
+- Sin carga sin conexión por ahora (requeriría guardar datos sensibles en el teléfono). Se reevalúa si en las visitas la falta de señal resulta frecuente.
+- Uso fuera de la oficina: requiere publicar con HTTPS (preparado con Caddy en `docker-compose`, perfil `publico`) o una VPN. Lo define informática (P-009).
+
 ---
 
 ## Pendientes (no se inventan)

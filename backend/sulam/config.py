@@ -42,6 +42,7 @@ class Settings:
     max_upload_mb: int
     session_hours: int
     session_idle_minutes: int
+    session_idle_minutes_movil: int
     cookie_secure: bool
     max_failed_logins: int
     lockout_minutes: int
@@ -71,6 +72,7 @@ def get_settings() -> Settings:
         max_upload_mb=int(os.environ.get("SULAM_MAX_UPLOAD_MB", "20")),
         session_hours=int(os.environ.get("SULAM_SESSION_HOURS", "10")),
         session_idle_minutes=int(os.environ.get("SULAM_SESSION_IDLE_MINUTES", "60")),
+        session_idle_minutes_movil=int(os.environ.get("SULAM_SESSION_IDLE_MINUTES_MOVIL", "15")),
         cookie_secure=_bool(os.environ.get("SULAM_COOKIE_SECURE"), False),
         max_failed_logins=int(os.environ.get("SULAM_MAX_FAILED_LOGINS", "5")),
         lockout_minutes=int(os.environ.get("SULAM_LOCKOUT_MINUTES", "15")),

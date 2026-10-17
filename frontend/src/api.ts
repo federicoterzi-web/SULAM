@@ -41,7 +41,12 @@ async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise
     headers["Content-Type"] = "application/json";
     init.body = JSON.stringify(cuerpo);
   }
-  const r = await fetch("/api" + ruta, init);
+  let r: Response;
+  try {
+    r = await fetch("/api" + ruta, init);
+  } catch {
+    throw new ApiError(0, "Sin conexión con SULAM. Revise la señal o el wifi y vuelva a intentar; lo cargado sigue en pantalla.");
+  }
   if (r.status === 401 && !ruta.startsWith("/auth/login")) alExpirar();
   if (!r.ok) {
     let detalle: any = r.statusText;
@@ -53,6 +58,30 @@ async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise
     throw new ApiError(r.status, detalle);
   }
   return (await r.json()) as T;
+}
+
+/** Envía un formulario con archivos informando el avance (útil con datos móviles). */
+export function subirConProgreso<T>(ruta: string, datos: FormData, alAvanzar: (fraccion: number) => void): Promise<T> {
+  return new Promise((resolver, rechazar) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api" + ruta);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader("X-CSRF-Token", csrf);
+    xhr.upload.onprogress = (e) => e.lengthComputable && alAvanzar(e.loaded / e.total);
+    xhr.onerror = () => rechazar(new ApiError(0, "Sin conexión: no se pudo enviar. Las fotos siguen en pantalla; reintente."));
+    xhr.onload = () => {
+      let cuerpo: any = null;
+      try {
+        cuerpo = JSON.parse(xhr.responseText);
+      } catch {
+        /* sin JSON */
+      }
+      if (xhr.status === 401) alExpirar();
+      if (xhr.status >= 200 && xhr.status < 300) resolver(cuerpo as T);
+      else rechazar(new ApiError(xhr.status, cuerpo?.detail ?? xhr.statusText));
+    };
+    xhr.send(datos);
+  });
 }
 
 export const api = {
@@ -83,6 +112,8 @@ export interface Yo {
   permisos: Record<string, string>;
   debe_cambiar_password: boolean;
   csrf_token: string;
+  sesion_movil?: boolean;
+  inactividad_minutos?: number;
 }
 
 export interface UsuarioBreve {

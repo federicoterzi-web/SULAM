@@ -41,6 +41,7 @@ def crear_app() -> FastAPI:
         respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
         respuesta.headers.setdefault("X-Frame-Options", "DENY")
         respuesta.headers.setdefault("Referrer-Policy", "same-origin")
+        respuesta.headers.setdefault("Permissions-Policy", "camera=(self), geolocation=(), microphone=()")
         if request.url.path.startswith(API):
             respuesta.headers.setdefault("Cache-Control", "no-store")
         else:
@@ -62,6 +63,21 @@ def crear_app() -> FastAPI:
     if dist and (dist / "index.html").is_file():
         if (dist / "assets").is_dir():
             app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+        if (dist / "iconos").is_dir():
+            app.mount("/iconos", StaticFiles(directory=dist / "iconos"), name="iconos")
+
+        # App instalable en el celular. El service worker no guarda datos (ver frontend/public/sw.js).
+        @app.get("/manifest.webmanifest", include_in_schema=False)
+        def manifiesto():
+            return FileResponse(dist / "manifest.webmanifest", media_type="application/manifest+json")
+
+        @app.get("/sw.js", include_in_schema=False)
+        def service_worker():
+            return FileResponse(
+                dist / "sw.js",
+                media_type="text/javascript",
+                headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"},
+            )
 
         @app.get("/", include_in_schema=False)
         def inicio():

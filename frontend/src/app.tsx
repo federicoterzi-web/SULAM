@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, api, configurarSesion, type Catalogos, type Formularios, type Yo } from "./api";
-import { Aviso, Cargando, Campo, Enlace, SesionCtx, navegar, useEnvio, useRuta } from "./comun";
+import { Aviso, Cargando, Campo, Enlace, SesionCtx, esCelular, navegar, rutaActual, useEnvio, useRuta } from "./comun";
+import { Movil } from "./movil/movil";
 import { PaginaAdmin } from "./paginas/admin";
 import { PaginaAuditoria } from "./paginas/auditoria";
 import { PaginaBuscar } from "./paginas/buscar";
@@ -16,18 +17,25 @@ import { Impresion } from "./paginas/impresion";
 export function App() {
   const [yo, setYo] = useState<Yo | null>(null);
   const [cargando, setCargando] = useState(true);
+  // Sesión vencida con la pantalla abierta: se pide la contraseña encima, sin
+  // desmontar la página, para no perder lo que se estaba escribiendo.
+  const [vencida, setVencida] = useState(false);
 
   const salir = useCallback(() => {
+    setVencida(false);
     setYo(null);
   }, []);
 
-  const entrar = useCallback(
-    (y: Yo) => {
-      configurarSesion(y.csrf_token, salir);
-      setYo(y);
-    },
-    [salir],
-  );
+
+  const actual = useRef<string | null>(null);
+  const entrar = useCallback((y: Yo) => {
+    configurarSesion(y.csrf_token, () => setVencida(true));
+    // Si al reingresar entra otra persona, no se le muestra la pantalla de la anterior.
+    if (actual.current && actual.current !== y.id) navegar(esCelular() ? "/m" : "/");
+    actual.current = y.id;
+    setVencida(false);
+    setYo(y);
+  }, []);
 
   useEffect(() => {
     api
@@ -38,36 +46,73 @@ export function App() {
   }, [entrar]);
 
   if (cargando) return <Cargando />;
-  if (!yo) return <Login alEntrar={entrar} />;
+  if (!yo)
+    return (
+      <Login
+        alEntrar={(y) => {
+          entrar(y);
+          const r = rutaActual();
+          if (esCelular() && !r.startsWith("/m") && !r.startsWith("/imprimir/")) navegar("/m");
+        }}
+      />
+    );
   if (yo.debe_cambiar_password) return <CambioPassword yo={yo} alCambiar={entrar} obligatorio />;
-  return <Principal yo={yo} alSalir={salir} alActualizar={entrar} />;
+  return (
+    <>
+      <Principal key={yo.id} yo={yo} alSalir={salir} alActualizar={entrar} />
+      {vencida && (
+        <div className="modal-fondo modal-fondo-sesion">
+          <Login alEntrar={entrar} usuarioInicial={yo.usuario} vencida />
+        </div>
+      )}
+    </>
+  );
 }
 
-function Login({ alEntrar }: { alEntrar: (y: Yo) => void }) {
-  const [usuario, setUsuario] = useState("");
+function Login({
+  alEntrar,
+  usuarioInicial = "",
+  vencida,
+}: {
+  alEntrar: (y: Yo) => void;
+  usuarioInicial?: string;
+  vencida?: boolean;
+}) {
+  const [usuario, setUsuario] = useState(usuarioInicial);
   const [password, setPassword] = useState("");
   const { enviando, error, ejecutar } = useEnvio();
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
-    const y = await ejecutar(() => api.post<Yo>("/auth/login", { usuario, password }));
+    const dispositivo = esCelular() ? "movil" : "escritorio";
+    const y = await ejecutar(() => api.post<Yo>("/auth/login", { usuario, password, dispositivo }));
     if (y) alEntrar(y);
   };
 
-  return (
-    <main className="pantalla-acceso">
+  const formulario = (
       <form className="tarjeta-acceso" onSubmit={enviar}>
-        <div className="marca-acceso">
-          <span className="marca-sigla">SULAM</span>
-          <span className="marca-texto">Sistema Único de Legajos de Adultos Mayores</span>
-          <span className="marca-org">Dirección de Adultos Mayores · Tucumán</span>
-        </div>
+        {vencida ? (
+          <>
+            <h1>La sesión se cerró</h1>
+            <p>
+              Pasó un tiempo sin uso y SULAM cerró la sesión por seguridad. Ingrese su contraseña para seguir: lo que
+              estaba cargando sigue en pantalla.
+            </p>
+          </>
+        ) : (
+          <div className="marca-acceso">
+            <span className="marca-sigla">SULAM</span>
+            <span className="marca-texto">Sistema Único de Legajos de Adultos Mayores</span>
+            <span className="marca-org">Dirección de Adultos Mayores · Tucumán</span>
+          </div>
+        )}
         <Campo etiqueta="Usuario">
-          <input autoFocus autoComplete="username" value={usuario} onChange={(e) => setUsuario(e.target.value)} required />
+          <input autoFocus={!vencida} autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="username" value={usuario} onChange={(e) => setUsuario(e.target.value)} required />
         </Campo>
         <Campo etiqueta="Contraseña">
           <input
             type="password"
+            autoFocus={vencida}
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -76,11 +121,11 @@ function Login({ alEntrar }: { alEntrar: (y: Yo) => void }) {
         </Campo>
         <Aviso error={error} />
         <button className="boton boton-primario boton-bloque" disabled={enviando}>
-          {enviando ? "Ingresando…" : "Ingresar"}
+          {enviando ? "Ingresando…" : vencida ? "Seguir" : "Ingresar"}
         </button>
       </form>
-    </main>
   );
+  return vencida ? formulario : <main className="pantalla-acceso">{formulario}</main>;
 }
 
 export function CambioPassword({
@@ -195,10 +240,28 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
 
   const seccion = "/" + (ruta.split("?")[0].split("/")[1] ?? "");
 
+  const cambioPw = cambiarPw && (
+    <div className="modal-fondo">
+      <CambioPassword
+        yo={yo}
+        alCambiar={(y) => {
+          alActualizar(y);
+          setCambiarPw(false);
+        }}
+        alCancelar={() => setCambiarPw(false)}
+      />
+    </div>
+  );
+
   return (
     <SesionCtx.Provider value={{ yo, catalogos, formularios, puede, recargarCatalogos }}>
       {ruta.startsWith("/imprimir/") ? (
         <Impresion ruta={ruta} />
+      ) : ruta === "/m" || ruta.startsWith("/m/") ? (
+        <>
+          <Movil ruta={ruta} alSalir={salir} alCambiarPassword={() => setCambiarPw(true)} />
+          {cambioPw}
+        </>
       ) : (
       <>
       <a className="saltar" href="#contenido" onClick={(e) => { e.preventDefault(); document.getElementById("contenido")?.focus(); }}>
@@ -240,6 +303,9 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
               {m.texto}
             </Enlace>
           ))}
+          <Enlace a="/m" className="menu-celular">
+            Versión para celular
+          </Enlace>
           <div className="menu-pie">
             Versión 0.1 · Datos de prueba
           </div>
@@ -248,18 +314,7 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
           <Rutas ruta={ruta} />
         </main>
       </div>
-      {cambiarPw && (
-        <div className="modal-fondo">
-          <CambioPassword
-            yo={yo}
-            alCambiar={(y) => {
-              alActualizar(y);
-              setCambiarPw(false);
-            }}
-            alCancelar={() => setCambiarPw(false)}
-          />
-        </div>
-      )}
+      {cambioPw}
       </>
       )}
     </SesionCtx.Provider>

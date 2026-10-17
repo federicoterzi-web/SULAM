@@ -154,6 +154,7 @@ class Sesion(Base):
     revocada_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ip: Mapped[str | None] = mapped_column(String(64))
     user_agent: Mapped[str | None] = mapped_column(String(300))
+    movil: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
 
     usuario: Mapped[Usuario] = relationship()
 

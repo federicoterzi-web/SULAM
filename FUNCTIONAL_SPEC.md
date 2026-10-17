@@ -122,6 +122,18 @@ SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `su
 - Validación con 60 fotos simuladas (perspectiva, giros, sombra, ruido, desenfoque): 60/60 hojas leídas y 0 errores en 1.815 casillas.
 - **Pendiente**: captura con el celular por QR, pantalla de revisión campo por campo, reconocimiento de dígitos y de texto (solo local, D-018), y lectura de las fichas anteriores sin marcas.
 
+## 5 quater. Versión para celular
+
+Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un teléfono; desde la versión completa se llega con *Versión para celular* y a la inversa con *Ver en la versión completa*.
+
+- **Inicio**: buscador (DNI, apellido o N° de legajo; botón para teclado numérico) y *Mis casos* (asignados); si no hay, los de actividad reciente.
+- **Legajo**: datos de identificación y domicilio, botones para llamar a la persona y a sus vinculados con teléfono, casos. Si ya tiene actuación en el año ofrece *Nueva demanda (reiteración)*; si no, *Nueva carátula*.
+- **Caso**: actuación, estado, indicadores y motivo, llamar, *Agregar evolución*, *Sacar fotos*, *Fotografiar registro de demanda* (si alguno no tiene escaneo) y *Registrar reiteración*; últimas entradas de evolución y documentos. El contenido reservado se oculta igual que en la versión completa.
+- **Nuevo caso**: DNI primero (avisa al instante si ya tiene legajo); opción sin DNI con número «SD-»; control de posibles duplicados con motivo obligatorio para confirmar. Sigue la **carátula en 6 pasos** (ingreso, persona, domicilio, indicadores, intervención, confirmar con resumen editable). El botón «atrás» del teléfono vuelve al paso anterior sin perder lo cargado. La actuación se numera al crear; si la persona ya tiene una en el año, se ofrece la reiteración (regla de §5).
+- **Fotos**: una o varias hojas con la cámara (o elegidas del teléfono), reordenables; se guardan como **un PDF** asociado al legajo, al caso y, si corresponde, al registro de demanda como escaneo del original. Las fotos se reducen a 2000 px y se envían sin metadatos; el servidor vuelve a procesarlas (máx. 2400 px, sin EXIF) y muestra el avance del envío.
+- **Sesión**: las iniciadas desde el celular vencen a los 15 minutos sin uso. Al vencer cualquier sesión con la pantalla abierta, se pide la contraseña encima y se conserva lo escrito.
+- **Sin conexión**: aviso; no se guardan datos en el teléfono.
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.
@@ -136,6 +148,7 @@ SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `su
 4. **Reservados**: un documento es reservado si se marca así, si su tipo documental es reservado o si pertenece a un caso reservado.
 5. **Baja lógica** con motivo obligatorio y permiso específico: el documento deja de mostrarse, pero el archivo y su registro se conservan.
 6. Cada descarga o visualización queda registrada.
+7. **Fotos desde el celular**: varias fotos JPG/PNG (hasta 30 hojas) se unen en un único PDF al cargarlas (§5 quater); se aplican los mismos permisos y la misma auditoría que a cualquier documento.
 
 ## 8. Búsqueda
 

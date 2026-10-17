@@ -52,7 +52,11 @@ frontend/
     comun.tsx         Navegación, sesión y componentes compartidos
     app.tsx           Acceso, estructura y rutas
     paginas/          Una página por módulo
+    movil/            Versión para celular (#/m): pantallas cortas, cámara, carátula por pasos
+  public/             manifest.webmanifest, sw.js (sin caché de datos) e íconos de la app instalable
 ```
+
+La versión para celular usa la misma API y la misma sesión (cookie); el login indica `dispositivo: "movil"` y esa sesión vence antes por inactividad. `POST /api/documentos/fotos` recibe varias fotos y las guarda como un PDF (Pillow). Para usarla fuera de la red interna se publica detrás de Caddy con HTTPS (`docker compose --profile publico`).
 
 ## Modelo de datos
 
