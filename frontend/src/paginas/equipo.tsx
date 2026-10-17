@@ -1,5 +1,6 @@
 // Equipo a cargo de un caso: varios técnicos, todos responsables por igual.
 import { useMemo, useState, type FormEvent } from "react";
+import { EtiquetaHoy, useHoy } from "./miasistencia";
 import { api, type Caso } from "../api";
 import { Aviso, useEnvio, useSesion } from "../comun";
 
@@ -22,6 +23,7 @@ export function SelectorEquipo({
   const { catalogos, yo } = useSesion();
   const [filtro, setFiltro] = useState("");
   const usuarios = catalogos.usuarios_asignables;
+  const hoy = useHoy().datos;
   const grupos = useMemo(() => {
     const preferida = areaPreferida ?? yo.area?.nombre ?? null;
     const porArea = new Map<string, Usuario[]>();
@@ -55,6 +57,7 @@ export function SelectorEquipo({
                 <label key={u.id} className={`casilla ${elegidosSet.has(u.id) ? "elegido" : ""}`}>
                   <input type="checkbox" checked={elegidosSet.has(u.id)} onChange={() => alternar(u.id)} />
                   {u.nombre_completo}
+                  <EtiquetaHoy hoy={hoy} usuarioId={u.id} />
                 </label>
               ))}
             </fieldset>

@@ -62,6 +62,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Gestión de permisos, plantillas, configuraciones y operaciones institucionales autorizadas.",
         "permisos": [
+            ("personal", "consultar", T), ("personal", "administrar", T), ("personal", "aprobar", T),
             ("novedades", "publicar", T),
             ("plantillas", "modificar", T),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
@@ -80,6 +81,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Conducción de la Dirección: ve todos los casos y la auditoría, y puede derivar y asignar. No administra usuarios ni permisos.",
         "permisos": [
+            ("personal", "consultar", T), ("personal", "aprobar", T),
             ("novedades", "publicar", T),
             ("plantillas", "modificar", T),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
@@ -96,6 +98,7 @@ ROLES: dict[str, dict] = {
         "inicio": "jefatura",
         "descripcion": "Conduce un departamento que maneja casos (Admisión o Promoción, según el área del usuario): abre carátulas y asigna técnicos en su área.",
         "permisos": [
+            ("personal", "aprobar", AR),
             ("novedades", "publicar", AR),
             ("plantillas", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
@@ -111,6 +114,7 @@ ROLES: dict[str, dict] = {
         "inicio": "jefatura",
         "descripcion": "Conduce una división (Participación y Sensibilización Ciudadana, Cuidados y Promoción de Autonomía) o cumple esa función en un departamento. Mismos permisos que un jefe de departamento, sobre el área del usuario.",
         "permisos": [
+            ("personal", "aprobar", AR),
             ("novedades", "publicar", AR),
             ("plantillas", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
@@ -146,6 +150,14 @@ ROLES: dict[str, dict] = {
             ("expedientes", "consultar", T), ("expedientes", "crear", AS),
             ("documentos", "consultar", T), ("documentos", "crear", AS), ("documentos", "descargar", T),
             ("documentos", "modificar", AS),
+        ],
+    },
+    "Personal": {
+        "inicio": "personal",
+        "descripcion": "Encargada/o de personal: asistencias, horarios, justificativos, licencias y comisiones.",
+        "permisos": [
+            ("personal", "consultar", T), ("personal", "administrar", T),
+            ("recursos", "consultar", T),
         ],
     },
     "Mesa de Entrada": {
@@ -235,6 +247,7 @@ USUARIOS_DEMO = [
     ("jefa_cuidados", "Jefa de Cuidados (demo)", "Jefe/a de división", "División Cuidados y Promoción de Autonomía"),
     ("mesa", "Mesa de Entrada (demo)", "Mesa de Entrada", "División Asistencia Administrativa"),
     ("adminarea", "Administrativo de Área (demo)", "Administrativo de Área", "División Cuidados y Promoción de Autonomía"),
+    ("personal", "Personal (demo)", "Personal", "División Asistencia Administrativa"),
     ("registro", "Oficina de Registro (demo)", "Administrativo de Área", "Oficina de Registro"),
 ]
 
@@ -246,3 +259,24 @@ PERSONAS_DEMO = [
     ("ACOSTA", "Delia del Valle", "DNI", "6234511", date(1950, 5, 30), "Banda del Río Salí"),
     ("RUIZ", "Héctor Hugo", "DNI", "7012844", date(1952, 9, 14), "Concepción"),
 ]
+
+
+def fichas_personal_demo(db: Session, usuarios: dict) -> int:
+    """Fichas de personal FICTICIAS para los usuarios de demostración (idempotente)."""
+    from .models import Agente, Horario
+
+    creadas = 0
+    turno = {str(d): ["08:00", "14:00"] for d in range(5)}
+    for n, (usuario, nombre, _rol, _area) in enumerate(USUARIOS_DEMO, start=1):
+        u = usuarios.get(usuario)
+        if u is None or db.execute(select(Agente).where(Agente.usuario_id == u.id)).first() is not None:
+            continue
+        a = Agente(
+            nombre=nombre.replace(" (demo)", ""), usuario_id=u.id, area_id=u.area_id,
+            cargo=_rol, id_reloj=str(900 + n), boleta=f"D-{n:03d}", periodos=[{"desde": "2026-01-01", "hasta": None}],
+        )
+        db.add(a)
+        db.flush()
+        db.add(Horario(agente_id=a.id, vigente_desde=date(2026, 1, 1), semana=turno, confirmado=True, fuente="Horario ficticio de demostración"))
+        creadas += 1
+    return creadas

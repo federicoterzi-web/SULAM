@@ -244,6 +244,20 @@ Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un
 - **Carga inicial**: en Pases de carpetas, cada área anota de una vez las carpetas que tiene pegando los números de legajo.
 - Área nueva «Oficina de Registro» (nombre a confirmar con la Dirección).
 
+## 5 sexdecies. Personal y asistencia (antes «Asistencia DAM»)
+
+La app de asistencia en Google pasa a SULAM con **las mismas reglas fijas** (`sulam/asistencia.py`, mismos 22 casos de prueba).
+
+- **Ficha de cada persona de la planta**: nombre, área, cargo, ID del reloj, boleta, períodos de alta. Puede vincularse a un usuario de SULAM o crearlo en el alta. El área de la ficha se refleja en el usuario. La **baja** desactiva el usuario y cierra sus sesiones; el **reingreso** lo reactiva. No se borra nada.
+- **Horarios con vigencia**: cada versión tiene fecha de inicio, referencia y la marca «confirmado». Una versión nueva cierra la anterior.
+- **Reloj**: se sube el «.xls» (tabla HTML). Primero hay vista previa: período, filas, errores e ID sin identificar con sugerencias por nombre. Se incorpora recién al confirmar. Un mismo archivo no se incorpora dos veces y el original se guarda.
+- **Resumen** (pestaña principal de Personal): jornadas por período, con estado pendiente / revisado / justificado / aprobado automáticamente / sin datos. Personal **revisa** cada jornada pendiente con fundamento: «sin descuento», «mantener pendiente» o «proponer minutos» (nunca más que la diferencia técnica). La revisión queda atada a una huella del cálculo; si los datos cambian, vuelve a pendiente. No se ejecutan descuentos.
+- **Justificativos** con los códigos de la app (CT, CE, CS, VAO, DF, C3, SESOP, LICENCIA, CAMBIO), por día completo o por tramo, con adjuntos. Se aplican al cargarse; pueden rechazarse con fundamento.
+- **Pedidos (Mi asistencia)**: cada persona pide **licencia** (con tipo), **comisión** (con destino) o **cambio de horario** (con el nuevo horario), con certificado opcional. Lo **aprueba su jefatura** (de su área; nadie aprueba lo propio; la Dirección y la Directora, a todos). **Personal lo registra** y se convierte en justificativo, con los adjuntos copiados. En licencias por enfermedad, el motivo y el certificado los ven solo la persona, Personal y la Dirección; la jefatura aprueba sin verlos.
+- **Quién está hoy**: «De licencia», «En comisión» o «Ausente con justificativo», sin motivos. Se muestra al armar el equipo de un caso, en las carpetas en papel y en el inicio de Personal.
+- Nuevo rol **Personal**, con su inicio: pedidos para registrar, jornadas pendientes, horarios sin confirmar, personas sin ID del reloj y quién no está hoy. Las jefaturas ven en su inicio los pedidos para aprobar.
+- Datos reales: **no van al repositorio**. Se importan en el servidor de la Dirección (etapa 2: importador desde la app de Google, informe mensual en PDF y Excel de incidencias).
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.

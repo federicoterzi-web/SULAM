@@ -865,3 +865,151 @@ class Pase(Base):
     hacia_usuario: Mapped[Usuario | None] = relationship(foreign_keys=[hacia_usuario_id], lazy="joined")
     iniciador: Mapped[Usuario | None] = relationship(foreign_keys=[iniciado_por], lazy="joined")
     resolvio: Mapped[Usuario | None] = relationship(foreign_keys=[resuelto_por], lazy="joined")
+
+
+# ---------------------------------------------------------------------------
+# Personal: agentes, horarios, reloj, justificativos, revisiones y solicitudes.
+# (Portado de la app «Asistencia DAM»; mismas reglas fijas.)
+# ---------------------------------------------------------------------------
+
+
+class Agente(Base):
+    __tablename__ = "agentes"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(200))
+    usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"), unique=True)
+    area_id: Mapped[int | None] = mapped_column(ForeignKey("areas.id"))
+    cargo: Mapped[str | None] = mapped_column(String(200))
+    id_reloj: Mapped[str | None] = mapped_column(String(80), unique=True)
+    boleta: Mapped[str | None] = mapped_column(String(80))
+    # [{"desde": "AAAA-MM-DD"|None, "hasta": "AAAA-MM-DD"|None}]
+    periodos: Mapped[list] = mapped_column(JSONB)
+    revision: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    creado_en: Mapped[datetime] = _ts()
+
+    area: Mapped[Area | None] = relationship(lazy="joined")
+    usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
+class Horario(Base):
+    __tablename__ = "agentes_horarios"
+    __table_args__ = (UniqueConstraint("agente_id", "vigente_desde", name="uq_horario_vigencia"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    agente_id: Mapped[int] = mapped_column(ForeignKey("agentes.id", ondelete="CASCADE"), index=True)
+    vigente_desde: Mapped[date] = mapped_column(Date)
+    vigente_hasta: Mapped[date | None] = mapped_column(Date)
+    # {"0": ["08:00", "13:00"], ...}  (0 = lunes)
+    semana: Mapped[dict] = mapped_column(JSONB)
+    confirmado: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    fuente: Mapped[str] = mapped_column(Text)
+
+
+class RelojImportacion(Base):
+    __tablename__ = "reloj_importaciones"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nombre_archivo: Mapped[str] = mapped_column(String(300))
+    sha256: Mapped[str] = mapped_column(String(64), unique=True)
+    almacenamiento: Mapped[str] = mapped_column(String(30))
+    clave: Mapped[str] = mapped_column(String(300))
+    desde: Mapped[date] = mapped_column(Date)
+    hasta: Mapped[date] = mapped_column(Date)
+    filas: Mapped[int] = mapped_column(Integer)
+    errores: Mapped[list] = mapped_column(JSONB)
+    avisos: Mapped[list] = mapped_column(JSONB)
+    identidades: Mapped[list] = mapped_column(JSONB)
+    incorporada: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    en: Mapped[datetime] = _ts()
+
+
+class Marcacion(Base):
+    __tablename__ = "marcaciones"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    importacion_id: Mapped[int] = mapped_column(ForeignKey("reloj_importaciones.id"), index=True)
+    agente_id: Mapped[int] = mapped_column(ForeignKey("agentes.id"), index=True)
+    dia: Mapped[date] = mapped_column(Date, index=True)
+    entrada: Mapped[str | None] = mapped_column(String(8))
+    salida: Mapped[str | None] = mapped_column(String(8))
+    fila: Mapped[int] = mapped_column(Integer)
+
+
+class Justificativo(Base):
+    __tablename__ = "justificativos"
+    __table_args__ = (CheckConstraint("estado IN ('pendiente', 'aprobado', 'rechazado')", name="ck_justificativo_estado"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    agente_id: Mapped[int] = mapped_column(ForeignKey("agentes.id"), index=True)
+    codigo: Mapped[str] = mapped_column(String(20))
+    desde: Mapped[date] = mapped_column(Date)
+    hasta: Mapped[date] = mapped_column(Date)
+    hora_desde: Mapped[str | None] = mapped_column(String(5))
+    hora_hasta: Mapped[str | None] = mapped_column(String(5))
+    excepcion_desde: Mapped[str | None] = mapped_column(String(5))
+    excepcion_hasta: Mapped[str | None] = mapped_column(String(5))
+    referencia: Mapped[str | None] = mapped_column(Text)
+    notas: Mapped[str | None] = mapped_column(Text)
+    estado: Mapped[str] = mapped_column(String(12))
+    requiere_horario: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    revision: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    fundamento: Mapped[str | None] = mapped_column(Text)
+    # [{"id", "nombre", "sha256", "mime", "almacenamiento", "clave"}]
+    adjuntos: Mapped[list] = mapped_column(JSONB, default=list)
+    solicitud_id: Mapped[int | None] = mapped_column(ForeignKey("solicitudes_personal.id"))
+    usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    en: Mapped[datetime] = _ts()
+
+    agente: Mapped[Agente] = relationship(lazy="joined")
+    usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
+class RevisionJornada(Base):
+    __tablename__ = "revisiones_jornada"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    agente_id: Mapped[int] = mapped_column(ForeignKey("agentes.id"), index=True)
+    dia: Mapped[date] = mapped_column(Date)
+    huella: Mapped[str] = mapped_column(String(64))
+    decision: Mapped[str] = mapped_column(String(30))
+    minutos: Mapped[int] = mapped_column(Integer)
+    fundamento: Mapped[str] = mapped_column(Text)
+    usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    en: Mapped[datetime] = _ts()
+
+    usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
+class SolicitudPersonal(Base):
+    """Pedido de licencia, comisión o cambio de horario: lo hace la persona, lo aprueba
+    su jefatura (o la Dirección) y Personal lo registra como justificativo."""
+
+    __tablename__ = "solicitudes_personal"
+    __table_args__ = (
+        CheckConstraint("tipo IN ('licencia', 'comision', 'cambio_horario')", name="ck_solicitud_tipo"),
+        CheckConstraint(
+            "estado IN ('pendiente', 'aprobada', 'rechazada', 'cancelada', 'registrada')", name="ck_solicitud_estado"
+        ),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    agente_id: Mapped[int] = mapped_column(ForeignKey("agentes.id"), index=True)
+    tipo: Mapped[str] = mapped_column(String(20))
+    clase: Mapped[str | None] = mapped_column(String(40))  # clase de licencia
+    desde: Mapped[date] = mapped_column(Date)
+    hasta: Mapped[date] = mapped_column(Date)
+    hora_desde: Mapped[str | None] = mapped_column(String(5))
+    hora_hasta: Mapped[str | None] = mapped_column(String(5))
+    nueva_entrada: Mapped[str | None] = mapped_column(String(5))
+    nueva_salida: Mapped[str | None] = mapped_column(String(5))
+    lugar: Mapped[str | None] = mapped_column(String(300))
+    motivo: Mapped[str | None] = mapped_column(Text)
+    adjuntos: Mapped[list] = mapped_column(JSONB, default=list)
+    estado: Mapped[str] = mapped_column(String(12), default="pendiente")
+    pedido_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    pedido_en: Mapped[datetime] = _ts()
+    decidido_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    decidido_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    respuesta: Mapped[str | None] = mapped_column(Text)
+    registrado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    registrado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    agente: Mapped[Agente] = relationship(lazy="joined")
+    solicitante: Mapped[Usuario | None] = relationship(foreign_keys=[pedido_por], lazy="joined")
+    decisor: Mapped[Usuario | None] = relationship(foreign_keys=[decidido_por], lazy="joined")
+    registrador: Mapped[Usuario | None] = relationship(foreign_keys=[registrado_por], lazy="joined")

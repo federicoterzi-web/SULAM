@@ -105,13 +105,28 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Carpetas en papel: ubicación y pases (pedir, entregar, devolver), carga inicial por número de legajo | ✅ |
 | Nombre del área de archivo y quiénes la integran | ⏳ a confirmar con la Dirección |
 
+## Personal y asistencia
+
+| Funcionalidad | Estado |
+|---|---|
+| Fichas de personal ligadas a usuarios (alta, baja, reingreso, área y cargo) | ✅ |
+| Horarios con vigencia y confirmación | ✅ |
+| Importación del reloj con vista previa, identificación de ID y sin duplicados | ✅ |
+| Cálculo de incidencias con las reglas de la app original (mismos casos de prueba) | ✅ |
+| Revisión de jornadas con huella; justificativos con adjuntos | ✅ |
+| Pedidos de licencia, comisión y cambio de horario (persona → jefatura → Personal) | ✅ |
+| «Quién está hoy» en equipo de casos, carpetas e inicio | ✅ |
+| Significado de CT, CE, CS, VAO, DF, C3, SESOP y reglas por tipo de licencia | ⏳ a confirmar con Personal |
+| Informe mensual en PDF y Excel de incidencias | ⏳ etapa 2 |
+| Importar los datos de la app de Google (en el servidor de la Dirección) | ⏳ etapa 2 |
+
 ## Digitalización de fichas — en curso
 
 | Funcionalidad | Estado |
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0018) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0019) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |

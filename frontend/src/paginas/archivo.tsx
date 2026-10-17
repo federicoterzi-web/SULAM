@@ -2,6 +2,7 @@
 // Muy simple: un botón para pedir y uno para confirmar la entrega o la recepción.
 import { useEffect, useState } from "react";
 import { api, type UsuarioBreve } from "../api";
+import { EtiquetaHoy, useHoy } from "./miasistencia";
 import { Aviso, Cargando, Seccion, Vacio, fechaHora, useDatos, useEnvio, useSesion } from "../comun";
 
 interface Ubicacion {
@@ -93,6 +94,7 @@ export function CarpetaFisica({
   const [area, setArea] = useState("");
   const [persona, setPersona] = useState("");
   const [historial, setHistorial] = useState(false);
+  const hoy = useHoy().datos;
   if (error) return <Aviso error={error} />;
   if (!d) return <Cargando />;
   const registro = catalogos.areas.find((a) => a.nombre === "Oficina de Registro");
@@ -118,6 +120,7 @@ export function CarpetaFisica({
         </span>
         <div>
           <strong>{d.ubicacion ? (d.la_tengo && d.ubicacion.usuario ? "La carpeta la tiene usted" : dondeEsta(d.ubicacion)) : "No se registró dónde está la carpeta en papel"}</strong>
+          {d.ubicacion?.usuario && !d.la_tengo && <EtiquetaHoy hoy={hoy} usuarioId={d.ubicacion.usuario.id} />}
           {d.ubicacion && <span className="tenue"> · desde {fechaHora(d.ubicacion.desde)}</span>}
           {d.pendiente && (
             <div className="carpeta-pendiente">
@@ -205,6 +208,7 @@ export function CarpetaFisica({
                 <option key={u.id} value={u.id}>
                   {modo === "pasar" ? "A " : "La tiene "}
                   {u.nombre_completo}
+                  {hoy?.[u.id] ? ` (${hoy[u.id].texto.toLowerCase()})` : ""}
                 </option>
               ))}
             </select>

@@ -1,6 +1,7 @@
 // Página de inicio: cada rol ve lo que necesita para su trabajo (sulam/routers/inicio.py).
 import { PasesPendientes } from "./archivo";
 import { NovedadesPendientes } from "./novedades";
+import { PedidosParaAprobar } from "./miasistencia";
 import { useState, type ReactNode } from "react";
 import { FormEquipo } from "./equipo";
 import { rutaInforme } from "./informes";
@@ -78,6 +79,7 @@ export function PaginaTablero() {
       {saludo}
       <NovedadesPendientes />
       <PasesPendientes />
+      <PedidosParaAprobar />
       {datos.perfil === "tecnico" ? (
         <InicioTecnico d={d} />
       ) : datos.perfil === "jefatura" ? (
@@ -88,6 +90,8 @@ export function PaginaTablero() {
         <InicioMesa d={d} />
       ) : datos.perfil === "carga" ? (
         <InicioCarga d={d} />
+      ) : datos.perfil === "personal" ? (
+        <InicioPersonal d={d} />
       ) : datos.perfil === "administrativo_area" ? (
         <InicioAdministrativo d={d} />
       ) : (
@@ -666,6 +670,68 @@ interface Tablero {
   dias_sin_actividad: number;
   ingresos_pendientes: number | null;
   resumen_estados: Record<string, number>;
+}
+
+interface PersonalInicio {
+  para_registrar: number;
+  pedidos_pendientes: number;
+  jornadas_pendientes: number;
+  mes: string;
+  ultima_semana: { desde: string; hasta: string } | null;
+  agentes: number;
+  sin_horario_confirmado: number;
+  sin_id_reloj: number;
+  hoy_no_estan: { nombre: string; texto: string; hasta: string }[];
+}
+
+function InicioPersonal({ d }: { d: PersonalInicio }) {
+  const ir = (pestana: string) => {
+    try {
+      sessionStorage.setItem("sulam.personal.pestana", pestana);
+    } catch {
+      /* sin almacenamiento */
+    }
+  };
+  return (
+    <>
+      <div className="indicadores" onClickCapture={(e) => ir((e.target as HTMLElement).closest("[data-pestana]")?.getAttribute("data-pestana") ?? "Resumen")}>
+        <span className="sin-caja" data-pestana="Pedidos">
+          <Indicador valor={d.para_registrar} texto="pedidos aprobados para registrar" a="/personal" alerta={d.para_registrar > 0} />
+        </span>
+        <span className="sin-caja" data-pestana="Resumen">
+          <Indicador valor={d.jornadas_pendientes} texto="jornadas pendientes de revisar este mes" a="/personal" alerta={d.jornadas_pendientes > 0} />
+        </span>
+        <span className="sin-caja" data-pestana="Personal y horarios">
+          <Indicador valor={d.sin_horario_confirmado} texto="personas con horario sin confirmar" a="/personal" alerta={d.sin_horario_confirmado > 0} />
+        </span>
+        <span className="sin-caja" data-pestana="Personal y horarios">
+          <Indicador valor={d.sin_id_reloj} texto="personas sin ID del reloj" a="/personal" />
+        </span>
+      </div>
+      <p className="tenue">
+        {d.agentes} {d.agentes === 1 ? "persona en planta" : "personas en planta"} · {d.pedidos_pendientes}{" "}
+        {d.pedidos_pendientes === 1 ? "pedido espera" : "pedidos esperan"} a su jefatura ·{" "}
+        {d.ultima_semana ? `última semana del reloj: ${fecha(d.ultima_semana.desde)} al ${fecha(d.ultima_semana.hasta)}` : "todavía no se importó el reloj"}
+        {" · "}
+        <span className="sin-caja" data-pestana="Importar reloj" onClickCapture={() => ir("Importar reloj")}>
+          <Enlace a="/personal">importar semana</Enlace>
+        </span>
+      </p>
+      <Seccion titulo="Hoy no están">
+        {d.hoy_no_estan.length === 0 ? (
+          <Vacio>No hay licencias ni comisiones registradas para hoy.</Vacio>
+        ) : (
+          <ul className="lista-simple">
+            {d.hoy_no_estan.map((x) => (
+              <li key={x.nombre}>
+                <strong>{x.nombre}</strong> · {x.texto} hasta el {fecha(x.hasta)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Seccion>
+    </>
+  );
 }
 
 function InicioGeneral() {

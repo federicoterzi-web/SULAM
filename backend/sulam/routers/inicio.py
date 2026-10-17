@@ -43,6 +43,7 @@ PERFILES = {
     "carga": "Carga de datos",
     "mesa": "Mesa de Entrada",
     "administrativo_area": "Administrativo de área",
+    "personal": "Personal",
 }
 DIAS_SIN_ACTIVIDAD = 30
 
@@ -421,6 +422,33 @@ def _administrativo_area(db: Session, ctx: Contexto) -> dict:
     }
 
 
+def _personal(db: Session, ctx: Contexto) -> dict:
+    from ..models import Agente, Horario, RelojImportacion, SolicitudPersonal
+    from .personal import _informe, estado_hoy
+
+    hoy = _hoy()
+    desde = hoy.replace(day=1)
+    ultima = db.execute(select(RelojImportacion).where(RelojImportacion.incorporada).order_by(RelojImportacion.hasta.desc())).scalars().first()
+    filas = _informe(db, desde, hoy, None) if ctx.tiene("personal", "consultar") or ctx.tiene("personal", "administrar") else []
+    agentes = db.execute(select(Agente)).scalars().all()
+    con_horario_confirmado = set(db.execute(select(Horario.agente_id).where(Horario.confirmado)).scalars())
+    activos = [a for a in agentes if any((not p.get("desde") or p["desde"] <= hoy.isoformat()) and (not p.get("hasta") or p["hasta"] >= hoy.isoformat()) for p in a.periodos or [])]
+    ausentes = estado_hoy(db, hoy)
+    return {
+        "para_registrar": db.execute(select(func.count(SolicitudPersonal.id)).where(SolicitudPersonal.estado == "aprobada")).scalar_one(),
+        "pedidos_pendientes": db.execute(select(func.count(SolicitudPersonal.id)).where(SolicitudPersonal.estado == "pendiente")).scalar_one(),
+        "jornadas_pendientes": sum(1 for f in filas if f["estado"] == "pendiente"),
+        "mes": desde.isoformat(),
+        "ultima_semana": {"desde": ultima.desde.isoformat(), "hasta": ultima.hasta.isoformat()} if ultima else None,
+        "agentes": len(activos),
+        "sin_horario_confirmado": sum(1 for a in activos if a.id not in con_horario_confirmado),
+        "sin_id_reloj": sum(1 for a in activos if not a.id_reloj),
+        "hoy_no_estan": [
+            {"nombre": a.nombre, **ausentes[str(a.usuario_id)]} for a in activos if a.usuario_id and str(a.usuario_id) in ausentes
+        ],
+    }
+
+
 ARMADORES = {
     "direccion": _direccion,
     "jefatura": _jefatura,
@@ -428,6 +456,7 @@ ARMADORES = {
     "carga": _carga,
     "mesa": _mesa,
     "administrativo_area": _administrativo_area,
+    "personal": _personal,
 }
 
 
@@ -445,7 +474,7 @@ def inicio(
     if perfil not in propios:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Ese inicio no corresponde a sus roles.")
     # Un rol sin permiso para consultar casos no ve bloques de casos.
-    if perfil != "mesa" and not ctx.tiene("casos", "consultar"):
+    if perfil not in ("mesa", "personal") and not ctx.tiene("casos", "consultar"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Su rol no permite consultar casos.")
     if perfil == "mesa":
         ctx.requerir("mesa_entrada", "consultar")

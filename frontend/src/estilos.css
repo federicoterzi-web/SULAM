@@ -4155,3 +4155,220 @@ h1.hoja-titulo {
 .pases-movil .fila-pase-acciones {
   width: 100%;
 }
+
+/* ---------------------------------------------------------------- Personal y asistencia */
+.sin-caja {
+  display: contents;
+}
+
+.pestanas-personal {
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.indicadores-chicos {
+  margin: 0.75rem 0;
+}
+
+button.indicador {
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.indicador-activo {
+  outline: 2px solid var(--primario);
+  outline-offset: -2px;
+  background: var(--primario-claro);
+}
+
+.campo-linea {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.estado-jornada {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+}
+
+.ej-pendiente {
+  background: var(--advertencia-claro);
+  border-color: #e9c46a;
+  color: var(--advertencia);
+}
+
+.ej-revisado,
+.ej-auto_aprobado {
+  background: var(--info-claro);
+  border-color: #b9d3ef;
+}
+
+.ej-justificado {
+  background: var(--exito-claro);
+  border-color: #a9d8c3;
+  color: var(--acento);
+}
+
+.ej-sin_datos {
+  color: var(--texto-tenue);
+}
+
+.semana-horario {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+
+.dia-horario {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dia-horario input[type="time"] {
+  width: auto;
+}
+
+.vista-previa-reloj {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--fondo);
+}
+
+.lista-solicitudes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.solicitud {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--borde);
+}
+
+.solicitud:first-child {
+  border-top: 0;
+}
+
+.solicitud-cuerpo {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1 1 22rem;
+}
+
+.solicitud-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.solicitud-acciones input,
+.solicitud-acciones select {
+  width: auto;
+  min-width: 9rem;
+}
+
+.solicitud-movil .solicitud-acciones {
+  width: 100%;
+}
+
+.solicitud-movil .solicitud-acciones .boton {
+  flex: 1 1 auto;
+}
+
+.chip-solicitud {
+  display: inline-block;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+}
+
+.cs-pendiente {
+  background: var(--advertencia-claro);
+  color: var(--advertencia);
+}
+
+.cs-aprobada {
+  background: var(--info-claro);
+  color: var(--primario);
+}
+
+.cs-registrada {
+  background: var(--exito-claro);
+  color: var(--acento);
+}
+
+.cs-rechazada {
+  background: var(--peligro-claro);
+  color: var(--peligro);
+}
+
+.formulario-solicitud {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--fondo);
+}
+
+.lista-jornadas {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lista-jornadas li {
+  display: grid;
+  grid-template-columns: 6.5rem 7.5rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--borde);
+}
+
+.chip-hoy {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--advertencia-claro);
+  color: var(--advertencia);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .dia-horario {
+    grid-template-columns: 1fr;
+  }
+
+  .lista-jornadas li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .tabla-compacta {
+    display: block;
+    overflow-x: auto;
+  }
+}

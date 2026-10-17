@@ -2,6 +2,7 @@
 // Pantallas cortas, botones grandes, teclado numérico para DNI y fechas, y la
 // cámara integrada. Nada se guarda en el teléfono: todo va directo al servidor.
 import { CarpetaFisica, PaginaPases, PasesPendientes } from "../paginas/archivo";
+import { PaginaMiAsistencia, PedidosParaAprobar } from "../paginas/miasistencia";
 import { NovedadesPendientes, PaginaNovedades } from "../paginas/novedades";
 import { PanelNegativa } from "../paginas/anses";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
@@ -89,6 +90,7 @@ export function Movil({ ruta, alSalir, alCambiarPassword }: { ruta: string; alSa
             <MenuUsuario />
             <a href="#/m/novedades">Novedades</a>
             <a href="#/m/pases">Pases de carpetas</a>
+            <a href="#/m/mi-asistencia">Mi asistencia</a>
             <a href={"#" + equivalenteCompleto(p)}>Ver en la versión completa</a>
             <button onClick={alCambiarPassword}>Cambiar contraseña</button>
             <button onClick={salir}>Cerrar sesión</button>
@@ -162,6 +164,8 @@ function titulo(p: string[]): string {
       return "Novedades";
     case "pases":
       return "Pases de carpetas";
+    case "mi-asistencia":
+      return "Mi asistencia";
     case "informe":
       return "Informe";
     case "visitas":
@@ -203,6 +207,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "ingreso") return "/mesa";
   if (p[0] === "novedades") return "/novedades";
   if (p[0] === "pases") return "/pases";
+  if (p[0] === "mi-asistencia") return "/mi-asistencia";
   if (p[0] === "informe" && p[1]) return `/informes/${p[1]}`;
   if (p[0] === "visitas") return "/visitas";
   return "/";
@@ -230,6 +235,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       return <PaginaNovedades movil />;
     case "pases":
       return <PaginaPases movil />;
+    case "mi-asistencia":
+      return <PaginaMiAsistencia movil />;
     case "informe":
       return <PaginaInforme id={p[1]} movil key={p[1]} />;
     case "visitas":
@@ -431,6 +438,7 @@ function InicioMovil() {
       )}
       <NovedadesPendientes movil />
       <PasesPendientes movil />
+      <PedidosParaAprobar movil />
       <CajaBusqueda inicial="" />
       <div className="m-acciones">
         {puede("mesa_entrada", "crear") && (
@@ -448,6 +456,9 @@ function InicioMovil() {
             Agregar un lugar al mapa de recursos
           </Accion>
         )}
+        <Accion a="/m/mi-asistencia" icono="📝" principal={actual === "personal"}>
+          {actual === "personal" ? "Pedidos y asistencia" : "Pedir licencia, comisión o cambio de horario"}
+        </Accion>
       </div>
       {inicio.error ? (
         <Aviso error={inicio.error} />
@@ -463,9 +474,34 @@ function InicioMovil() {
         <InicioCargaMovil d={r.datos} />
       ) : actual === "mesa" ? (
         <InicioMesaMovil d={r.datos} />
+      ) : actual === "personal" ? (
+        <InicioPersonalMovil d={r.datos} />
       ) : actual === "administrativo_area" ? (
         <ListaCasosMovil titulo={`Casos del área${r.datos.area ? ` · ${r.datos.area.replace(/^(Departamento|División) /, "")}` : ""}`} casos={r.datos.casos} vacio="No hay casos activos en el área." />
       ) : null}
+    </>
+  );
+}
+
+function InicioPersonalMovil({ d }: { d: any }) {
+  return (
+    <>
+      <p className="m-tenue">
+        {d.para_registrar} {d.para_registrar === 1 ? "pedido aprobado" : "pedidos aprobados"} para registrar · {d.jornadas_pendientes} jornadas pendientes de
+        revisar este mes. La importación del reloj y la revisión se hacen en la versión completa.
+      </p>
+      <h2 className="m-subtitulo">Hoy no están</h2>
+      {d.hoy_no_estan.length === 0 ? (
+        <p className="m-tenue">No hay licencias ni comisiones registradas para hoy.</p>
+      ) : (
+        <ul className="lista-simple">
+          {d.hoy_no_estan.map((x: { nombre: string; texto: string; hasta: string }) => (
+            <li key={x.nombre}>
+              <strong>{x.nombre}</strong> · {x.texto} hasta el {fecha(x.hasta)}
+            </li>
+          ))}
+        </ul>
+      )}
     </>
   );
 }

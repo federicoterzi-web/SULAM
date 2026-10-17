@@ -60,6 +60,10 @@ CATALOGO: dict[str, dict] = {
         "nombre": "Novedades y circulares (con alcance «área»: solo para el área propia)",
         "acciones": ["publicar"],
     },
+    "personal": {
+        "nombre": "Personal: asistencias, horarios, licencias y comisiones (aprobar con «área»: las del área propia)",
+        "acciones": ["consultar", "administrar", "aprobar"],
+    },
     "administracion": {
         "nombre": "Administración del sistema",
         "acciones": ["administrar"],

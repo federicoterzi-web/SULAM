@@ -114,7 +114,7 @@ def cmd_datos_demo(_args) -> None:
     )
     from .numbering import nueva_actuacion, numero_ingreso, numero_legajo
     from .security import hash_password
-    from .seed import PASSWORD_DEMO, PERSONAS_DEMO, USUARIOS_DEMO, inicializar_catalogos
+    from .seed import PASSWORD_DEMO, PERSONAS_DEMO, USUARIOS_DEMO, fichas_personal_demo, inicializar_catalogos
     from .storage import almacenamiento_actual
     from .textutil import normalizar
 
@@ -238,6 +238,7 @@ def cmd_datos_demo(_args) -> None:
                 clave_almacenamiento=guardado.clave, cargado_por=usuarios[
                     "tecnica1"].id,
             ))
+        fichas_personal_demo(db, usuarios)
         audit.registrar(db, None, "datos_demo", "sistema", detalle={"personas": len(personas)})
         db.commit()
         print("Datos de demostración cargados (todos FICTICIOS).")

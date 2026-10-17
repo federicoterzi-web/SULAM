@@ -96,6 +96,9 @@ Pedido de la Dirección (17/10/2026): un caso puede tener varios técnicos a car
 
 ### D-024 · Negativa de ANSES asistida, sin consultas automáticas a ANSES — *Vigente*
 SULAM no consulta ANSES desde el servidor: el servicio está pensado para uso desde el navegador (con controles anti-robots) y no se envían datos de los legajos a sitios externos. SULAM calcula el CUIL, abre el servicio, lee el PDF descargado (propuesta que la persona revisa), lo guarda en el legajo y controla el vencimiento. La tabla `constancias` admite otros tipos de constancias a futuro.
+
+### D-025 · Asistencia dentro de SULAM, con las reglas de la app original y sin datos reales en el repositorio — *Vigente*
+Las reglas de cálculo se portan tal cual (segundos ignorados, ventana de 30 min, tolerancia de 10 min recuperada el mismo día, cobertura por tramos, CAMBIO reemplaza el turno) y se prueban con los mismos casos que la app original. SULAM no ejecuta descuentos: solo revisa y propone. El repositorio es público, así que la planta real, los ID del reloj, los horarios y los archivos del reloj nunca se copian a él: se cargan en el servidor de la Dirección. La ficha de personal es la fuente del área de cada usuario y la baja desactiva su acceso. Los pedidos siguen el circuito persona → jefatura → Personal. Los motivos de salud quedan reservados a la persona, Personal y la Dirección.
 ---
 
 ## Pendientes (no se inventan)
