@@ -347,6 +347,25 @@ class CasoEvolucion(Base):
     autor: Mapped[Usuario | None] = relationship(foreign_keys=[autor_id], lazy="joined")
 
 
+class Reiteracion(Base):
+    """Nuevo ingreso de una persona que ya tiene caso (actuación) en el año."""
+
+    __tablename__ = "casos_reiteraciones"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    caso_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("casos.id"), index=True)
+    fecha: Mapped[date] = mapped_column(Date)
+    motivo: Mapped[str | None] = mapped_column(Text)
+    tipo_ingreso: Mapped[str | None] = mapped_column(String(30))
+    tipo_ingreso_detalle: Mapped[str | None] = mapped_column(String(30))
+    derivado_por: Mapped[str | None] = mapped_column(String(30))
+    derivado_por_detalle: Mapped[str | None] = mapped_column(String(300))
+    ingreso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("ingresos.id"))
+    usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    en: Mapped[datetime] = _ts()
+
+    usuario: Mapped[Usuario | None] = relationship(lazy="joined")
+
+
 class RegistroDemanda(Base):
     """Registro de demanda: se carga después de la carátula, sobre un caso existente."""
 

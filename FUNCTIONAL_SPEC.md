@@ -61,6 +61,14 @@ Reglas que el sistema **implementa hoy**. Lo que falta definir está en [DECISIO
 5. **Casos reservados** (por ejemplo, denuncias de maltrato): cualquiera con acceso al legajo ve que el caso existe, su número, estado, área y responsables —para evitar intervenciones duplicadas— pero **no** su descripción, documentos, motivos de cambios de estado ni la carátula de sus expedientes. El contenido lo ven los responsables asignados, quien lo creó y quienes tienen el permiso *Información reservada › Consultar*.
 6. El tablero de cada usuario muestra sus casos activos asignados y señala los que llevan **más de 30 días sin movimientos**.
 
+## 5. bis-0. Una actuación por persona por año; reiteraciones
+
+- Si la persona ya tiene un caso (actuación) en el año, **no se abre otra carátula**: un nuevo ingreso se registra como **reiteración** de ese caso, con fecha, motivo y tipo de ingreso. Si el caso estaba cerrado, se reabre (queda en el historial de estados).
+- «Nuevo caso» avisa al abrirse y ofrece «Registrar como reiteración».
+- Un ingreso de Mesa de Entrada vinculado a una persona con caso en el año se asocia a ese caso como reiteración automáticamente.
+- Excepción: solo Administración puede abrir otra actuación en el mismo año, con motivo (queda en la auditoría).
+- Las reiteraciones se listan en el caso y se cuentan para estadísticas.
+
 ## 5 bis. Carátula de legajo y registro de demanda
 
 Implementados según los modelos institucionales («Modelo de carátula de legajo» y «Registro de demanda», octubre 2026). Los textos de las opciones son los de los modelos (`backend/sulam/formularios.py`).

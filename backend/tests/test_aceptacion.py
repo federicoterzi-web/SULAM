@@ -128,8 +128,11 @@ def test_crear_y_cerrar_caso_sin_eliminar_historial(admin):
     assert [h["estado_nuevo"] for h in historial] == ["abierto", "en_seguimiento", "cerrado", "abierto"]
     assert historial[2]["motivo"] == "Intervención finalizada"
 
-    # Un segundo caso para la misma persona convive con el primero.
-    nuevo_caso(admin, p["id"])
+    # Otra demanda en el mismo año no abre otra actuación: va al mismo caso.
+    r = admin.post("/api/casos", json={"persona_id": p["id"]})
+    assert r.status_code == 409 and r.json()["detail"]["caso_existente"]["id"] == caso["id"]
+    # En otro año sí hay otra actuación, y convive con la anterior.
+    nuevo_caso(admin, p["id"], fecha_ingreso="2025-05-10")
     assert len(admin.get(f"/api/personas/{p['id']}").json()["casos"]) == 2
 
 
@@ -233,7 +236,7 @@ def test_restringir_acciones_segun_permisos(admin):
     assert adm.get(f"/api/personas/{p['id']}").status_code == 403
     assert adm.get("/api/personas", params={"q": "prueba"}).json() == []
     admin.patch(f"/api/casos/{caso['id']}", json={"area_id": 2})
-    nuevo_caso(admin, p["id"], area_id=2)
+    nuevo_caso(admin, p["id"], area_id=2, fecha_ingreso="2025-06-01")
     assert adm.get(f"/api/personas/{p['id']}").status_code == 200
 
     # Sin CSRF no se puede modificar nada aunque la sesión sea válida.

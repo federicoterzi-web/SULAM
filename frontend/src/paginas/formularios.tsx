@@ -1,8 +1,8 @@
 // Carátula de legajo, registro de demanda y evolución del caso.
 // Las opciones vienen del servidor (/api/formularios) con los textos de los modelos institucionales.
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { api, type Caso, type Demanda, type Evolucion, type Opcion, type PersonaDetalle } from "../api";
-import { Aviso, Campo, Cargando, Seccion, Vacio, documento, edad, fecha, fechaHora, nombre, useEnvio, useSesion } from "../comun";
+import { ApiError, api, type Caso, type Demanda, type Evolucion, type Opcion, type PersonaDetalle } from "../api";
+import { Aviso, Campo, Cargando, ESTADOS, Seccion, Vacio, documento, edad, fecha, fechaHora, navegar, nombre, useEnvio, useSesion } from "../comun";
 
 // ---------------------------------------------------------------- textos
 
@@ -269,13 +269,22 @@ export function FormCaratula({
   const [areaId, setAreaId] = useState(String(yo.area?.id ?? ""));
   const [reservado, setReservado] = useState(false);
   const [responsable, setResponsable] = useState("");
+  const [existente, setExistente] = useState<any>(null);
   const { enviando, error, setError, ejecutar } = useEnvio();
 
   useEffect(() => {
     api
-      .get<PersonaDetalle>(`/personas/${personaId}`)
+      .get<PersonaDetalle & { casos?: Caso[] }>(`/personas/${personaId}`)
       .then((p) => {
         setPersona(p);
+        const anio = new Date().getFullYear();
+        const delAnio = !caso && p.casos?.find((x) => x.caratula?.anio_actuacion === anio);
+        if (delAnio) {
+          setExistente({
+            mensaje: `${p.apellidos}, ${p.nombres} ya tiene la actuación N° ${delAnio.caratula.numero_actuacion}/${anio}.`,
+            caso_existente: { id: delAnio.id, estado: delAnio.estado },
+          });
+        }
         const c = caso?.caratula;
         setD({
           numero_actuacion: c?.numero_actuacion ? String(c.numero_actuacion) : "",
@@ -341,8 +350,10 @@ export function FormCaratula({
       caratula.antecedentes = d.antecedentes;
       caratula.fecha_ultimo_ingreso = d.antecedentes ? d.fecha_ultimo_ingreso || null : null;
     }
-    const r = await ejecutar(() =>
-      caso
+    setExistente(null);
+    const r = await ejecutar(async () => {
+      try {
+        return await (caso
         ? api.patch<Caso>(`/casos/${caso.id}/caratula`, caratula)
         : api.post<Caso>("/casos", {
             ...caratula,
@@ -351,13 +362,39 @@ export function FormCaratula({
             reservado,
             responsable_id: responsable || null,
             ingreso_id: ingresoId ?? null,
-          }),
-    );
+          }));
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409 && err.detalle?.caso_existente) setExistente(err.detalle);
+        throw err;
+      }
+    });
     if (r) alGuardar(r);
+  };
+
+  const reiterar = async () => {
+    if (!existente) return;
+    const id = existente.caso_existente.id;
+    const r = await ejecutar(() =>
+      api.post(`/casos/${id}/reiteraciones`, {
+        fecha: d.fecha_ingreso || null,
+        motivo: d.motivo || null,
+        tipo_ingreso: d.tipo_ingreso,
+        tipo_ingreso_detalle: d.tipo_ingreso_detalle,
+        derivado_por: d.derivado_por,
+        derivado_por_detalle: d.derivado_por_detalle,
+      }),
+    );
+    if (r) navegar(`/casos/${id}`);
   };
 
   return (
     <form onSubmit={enviar} className="formulario formulario-carga">
+      {existente && !caso && (
+        <div className="aviso aviso-advertencia">
+          <strong>{existente.mensaje}</strong> Una nueva demanda en el mismo año es una reiteración de ese caso: complete
+          fecha, motivo y tipo de ingreso, y use «Registrar como reiteración» al pie.
+        </div>
+      )}
       <section>
         <h3>Legajo y actuación</h3>
         <div className="grilla">
@@ -500,7 +537,25 @@ export function FormCaratula({
         </section>
       )}
 
-      <Aviso error={error} />
+      {existente ? (
+        <div className="aviso aviso-advertencia">
+          <strong>{existente.mensaje}</strong>
+          <p>
+            El caso está {ESTADOS[existente.caso_existente.estado]?.toLowerCase()}. Esta demanda se registra como{" "}
+            <strong>reiteración</strong> de ese caso{existente.caso_existente.estado === "cerrado" ? " y el caso se reabre" : ""}.
+          </p>
+          <div className="fila-botones">
+            <a className="boton" href={`#/casos/${existente.caso_existente.id}`}>
+              Ir al caso
+            </a>
+            <button type="button" className="boton boton-primario" onClick={reiterar} disabled={enviando}>
+              Registrar como reiteración
+            </button>
+          </div>
+        </div>
+      ) : (
+        <Aviso error={error} />
+      )}
       <div className="fila-botones">
         <button className="boton boton-primario" disabled={enviando}>
           {caso ? "Guardar carátula" : "Crear caso con esta carátula"}
@@ -915,5 +970,50 @@ export function SeccionEvolucion({
         </form>
       )}
     </Seccion>
+  );
+}
+
+// ---------------------------------------------------------------- reiteraciones
+
+export interface ReiteracionDato {
+  id: number;
+  fecha: string;
+  motivo?: string | null;
+  tipo_ingreso?: string | null;
+  tipo_ingreso_detalle?: string | null;
+  usuario?: { nombre_completo: string } | null;
+}
+
+export function FormReiteracion({ caso, alGuardar }: { caso: Caso; alGuardar: () => void }) {
+  const [d, setD] = useState({ fecha: hoy(), motivo: "", tipo_ingreso: null as string | null, tipo_ingreso_detalle: null as string | null, derivado_por: null as string | null, derivado_por_detalle: null as string | null });
+  const { enviando, error, ejecutar } = useEnvio();
+  const set = (c: Partial<typeof d>) => setD({ ...d, ...c });
+  const enviar = async (e: FormEvent) => {
+    e.preventDefault();
+    const r = await ejecutar(() => api.post(`/casos/${caso.id}/reiteraciones`, { ...d, motivo: d.motivo || null }));
+    if (r) alGuardar();
+  };
+  return (
+    <form onSubmit={enviar} className="formulario">
+      <p className="tenue">
+        Nuevo ingreso de la persona en el año: se registra en la actuación N° {caso.caratula.numero_actuacion}/{caso.caratula.anio_actuacion}
+        {caso.estado === "cerrado" ? " y el caso se reabre" : ""}.
+      </p>
+      <div className="grilla">
+        <Campo etiqueta="Fecha">
+          <input type="date" value={d.fecha} max={hoy()} onChange={(e) => set({ fecha: e.target.value })} required />
+        </Campo>
+      </div>
+      <Campo etiqueta="Motivo">
+        <textarea rows={3} value={d.motivo} onChange={(e) => set({ motivo: e.target.value })} />
+      </Campo>
+      <TipoIngreso d={d} set={set} conDerivadoPor={false} />
+      <Aviso error={error} />
+      <div className="fila-botones">
+        <button className="boton boton-primario" disabled={enviando}>
+          Registrar reiteración
+        </button>
+      </div>
+    </form>
   );
 }

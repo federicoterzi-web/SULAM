@@ -34,7 +34,7 @@ def test_caratula_al_crear_el_caso(admin):
     assert legajo["cobertura_salud"] == ["pami"] and legajo["telefono"] == "381-111"
 
     # Un segundo ingreso detecta los antecedentes en el sistema.
-    segundo = nuevo_caso(admin, p["id"], fecha_ingreso="2026-10-20", tipo_ingreso="portal_sae")
+    segundo = nuevo_caso(admin, p["id"], fecha_ingreso="2027-01-20", tipo_ingreso="portal_sae")
     assert segundo["caratula"]["antecedentes"] is True
     assert segundo["caratula"]["fecha_ultimo_ingreso"] == "2026-10-05"
 
@@ -135,6 +135,8 @@ def test_evolucion_y_reserva(admin):
 
 def test_numeracion_de_actuaciones(admin):
     p = nueva_persona(admin)
+    p2 = nueva_persona(admin, numero_documento="2000001", apellidos="DOS")
+    p3 = nueva_persona(admin, numero_documento="2000002", apellidos="TRES")
     # Se continúa la numeración que se llevaba en papel.
     assert admin.put("/api/admin/numeracion", json={"anio": 2026, "proximo": 351}).status_code == 200
     c1 = nuevo_caso(admin, p["id"], fecha_ingreso="2026-10-16")
@@ -143,12 +145,12 @@ def test_numeracion_de_actuaciones(admin):
     # Carátula vieja cargada con su número original; no puede repetirse.
     viejo = nuevo_caso(admin, p["id"], fecha_ingreso="2025-03-02", numero_actuacion=87)
     assert viejo["caratula"]["anio_actuacion"] == 2025 and viejo["numero"] == "C-2025-00087"
-    r = admin.post("/api/casos", json={"persona_id": p["id"], "fecha_ingreso": "2025-05-01", "numero_actuacion": 87})
+    r = admin.post("/api/casos", json={"persona_id": p2["id"], "fecha_ingreso": "2025-05-01", "numero_actuacion": 87})
     assert r.status_code == 409
 
     # El automático saltea un número ya usado manualmente.
-    nuevo_caso(admin, p["id"], numero_actuacion=352, anio_actuacion=2026)
-    c3 = nuevo_caso(admin, p["id"], fecha_ingreso="2026-10-17")
+    nuevo_caso(admin, p2["id"], numero_actuacion=352, anio_actuacion=2026)
+    c3 = nuevo_caso(admin, p3["id"], fecha_ingreso="2026-10-17")
     assert c3["caratula"]["numero_actuacion"] == 353
 
     # No se puede retroceder la numeración ni cambiar el número de una carátula.
@@ -156,3 +158,49 @@ def test_numeracion_de_actuaciones(admin):
     r = admin.patch(f"/api/casos/{c1['id']}/caratula", json={"numero_actuacion": 999})
     assert r.status_code == 400
     assert admin.get("/api/admin/numeracion/2026").json()["proximo"] == 354
+
+
+def test_una_actuacion_por_persona_por_anio(admin, cliente):
+    from conftest import crear_usuario
+
+    p = nueva_persona(admin)
+    caso = nuevo_caso(admin, p["id"], fecha_ingreso="2026-03-01")
+    admin.post(f"/api/casos/{caso['id']}/estado", json={"estado": "cerrado", "motivo": "Resuelto"})
+    # Aunque esté cerrado, en el mismo año no se abre otra actuación: se reabre el caso.
+    r = admin.post("/api/casos", json={"persona_id": p["id"], "fecha_ingreso": "2026-09-01"})
+    d = r.json()["detail"]
+    assert r.status_code == 409 and d["caso_existente"]["estado"] == "cerrado"
+    assert "1/2026" in d["mensaje"]
+
+    # Excepción: solo Administración y con motivo.
+    crear_usuario("carga", "Carga de Datos")
+    r = cliente("carga").post("/api/casos", json={"persona_id": p["id"], "forzar_otra_actuacion": True,
+                                                 "motivo_forzado": "x"})
+    assert r.status_code == 403
+    r = admin.post("/api/casos", json={"persona_id": p["id"], "forzar_otra_actuacion": True})
+    assert r.status_code == 403
+    r = admin.post("/api/casos", json={"persona_id": p["id"], "forzar_otra_actuacion": True,
+                                       "motivo_forzado": "Dos demandas independientes, autorizado por Dirección"})
+    assert r.status_code == 201
+
+
+def test_reiteraciones(admin):
+    p = nueva_persona(admin, numero_documento="5987321", apellidos="GOMEZ", nombres="Juan")
+    caso = nuevo_caso(admin, p["id"], fecha_ingreso="2026-02-10")
+    admin.post(f"/api/casos/{caso['id']}/estado", json={"estado": "cerrado", "motivo": "Resuelto"})
+
+    # Reiteración registrada desde el caso: lo reabre.
+    r = admin.post(f"/api/casos/{caso['id']}/reiteraciones",
+                   json={"fecha": "2026-06-01", "motivo": "Vuelve a consultar", "tipo_ingreso": "espontaneo",
+                         "tipo_ingreso_detalle": "presencial"})
+    assert r.status_code == 201, r.text
+    c = admin.get(f"/api/casos/{caso['id']}").json()
+    assert c["estado"] == "abierto" and len(c["reiteraciones"]) == 1
+    assert c["historial_estados"][-1]["motivo"].startswith("Reiteración")
+
+    # Un ingreso de Mesa de Entrada vinculado a la persona va al caso del año como reiteración.
+    ing = admin.post("/api/ingresos", json={"asunto": "Nueva nota del hospital", "documento_mencionado": "5987321"}).json()
+    r = admin.post(f"/api/ingresos/{ing['id']}/vincular", json={"persona_id": p["id"]})
+    assert r.status_code == 200 and r.json()["reiteracion"] is True and r.json()["caso_id"] == caso["id"]
+    c = admin.get(f"/api/casos/{caso['id']}").json()
+    assert len(c["reiteraciones"]) == 2 and c["reiteraciones"][1]["ingreso_id"] == ing["id"]

@@ -17,6 +17,7 @@ from ..models import (
     CasoEstadoHistorial,
     CasoEvolucion,
     RegistroDemanda,
+    Reiteracion,
     Documento,
     Expediente,
     Ingreso,
@@ -40,6 +41,7 @@ from ..schemas import (
     CasoPatch,
     EvolucionIn,
     FinAsignacionIn,
+    ReiteracionIn,
 )
 from ..security import ahora
 from ..serializers import (
@@ -47,12 +49,14 @@ from ..serializers import (
     demanda_out,
     documento_out,
     evolucion_out,
+    reiteracion_out,
     expediente_out,
     ingreso_out,
     persona_detalle,
     usuario_breve,
 )
 from ..textutil import escapar_like, normalizar
+from ..formularios import validar_ingreso
 from ._caratula import antecedentes_sistema, aplicar_caratula
 from .demandas import escaneos_de
 from ._comun import no_encontrado, obtener_caso, obtener_persona, registrar_actividad_caso
@@ -140,6 +144,37 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo puede crear casos de su área.")
 
     fecha_ingreso = datos.fecha_ingreso or ahora().astimezone().date()
+    anio_caso = datos.anio_actuacion or fecha_ingreso.year
+
+    # Una actuación por persona por año: si ya tiene caso en el año, la nueva
+    # demanda se trabaja en ese caso (no se arma otra carátula).
+    existente = db.execute(
+        select(Caso).where(Caso.persona_id == persona.id, Caso.anio_actuacion == anio_caso)
+    ).scalars().first()
+    if existente is not None:
+        if not datos.forzar_otra_actuacion:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                {
+                    "mensaje": (
+                        f"{persona.apellidos}, {persona.nombres} ya tiene la actuación "
+                        f"N° {existente.numero_actuacion}/{anio_caso}. La nueva demanda se registra en ese caso."
+                    ),
+                    "caso_existente": {
+                        "id": str(existente.id),
+                        "numero": existente.numero,
+                        "estado": existente.estado,
+                        "numero_actuacion": existente.numero_actuacion,
+                        "anio_actuacion": existente.anio_actuacion,
+                    },
+                },
+            )
+        if ctx.alcance("administracion", "administrar") is None or not datos.motivo_forzado:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "Solo Administración puede abrir otra actuación en el mismo año, indicando el motivo.",
+            )
+
     if datos.numero_actuacion is not None:
         # Carátula cargada con su número original (por ejemplo, de papel).
         anio = datos.anio_actuacion or fecha_ingreso.year
@@ -162,7 +197,10 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
     db.add(caso)
     caratula = datos.model_dump(
         exclude_unset=True,
-        exclude={"persona_id", "area_id", "reservado", "responsable_id", "ingreso_id", "numero_actuacion", "anio_actuacion"},
+        exclude={
+            "persona_id", "area_id", "reservado", "responsable_id", "ingreso_id", "numero_actuacion",
+            "anio_actuacion", "forzar_otra_actuacion", "motivo_forzado",
+        },
     )
     if caratula.get("persona") is not None:
         caratula["persona"] = datos.persona.model_dump(exclude_unset=True)
@@ -179,6 +217,9 @@ def crear_caso(datos: CasoIn, ctx: Contexto = Depends(contexto), db: Session = D
         {
             "numero": caso.numero, "reservado": caso.reservado, "area_id": area_id,
             "tipo_ingreso": caso.tipo_ingreso, "indicadores": caso.indicadores,
+            "otra_actuacion_en_el_anio": (
+                {"existente": existente.numero, "motivo": datos.motivo_forzado} if existente is not None else None
+            ),
         },
     )
 
@@ -216,6 +257,12 @@ def ver_caso(caso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session 
     r["antecedentes_sistema"] = {"tiene": tiene, "fecha_ultimo_ingreso": ultima.isoformat() if ultima else None}
     r["evoluciones"] = []
     r["demandas"] = []
+    r["reiteraciones"] = [
+        reiteracion_out(x) if visible else {"id": x.id, "fecha": x.fecha.isoformat()}
+        for x in db.execute(
+            select(Reiteracion).where(Reiteracion.caso_id == caso.id).order_by(Reiteracion.fecha)
+        ).scalars()
+    ]
     if visible:
         r["evoluciones"] = [
             evolucion_out(e)
@@ -315,6 +362,49 @@ def modificar_caratula(
     db.commit()
     db.refresh(caso)
     return caso_out(caso, True, persona, detalle=True)
+
+
+def registrar_reiteracion(
+    db: Session, ctx: Contexto, caso: Caso, *, fecha, motivo=None, ingreso_id=None, reabrir=True, **ingreso_datos
+) -> Reiteracion:
+    validar_ingreso({k: v for k, v in ingreso_datos.items() if k in ("tipo_ingreso", "tipo_ingreso_detalle", "derivado_por")})
+    r = Reiteracion(
+        caso_id=caso.id, fecha=fecha, motivo=motivo, ingreso_id=ingreso_id, usuario_id=ctx.id,
+        **{k: v for k, v in ingreso_datos.items() if v is not None},
+    )
+    db.add(r)
+    if caso.estado == "cerrado" and reabrir:
+        db.add(CasoEstadoHistorial(
+            caso_id=caso.id, estado_anterior="cerrado", estado_nuevo="abierto",
+            motivo="Reiteración" + (f": {motivo}" if motivo else ""), usuario_id=ctx.id,
+        ))
+        caso.estado = "abierto"
+        caso.cerrado_en = None
+    registrar_actividad_caso(caso)
+    db.flush()
+    audit.registrar(
+        db, ctx, "reiteracion", "caso", caso.id, caso.persona_id,
+        {"fecha": fecha, "ingreso_id": ingreso_id, "reabierto": caso.estado == "abierto" and reabrir},
+    )
+    return r
+
+
+@router.post("/casos/{caso_id}/reiteraciones", status_code=201)
+def nueva_reiteracion(
+    caso_id: uuid.UUID, datos: ReiteracionIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)
+):
+    caso = obtener_caso(db, caso_id)
+    requerir_caso(db, ctx, caso, "casos", "modificar")
+    if not ve_caso_reservado(db, ctx, caso):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Caso reservado.")
+    valores = datos.model_dump(exclude={"fecha", "reabrir", "motivo"})
+    r = registrar_reiteracion(
+        db, ctx, caso, fecha=datos.fecha or ahora().astimezone().date(), motivo=datos.motivo,
+        reabrir=datos.reabrir, **valores,
+    )
+    db.commit()
+    db.refresh(r)
+    return reiteracion_out(r)
 
 
 @router.post("/casos/{caso_id}/evolucion", status_code=201)

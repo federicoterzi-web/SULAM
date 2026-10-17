@@ -71,6 +71,9 @@ Según la Dirección, la Actuación N° es el número de caso iniciado / carátu
 - La lectura de texto manuscrito es **solo local** (sin servicios externos), por tratarse de datos sensibles. Toda lectura automática pasa por revisión humana, campo por campo, mostrando el recorte.
 - Si en el futuro cambia una ficha, se crea una versión nueva (el QR indica la versión) y el lector mantiene las anteriores.
 
+### D-019 · Una actuación por persona por año; los nuevos ingresos son reiteraciones — *Vigente*
+Definido por la Dirección. Áreas que manejan casos: Departamento de Admisión de Casos y Recepción de Denuncias y Departamento de Promoción Integral de Derechos (roles por área: pendiente P-003).
+
 ---
 
 ## Pendientes (no se inventan)

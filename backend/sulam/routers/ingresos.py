@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
-from ..models import Documento, Ingreso, Persona, TipoDocumental, Usuario
+from ..models import Caso, Documento, Ingreso, Persona, TipoDocumental, Usuario
 from ..numbering import numero_ingreso
 from ..permissions import Contexto, filtro_personas, requerir_persona
 from ..schemas import IngresoIn, VincularIngresoIn
@@ -154,6 +154,18 @@ def vincular_ingreso(
     persona = obtener_persona(db, datos.persona_id)
     requerir_persona(db, ctx, persona, "personas", "consultar")
     caso, exp = validar_pertenencia(db, persona.id, datos.caso_id, datos.expediente_id)
+    reiteracion = False
+    if caso is None:
+        # Si la persona ya tiene caso en el año del ingreso, el ingreso es una reiteración de ese caso.
+        anio = ingreso.fecha_ingreso.astimezone().year
+        caso = db.execute(
+            select(Caso).where(Caso.persona_id == persona.id, Caso.anio_actuacion == anio)
+        ).scalars().first()
+        reiteracion = caso is not None
+    elif ingreso.caso_id != caso.id:
+        reiteracion = db.execute(select(Ingreso.id).where(Ingreso.caso_id == caso.id)).first() is not None or (
+            caso.abierto_en.date() < ingreso.fecha_ingreso.date()
+        )
 
     anterior = {
         "persona_id": ingreso.persona_id,
@@ -167,6 +179,14 @@ def vincular_ingreso(
     ingreso.vinculado_en = ahora()
     if caso:
         registrar_actividad_caso(caso)
+
+    if reiteracion and caso is not None:
+        from .casos import registrar_reiteracion
+
+        registrar_reiteracion(
+            db, ctx, caso, fecha=ingreso.fecha_ingreso.astimezone().date(),
+            motivo=ingreso.asunto, ingreso_id=ingreso.id, tipo_ingreso="mesa_entrada",
+        )
 
     docs = db.execute(select(Documento).where(Documento.ingreso_id == ingreso.id)).scalars().all()
     for d in docs:
@@ -182,8 +202,9 @@ def vincular_ingreso(
             "expediente_id": ingreso.expediente_id,
             "anterior": anterior,
             "documentos": len(docs),
+            "reiteracion": reiteracion,
         },
     )
     db.commit()
     db.refresh(ingreso)
-    return ingreso_out(ingreso, persona)
+    return {**ingreso_out(ingreso, persona), "reiteracion": reiteracion}

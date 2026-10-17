@@ -248,6 +248,21 @@ def documento_out(d: Documento, visible: bool, cargado_por: Usuario | None = Non
     return base
 
 
+def reiteracion_out(r) -> dict:
+    return {
+        "id": r.id,
+        "fecha": r.fecha.isoformat(),
+        "motivo": r.motivo,
+        "tipo_ingreso": r.tipo_ingreso,
+        "tipo_ingreso_detalle": r.tipo_ingreso_detalle,
+        "derivado_por": r.derivado_por,
+        "derivado_por_detalle": r.derivado_por_detalle,
+        "ingreso_id": str(r.ingreso_id) if r.ingreso_id else None,
+        "usuario": usuario_breve(r.usuario),
+        "en": r.en.isoformat(),
+    }
+
+
 def evolucion_out(e) -> dict:
     return {
         "id": e.id,

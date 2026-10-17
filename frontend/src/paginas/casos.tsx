@@ -21,7 +21,7 @@ import {
 } from "../comun";
 import { FormDocumento, TablaDocumentos } from "./documentos";
 import { TablaCasos, TablaExpedientes } from "./legajo";
-import { FormCaratula, FormDemanda, ResumenCaratula, SeccionEvolucion } from "./formularios";
+import { FormCaratula, FormDemanda, FormReiteracion, ResumenCaratula, SeccionEvolucion, textoDe, type ReiteracionDato } from "./formularios";
 
 function parametro(nombre: string): string {
   const q = window.location.hash.split("?")[1] ?? "";
@@ -72,6 +72,7 @@ export function PaginaCasos() {
 
 interface CasoDetalle extends Omit<Caso, "persona"> {
   persona: PersonaDetalle;
+  reiteraciones: ReiteracionDato[];
   demandas: Demanda[];
   evoluciones: Evolucion[];
   antecedentes_sistema: { tiene: boolean; fecha_ultimo_ingreso: string | null };
@@ -81,11 +82,11 @@ interface CasoDetalle extends Omit<Caso, "persona"> {
   permisos: { modificar: boolean; derivar: boolean };
 }
 
-type Dialogo = null | "estado" | "asignar" | "documento" | "editar" | "caratula" | "demanda" | "escaneo-caratula";
+type Dialogo = null | "estado" | "asignar" | "documento" | "editar" | "caratula" | "demanda" | "escaneo-caratula" | "reiteracion";
 
 export function PaginaCaso({ id }: { id: string }) {
   const { datos: c, error, recargar } = useDatos(() => api.get<CasoDetalle>(`/casos/${id}`), [id]);
-  const { catalogos } = useSesion();
+  const { catalogos, formularios } = useSesion();
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [demandaEditada, setDemandaEditada] = useState<Demanda | null>(null);
   const [escaneoDemanda, setEscaneoDemanda] = useState<Demanda | null>(null);
@@ -173,6 +174,26 @@ export function PaginaCaso({ id }: { id: string }) {
         )}
         <h3>Motivo de ingreso</h3>
         <p className="texto-largo">{restringido ? "Reservado" : c.motivo || "—"}</p>
+        <h3>
+          Reiteraciones ({c.reiteraciones.length})
+          {c.permisos.modificar && !restringido && (
+            <button className="boton boton-chico" style={{ marginLeft: "0.8rem" }} onClick={() => setDialogo("reiteracion")}>
+              Registrar reiteración
+            </button>
+          )}
+        </h3>
+        {c.reiteraciones.length > 0 && (
+          <ul className="lista-simple">
+            {c.reiteraciones.map((x) => (
+              <li key={x.id}>
+                {fecha(x.fecha)}
+                {x.tipo_ingreso && ` · ${textoDe(formularios.tipos_ingreso, x.tipo_ingreso)}`}
+                {x.motivo && ` · ${x.motivo}`}
+                {x.usuario && <span className="tenue"> — {x.usuario.nombre_completo}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
         {c.antecedentes_sistema.tiene && c.caratula.antecedentes === false && (
           <div className="aviso aviso-advertencia">
             La carátula indica que no tiene antecedentes, pero SULAM registra un ingreso anterior
@@ -355,6 +376,11 @@ export function PaginaCaso({ id }: { id: string }) {
         </ol>
       </Seccion>
 
+      {dialogo === "reiteracion" && (
+        <Modal titulo={`Reiteración · ${c.numero}`} alCerrar={() => setDialogo(null)}>
+          <FormReiteracion caso={c as unknown as Caso} alGuardar={listo} />
+        </Modal>
+      )}
       {dialogo === "escaneo-caratula" && (
         <Modal titulo="Escaneo de la carátula firmada" alCerrar={() => setDialogo(null)}>
           <FormDocumento personaId={c.persona.id} casoFijo={c.id} tipoInicial="Carátula" alGuardar={listo} />

@@ -201,12 +201,29 @@ class CasoIn(CaratulaCampos):
     reservado: bool = False
     responsable_id: uuid.UUID | None = None
     ingreso_id: uuid.UUID | None = None
+    # Excepción a «una actuación por persona por año» (solo Administración, con motivo).
+    forzar_otra_actuacion: bool = False
+    motivo_forzado: str | None = Field(default=None, max_length=1000)
 
 
 class CasoPatch(Entrada):
     area_id: int | None = None
     motivo: str | None = Field(default=None, max_length=5000)
     reservado: bool | None = None
+
+
+class ReiteracionIn(Entrada):
+    fecha: date | None = None
+    motivo: str | None = Field(default=None, max_length=5000)
+    tipo_ingreso: str | None = None
+    tipo_ingreso_detalle: str | None = None
+    derivado_por: str | None = None
+    derivado_por_detalle: str | None = Field(default=None, max_length=300)
+    reabrir: bool = True
+
+    _limpiar = field_validator(
+        "motivo", "tipo_ingreso", "tipo_ingreso_detalle", "derivado_por", "derivado_por_detalle", mode="before"
+    )(_vacio_a_none)
 
 
 class EvolucionIn(Entrada):
