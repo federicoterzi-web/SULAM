@@ -19,6 +19,8 @@ AREAS = [
     "Departamento Admisión de Casos y Recepción de Denuncias",
     "Departamento Planificación y Estadística",
     "División Asistencia Administrativa",
+    # Guarda las carpetas en papel (nombre a confirmar con la Dirección).
+    "Oficina de Registro",
 ]
 
 # Documento de diseño, §6.2. Son administrables.
@@ -233,6 +235,7 @@ USUARIOS_DEMO = [
     ("jefa_cuidados", "Jefa de Cuidados (demo)", "Jefe/a de división", "División Cuidados y Promoción de Autonomía"),
     ("mesa", "Mesa de Entrada (demo)", "Mesa de Entrada", "División Asistencia Administrativa"),
     ("adminarea", "Administrativo de Área (demo)", "Administrativo de Área", "División Cuidados y Promoción de Autonomía"),
+    ("registro", "Oficina de Registro (demo)", "Administrativo de Área", "Oficina de Registro"),
 ]
 
 PERSONAS_DEMO = [

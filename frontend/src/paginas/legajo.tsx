@@ -1,7 +1,8 @@
+import { CarpetaFisica, SeccionCarpeta } from "./archivo";
 import { SeccionNegativa } from "./anses";
 import { SeccionInformes } from "./informes";
 import { UbicacionDomicilio } from "./ubicacion";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, Fragment } from "react";
 import { ApiError, api, type Caso, type EventoAuditoria, type Expediente, type Legajo, type PersonaResumen, type Vinculado } from "../api";
 import {
   Aviso,
@@ -134,6 +135,8 @@ export function PaginaLegajo({ id }: { id: string }) {
           <dd>{fechaHora(l.creado_en)}</dd>
         </dl>
       </Seccion>
+
+      <SeccionCarpeta personaId={l.id} />
 
       <SeccionNegativa personaId={l.id} />
 
@@ -324,6 +327,7 @@ export function TablaCasos({ casos, conPersona }: { casos: Caso[]; conPersona?: 
 }
 
 export function TablaExpedientes({ expedientes, casos = [] }: { expedientes: Expediente[]; casos?: Caso[] }) {
+  const [carpeta, setCarpeta] = useState<string | null>(null);
   if (expedientes.length === 0) return <Vacio>No hay expedientes vinculados.</Vacio>;
   const numeroCaso = Object.fromEntries(casos.map((c) => [c.id, c.numero]));
   return (
@@ -335,11 +339,13 @@ export function TablaExpedientes({ expedientes, casos = [] }: { expedientes: Exp
           <th>Organismo</th>
           <th>Carátula</th>
           <th>Caso</th>
+          <th>En papel</th>
         </tr>
       </thead>
       <tbody>
         {expedientes.map((x) => (
-          <tr key={x.id}>
+          <Fragment key={x.id}>
+          <tr>
             <td>
               <strong>{x.numero}</strong>
             </td>
@@ -347,7 +353,20 @@ export function TablaExpedientes({ expedientes, casos = [] }: { expedientes: Exp
             <td>{x.organismo ?? "—"}</td>
             <td>{x.caratula ?? "—"}</td>
             <td>{x.caso_id ? <Enlace a={`/casos/${x.caso_id}`}>{numeroCaso[x.caso_id] ?? "Ver caso"}</Enlace> : "—"}</td>
+            <td>
+              <button className="boton boton-chico" onClick={() => setCarpeta(carpeta === x.id ? null : x.id)}>
+                {carpeta === x.id ? "Cerrar" : "Dónde está"}
+              </button>
+            </td>
           </tr>
+          {carpeta === x.id && (
+            <tr className="fila-detalle">
+              <td colSpan={6}>
+                <CarpetaFisica expedienteId={x.id} />
+              </td>
+            </tr>
+          )}
+          </Fragment>
         ))}
       </tbody>
     </table>

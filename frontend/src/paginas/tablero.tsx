@@ -1,4 +1,5 @@
 // Página de inicio: cada rol ve lo que necesita para su trabajo (sulam/routers/inicio.py).
+import { PasesPendientes } from "./archivo";
 import { NovedadesPendientes } from "./novedades";
 import { useState, type ReactNode } from "react";
 import { FormEquipo } from "./equipo";
@@ -76,6 +77,7 @@ export function PaginaTablero() {
     <>
       {saludo}
       <NovedadesPendientes />
+      <PasesPendientes />
       {datos.perfil === "tecnico" ? (
         <InicioTecnico d={d} />
       ) : datos.perfil === "jefatura" ? (

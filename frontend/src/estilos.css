@@ -4001,3 +4001,157 @@ h1.hoja-titulo {
 .lecturas h3:first-child {
   margin-top: 0;
 }
+
+/* ================================================================ carpetas en papel y pases */
+
+.carpeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.carpeta-compacta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 1rem;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.carpeta-estado {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.carpeta-icono {
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+
+.carpeta-pendiente {
+  margin-top: 0.2rem;
+  color: var(--advertencia);
+  font-size: 0.9rem;
+}
+
+.carpeta-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  align-items: center;
+}
+
+.carpeta-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 34rem;
+  width: 100%;
+}
+
+.carpeta-historial {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.carpeta-historial li {
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--borde);
+}
+
+.pase-estado {
+  display: inline-block;
+  min-width: 5.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pase-hecho {
+  color: var(--acento);
+}
+
+.pase-pendiente {
+  color: var(--advertencia);
+}
+
+.pase-rechazado,
+.pase-cancelado {
+  color: var(--texto-tenue);
+}
+
+.fila-detalle td {
+  background: #f8f9fb;
+}
+
+.lista-pases {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fila-pase {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--borde);
+}
+
+.fila-pase:first-child {
+  border-top: none;
+}
+
+.fila-pase-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.pases-inicio {
+  display: block;
+  background: var(--info-claro);
+  border: 1px solid #b9d2ee;
+  border-radius: var(--radio);
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  color: var(--primario);
+  text-decoration: none;
+}
+
+.pases-inicio-movil {
+  border-radius: 12px;
+  margin: 4px 0 12px;
+  padding: 12px 14px;
+}
+
+.carpeta-movil .boton,
+.pases-movil .boton {
+  min-height: 46px;
+  flex: 1 1 auto;
+}
+
+.carpeta-movil select,
+.carpeta-movil input:not([type="checkbox"]) {
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.pases-movil .fila-pase {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.pases-movil .fila-pase-acciones {
+  width: 100%;
+}

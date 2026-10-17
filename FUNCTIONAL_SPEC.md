@@ -234,6 +234,16 @@ Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un
 - **Confirmación de lectura** («Leí y estoy al tanto»): una vez por persona, con fecha y hora. Quien publica ve «Leída por X de Y» y la lista de quién falta. Se puede publicar sin pedir confirmación.
 - Las no confirmadas aparecen arriba del inicio de cada perfil, en computadora y celular. Retirar una novedad la oculta (queda registrada en la auditoría).
 
+## 5 quindecies. Carpetas en papel y pases
+
+- Cada legajo y cada expediente tiene registrada **dónde está su carpeta en papel**: en un área (p. ej., Oficina de Registro) o en poder de una persona. Se ve en el legajo, en el caso (línea compacta), en cada expediente («Dónde está») y en el celular.
+- **Pedir la carpeta**: un toque (motivo opcional). Lo ve quien la tiene —o cualquiera de su área— en el inicio y en **Pases de carpetas**; al dársela toca **Entregado** y la carpeta pasa a quien la pidió. Si no puede, toca **No se puede** con el motivo.
+- **Devolver a Registro** / **Pasar a…** (otra área o persona): lo confirma quien la recibe con **Recibido**.
+- Un pase pendiente por carpeta. Quien la pidió puede cancelar. Cada movimiento queda en el historial de la carpeta y en la auditoría.
+- Si todavía no se sabe dónde está, cualquiera la registra; corregir una ubicación ya registrada lo hace quien la tiene (o Administración).
+- **Carga inicial**: en Pases de carpetas, cada área anota de una vez las carpetas que tiene pegando los números de legajo.
+- Área nueva «Oficina de Registro» (nombre a confirmar con la Dirección).
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.

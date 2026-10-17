@@ -102,6 +102,8 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Funcionalidad | Estado |
 |---|---|
 | Novedades de la Dirección y de las áreas, circulares adjuntas, confirmación de lectura | ✅ |
+| Carpetas en papel: ubicación y pases (pedir, entregar, devolver), carga inicial por número de legajo | ✅ |
+| Nombre del área de archivo y quiénes la integran | ⏳ a confirmar con la Dirección |
 
 ## Digitalización de fichas — en curso
 
@@ -109,7 +111,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0017) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0018) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |
@@ -135,7 +137,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 - [ ] Captura por QR desde el celular para la lectura automática de fichas.
 - [ ] Optimización de imágenes (perspectiva, recorte, compresión) y OCR asistido.
 - [ ] Plantillas institucionales e informes con estados (borrador, finalizado, copia física firmada).
-- [ ] Archivo físico: ubicaciones, movimientos, préstamos.
+- [x] Archivo físico: ubicaciones y pases de carpetas (pedido, entrega, devolución).
 - [ ] Autorizaciones con passkeys (WebAuthn).
 - [ ] Área de Cuidados: subsidios.
 - [ ] Estadísticas institucionales.

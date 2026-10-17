@@ -801,3 +801,67 @@ class NovedadLectura(Base):
     novedad_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("novedades.id", ondelete="CASCADE"), primary_key=True)
     usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"), primary_key=True)
     confirmada_en: Mapped[datetime] = _ts()
+
+
+# ---------------------------------------------------------------------------
+# Archivo físico: dónde está cada carpeta en papel y sus pases.
+# ---------------------------------------------------------------------------
+
+
+class UbicacionFisica(Base):
+    """Dónde está hoy la carpeta en papel de un legajo o de un expediente."""
+
+    __tablename__ = "ubicaciones_fisicas"
+    __table_args__ = (
+        CheckConstraint("(persona_id IS NULL) <> (expediente_id IS NULL)", name="ck_ubicacion_un_objeto"),
+        UniqueConstraint("persona_id", name="uq_ubicacion_persona"),
+        UniqueConstraint("expediente_id", name="uq_ubicacion_expediente"),
+    )
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    persona_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("personas.id"))
+    expediente_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("expedientes.id"))
+    area_id: Mapped[int] = mapped_column(ForeignKey("areas.id"))
+    # Persona que la tiene en su poder (si no, está en el área).
+    usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    desde: Mapped[datetime] = _ts()
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+
+    area: Mapped[Area] = relationship(lazy="joined")
+    usuario: Mapped[Usuario | None] = relationship(foreign_keys=[usuario_id], lazy="joined")
+
+
+class Pase(Base):
+    """Movimiento de una carpeta en papel.
+
+    - «pedido»: alguien pide la carpeta; la confirma quien la tiene al entregarla.
+    - «envio»: quien la tiene la pasa a otra área o persona; la confirma quien la recibe.
+    """
+
+    __tablename__ = "pases"
+    __table_args__ = (
+        CheckConstraint("(persona_id IS NULL) <> (expediente_id IS NULL)", name="ck_pase_un_objeto"),
+        CheckConstraint("tipo IN ('pedido', 'envio')", name="ck_pase_tipo"),
+        CheckConstraint("estado IN ('pendiente', 'hecho', 'rechazado', 'cancelado')", name="ck_pase_estado"),
+    )
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    tipo: Mapped[str] = mapped_column(String(10))
+    persona_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("personas.id"), index=True)
+    expediente_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("expedientes.id"), index=True)
+    desde_area_id: Mapped[int | None] = mapped_column(ForeignKey("areas.id"))
+    desde_usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    hacia_area_id: Mapped[int] = mapped_column(ForeignKey("areas.id"))
+    hacia_usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    motivo: Mapped[str | None] = mapped_column(Text)
+    estado: Mapped[str] = mapped_column(String(12), default="pendiente")
+    iniciado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    iniciado_en: Mapped[datetime] = _ts()
+    resuelto_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    resuelto_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    respuesta: Mapped[str | None] = mapped_column(Text)
+
+    desde_area: Mapped[Area | None] = relationship(foreign_keys=[desde_area_id], lazy="joined")
+    hacia_area: Mapped[Area] = relationship(foreign_keys=[hacia_area_id], lazy="joined")
+    desde_usuario: Mapped[Usuario | None] = relationship(foreign_keys=[desde_usuario_id], lazy="joined")
+    hacia_usuario: Mapped[Usuario | None] = relationship(foreign_keys=[hacia_usuario_id], lazy="joined")
+    iniciador: Mapped[Usuario | None] = relationship(foreign_keys=[iniciado_por], lazy="joined")
+    resolvio: Mapped[Usuario | None] = relationship(foreign_keys=[resuelto_por], lazy="joined")

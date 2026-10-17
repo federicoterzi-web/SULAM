@@ -1,3 +1,4 @@
+import { CarpetaFisica } from "./archivo";
 import { SeccionInformes } from "./informes";
 import { FormEquipo } from "./equipo";
 import { SeccionArticulaciones } from "./articulaciones";
@@ -164,6 +165,8 @@ export function PaginaCaso({ id }: { id: string }) {
           )}
         </div>
       </div>
+
+      {c.persona && <CarpetaFisica personaId={c.persona.id} compacto />}
 
       <Seccion
         titulo="Carátula de legajo"

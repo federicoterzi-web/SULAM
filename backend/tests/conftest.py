@@ -49,7 +49,7 @@ def esquema():
 
 
 TABLAS = [
-    "auditoria", "novedades_lecturas", "novedades", "constancias", "informes", "plantillas_informe", "casos_articulaciones", "contactos", "recursos", "registros_demanda", "casos_evoluciones", "documentos", "ingresos", "expedientes", "casos_asignaciones",
+    "auditoria", "pases", "ubicaciones_fisicas", "novedades_lecturas", "novedades", "constancias", "informes", "plantillas_informe", "casos_articulaciones", "contactos", "recursos", "registros_demanda", "casos_evoluciones", "documentos", "ingresos", "expedientes", "casos_asignaciones",
     "casos_estados_historial", "casos", "personas_vinculadas", "personas", "sesiones",
     "usuarios_roles", "usuarios", "roles_permisos", "roles", "tipos_vinculo",
     "tipos_documentales", "areas", "contadores",

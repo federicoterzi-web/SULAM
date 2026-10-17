@@ -1,6 +1,7 @@
 // Versión para celular: las mismas funciones de SULAM pensadas para el pulgar.
 // Pantallas cortas, botones grandes, teclado numérico para DNI y fechas, y la
 // cámara integrada. Nada se guarda en el teléfono: todo va directo al servidor.
+import { CarpetaFisica, PaginaPases, PasesPendientes } from "../paginas/archivo";
 import { NovedadesPendientes, PaginaNovedades } from "../paginas/novedades";
 import { PanelNegativa } from "../paginas/anses";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
@@ -87,6 +88,7 @@ export function Movil({ ruta, alSalir, alCambiarPassword }: { ruta: string; alSa
           <nav className="m-menu" onClick={(e) => e.stopPropagation()}>
             <MenuUsuario />
             <a href="#/m/novedades">Novedades</a>
+            <a href="#/m/pases">Pases de carpetas</a>
             <a href={"#" + equivalenteCompleto(p)}>Ver en la versión completa</a>
             <button onClick={alCambiarPassword}>Cambiar contraseña</button>
             <button onClick={salir}>Cerrar sesión</button>
@@ -158,6 +160,8 @@ function titulo(p: string[]): string {
       return "Mesa de Entrada";
     case "novedades":
       return "Novedades";
+    case "pases":
+      return "Pases de carpetas";
     case "informe":
       return "Informe";
     case "visitas":
@@ -198,6 +202,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "contactos") return "/contactos";
   if (p[0] === "ingreso") return "/mesa";
   if (p[0] === "novedades") return "/novedades";
+  if (p[0] === "pases") return "/pases";
   if (p[0] === "informe" && p[1]) return `/informes/${p[1]}`;
   if (p[0] === "visitas") return "/visitas";
   return "/";
@@ -223,6 +228,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       return <IngresoMovil />;
     case "novedades":
       return <PaginaNovedades movil />;
+    case "pases":
+      return <PaginaPases movil />;
     case "informe":
       return <PaginaInforme id={p[1]} movil key={p[1]} />;
     case "visitas":
@@ -423,6 +430,7 @@ function InicioMovil() {
         </div>
       )}
       <NovedadesPendientes movil />
+      <PasesPendientes movil />
       <CajaBusqueda inicial="" />
       <div className="m-acciones">
         {puede("mesa_entrada", "crear") && (
@@ -805,6 +813,9 @@ function LegajoMovil({ id }: { id: string }) {
       )}
 
       <InformesMovil ruta={`/personas/${id}/informes`} />
+
+      <h2 className="m-subtitulo">Carpeta en papel</h2>
+      <CarpetaFisica personaId={id} movil />
 
       <h2 className="m-subtitulo">Ubicación del domicilio</h2>
       <UbicacionDomicilio persona={l} puedeModificar={l.permisos.modificar} alCambiar={recargar} />
