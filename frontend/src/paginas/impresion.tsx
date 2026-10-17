@@ -2,6 +2,7 @@
 import { type ReactNode } from "react";
 import { api, type Caso, type Demanda, type Evolucion, type Opcion, type PersonaDetalle } from "../api";
 import { Aviso, Cargando, fecha, fechaHora, useDatos, useSesion } from "../comun";
+import { ConfirmarImpresion } from "./cola";
 
 interface CasoImpresion extends Omit<Caso, "persona"> {
   persona: PersonaDetalle;
@@ -10,9 +11,13 @@ interface CasoImpresion extends Omit<Caso, "persona"> {
 
 export function Impresion({ ruta }: { ruta: string }) {
   const [, , tipo, id] = ruta.split("?")[0].split("/");
+  // Tanda: #/imprimir/carpetas?ids=a,b,c  (una carátula por hoja)
+  const lote = (new URLSearchParams(ruta.split("?")[1] ?? "").get("ids") ?? "").split(",").filter(Boolean).slice(0, 200);
+  const caratulas = tipo === "carpetas" || tipo === "caratulas" ? lote : tipo === "carpeta" || tipo === "caratula" ? [id] : [];
   return (
     <div className="impresion">
       <div className="barra-impresion no-imprimir">
+        {lote.length > 0 && <span className="tenue">{lote.length} carátulas, una por hoja</span>}
         <button className="boton boton-primario" onClick={() => window.print()}>
           Imprimir
         </button>
@@ -20,10 +25,15 @@ export function Impresion({ ruta }: { ruta: string }) {
           Cerrar
         </button>
       </div>
+      <ConfirmarImpresion ids={caratulas} />
       {tipo === "caratula" ? (
         <ImprimirCaratula casoId={id} />
       ) : tipo === "carpeta" ? (
         <CaratulaCarpeta casoId={id} />
+      ) : tipo === "carpetas" ? (
+        lote.map((x, i) => <div key={x} className={i < lote.length - 1 ? "salto-hoja" : ""}><CaratulaCarpeta casoId={x} sinAvisoQr={i > 0} /></div>)
+      ) : tipo === "caratulas" ? (
+        lote.map((x, i) => <div key={x} className={i < lote.length - 1 ? "salto-hoja" : ""}><ImprimirCaratula casoId={x} /></div>)
       ) : tipo === "demanda" ? (
         <ImprimirDemanda demandaId={id} />
       ) : null}
@@ -427,7 +437,7 @@ interface CasoCarpeta extends CasoImpresion {
   reiteraciones?: { id: number; fecha: string }[];
 }
 
-function CaratulaCarpeta({ casoId }: { casoId: string }) {
+function CaratulaCarpeta({ casoId, sinAvisoQr }: { casoId: string; sinAvisoQr?: boolean }) {
   const { formularios: f } = useSesion();
   const { datos: c, error } = useDatos(() => api.get<CasoCarpeta>(`/casos/${casoId}`), [casoId]);
   const { datos: dir } = useDatos(
@@ -468,7 +478,7 @@ function CaratulaCarpeta({ casoId }: { casoId: string }) {
 
   return (
     <>
-    {dir && !dir.sirve_desde_otros_dispositivos && (
+    {!sinAvisoQr && dir && !dir.sirve_desde_otros_dispositivos && (
       <div className="aviso aviso-advertencia no-imprimir aviso-qr">
         El QR de esta carátula apunta a «{dir.url}» y no va a abrir el caso desde un celular. Pida a quien administra SULAM
         que configure la dirección oficial (SULAM_URL_PUBLICA) antes de imprimir.

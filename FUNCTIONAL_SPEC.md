@@ -122,6 +122,14 @@ SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `su
 - Validación con 60 fotos simuladas (perspectiva, giros, sombra, ruido, desenfoque): 60/60 hojas leídas y 0 errores en 1.815 casillas.
 - **Pendiente**: captura con el celular por QR, pantalla de revisión campo por campo, reconocimiento de dígitos y de texto (solo local, D-018), y lectura de las fichas anteriores sin marcas.
 
+## 5 quinquies. Impresión de carátulas en tanda
+
+- Todo caso nuevo (cargado en la computadora o en el celular) queda **pendiente de impresión** de su carátula.
+- *Imprimir carátulas* lista las pendientes: las que creó el usuario, las de su área o todas (según sus permisos de consulta), en orden de actuación. Por defecto vienen todas elegidas; se pueden destildar.
+- Se imprimen juntas, una por hoja, en formato para carpeta o en formato oficial.
+- Después de imprimir, SULAM pregunta si salieron bien: al confirmar, salen de la cola. Si no, se vuelven a imprimir.
+- Cada impresión queda en la auditoría; la fecha de la **primera** impresión se guarda en el caso y se muestra en su carátula. Imprimir de nuevo desde el caso no lo vuelve a poner en la cola.
+
 ## 5 quater. Versión para celular
 
 Misma aplicación, pantallas en `#/m` (D-020). Se abre sola al ingresar desde un teléfono; desde la versión completa se llega con *Versión para celular* y a la inversa con *Ver en la versión completa*.

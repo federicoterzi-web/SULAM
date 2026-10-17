@@ -2109,3 +2109,62 @@ a.indicador:hover {
   max-width: 210mm;
   margin: 0 auto 12px;
 }
+
+/* ---------------------------------------------------------------- cola de impresión */
+
+.segmentado {
+  display: inline-flex;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+
+.segmentado button {
+  font: inherit;
+  padding: 0.45rem 0.9rem;
+  border: 0;
+  background: var(--superficie);
+  cursor: pointer;
+}
+
+.segmentado button + button {
+  border-left: 1px solid var(--borde-fuerte);
+}
+
+.segmentado button.activo {
+  background: var(--primario);
+  color: #fff;
+  font-weight: 600;
+}
+
+.boton.deshabilitado {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.fila-elegible {
+  cursor: pointer;
+}
+
+.confirmar-impresion {
+  max-width: 210mm;
+  margin: 0 auto 12px;
+}
+
+.impresion .salto-hoja {
+  margin-bottom: 12mm;
+}
+
+@media print {
+  .impresion .salto-hoja {
+    break-after: page;
+    margin: 0;
+  }
+}
+
+@media print {
+  body,
+  .impresion {
+    background: #fff !important;
+  }
+}

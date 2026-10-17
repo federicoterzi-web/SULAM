@@ -315,7 +315,7 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
       }
     });
     if (r) {
-      avisar(`Caso creado · Actuación N° ${r.caratula.numero_actuacion}/${r.caratula.anio_actuacion}`);
+      avisar(`Caso creado · Actuación N° ${r.caratula.numero_actuacion}/${r.caratula.anio_actuacion} · carátula en la cola de impresión`);
       reemplazar(`/m/caso/${r.id}`);
     }
   };

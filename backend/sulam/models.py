@@ -306,6 +306,9 @@ class Caso(Base):
     cerrado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ultima_actividad: Mapped[datetime] = _ts()
     creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    # Primera impresión de la carátula (cola de impresión por tandas).
+    caratula_impresa_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    caratula_impresa_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
 
     area: Mapped[Area | None] = relationship(lazy="joined")
     asignaciones: Mapped[list["CasoAsignacion"]] = relationship(

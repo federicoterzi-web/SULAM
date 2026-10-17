@@ -132,6 +132,7 @@ def caso_out(c: Caso, visible: bool, persona: Persona | None = None, detalle: bo
         "ultima_actividad": c.ultima_actividad.isoformat() if c.ultima_actividad else None,
         "motivo": c.motivo if visible else None,
         "caratula": caratula_out(c, visible),
+        "caratula_impresa_en": c.caratula_impresa_en.isoformat() if c.caratula_impresa_en else None,
         "responsables": [
             usuario_breve(a.usuario) for a in c.asignaciones if a.hasta is None
         ],

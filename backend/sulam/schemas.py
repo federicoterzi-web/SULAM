@@ -415,3 +415,7 @@ class CatalogoIn(Entrada):
     nombre: str = Field(min_length=2, max_length=200)
     activo: bool = True
     reservado: bool | None = None
+
+
+class CaratulasImpresasIn(Entrada):
+    caso_ids: list[uuid.UUID] = Field(min_length=1, max_length=200)

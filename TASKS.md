@@ -57,6 +57,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Instalable como app (PWA) sin guardar datos; sesión de 15 min; reingreso sin perder lo escrito | ✅ |
 | Publicación con HTTPS (Caddy, perfil `publico`) | ✅ preparado · ⏳ dominio y servidor a definir con informática |
 | Probar en teléfonos reales del equipo (Android e iPhone) | ⏳ |
+| Cola de impresión: carátulas nuevas pendientes, impresión en tanda (una por hoja) | ✅ |
 
 ## Digitalización de fichas — en curso
 
@@ -64,7 +65,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 |---|---|
 | Fichas en papel v1 (carátula, registro de demanda, hoja de evolución) con marcas y QR | ✅ |
 | Lectura: enderezado, identificación por QR, casillas, recortes (validado con fotos simuladas) | ✅ |
-| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0008) |
+| Captura desde el celular con QR (por caso y por lotes) | ⏳ rama `captura-celular` (su migración pasa a ser la 0009) |
 | Pantalla de revisión campo por campo (recorte + valor + aprobar/corregir) | ⏳ |
 | Reconocimiento de dígitos manuscritos en cuadrículas (local) | ⏳ |
 | Lectura de las fichas anteriores (sin marcas) | ⏳ necesita fotos reales |

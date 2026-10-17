@@ -34,6 +34,7 @@ from ..permissions import (
     ve_reservado_de_persona,
 )
 from ..schemas import (
+    CaratulasImpresasIn,
     AsignacionIn,
     CambioEstadoIn,
     CaratulaCampos,
@@ -539,6 +540,54 @@ def finalizar_asignacion(
     db.commit()
     db.refresh(caso)
     return caso_out(caso, ve_caso_reservado(db, ctx, caso), db.get(Persona, caso.persona_id), detalle=True)
+
+
+# ---------------------------------------------------------------- cola de impresión
+
+
+@router.get("/caratulas/pendientes")
+def caratulas_pendientes(
+    de: str = Query("mias", pattern="^(mias|area|todas)$"),
+    ctx: Contexto = Depends(contexto),
+    db: Session = Depends(get_db),
+):
+    """Casos cuya carátula todavía no se imprimió, para imprimirlas en tanda."""
+    alcance = ctx.requerir("casos", "consultar")
+    consulta = (
+        select(Caso, Persona)
+        .join(Persona, Persona.id == Caso.persona_id)
+        .where(Caso.caratula_impresa_en.is_(None), filtro_casos(ctx, alcance))
+    )
+    if de == "mias":
+        consulta = consulta.where(Caso.creado_por == ctx.id)
+    elif de == "area":
+        consulta = consulta.where(Caso.area_id == ctx.usuario.area_id) if ctx.usuario.area_id else consulta.where(
+            Caso.creado_por == ctx.id
+        )
+    consulta = consulta.order_by(Caso.anio_actuacion, Caso.numero_actuacion, Caso.abierto_en).limit(200)
+    return [caso_out(c, ve_caso_reservado(db, ctx, c), p) for c, p in db.execute(consulta).all()]
+
+
+@router.post("/caratulas/impresas")
+def marcar_caratulas_impresas(
+    datos: CaratulasImpresasIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)
+):
+    """Registra que se imprimieron (la primera impresión queda; las reimpresiones se auditan)."""
+    momento = ahora()
+    nuevas = 0
+    for caso_id in dict.fromkeys(datos.caso_ids):
+        caso = obtener_caso(db, caso_id)
+        requerir_caso(db, ctx, caso, "casos", "consultar")
+        primera = caso.caratula_impresa_en is None
+        if primera:
+            caso.caratula_impresa_en = momento
+            caso.caratula_impresa_por = ctx.id
+            nuevas += 1
+        audit.registrar(
+            db, ctx, "imprimir_caratula", "caso", caso.id, caso.persona_id, {"reimpresion": not primera}
+        )
+    db.commit()
+    return {"marcadas": nuevas, "reimpresas": len(set(datos.caso_ids)) - nuevas}
 
 
 @router.get("/tablero")

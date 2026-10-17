@@ -164,6 +164,15 @@ export function PaginaCaso({ id }: { id: string }) {
         }
       >
         <ResumenCaratula caso={c as unknown as Caso} />
+        <p className="tenue">
+          {c.caratula_impresa_en ? (
+            <>Carátula impresa el {fecha(c.caratula_impresa_en)}.</>
+          ) : (
+            <>
+              Carátula pendiente de impresión: está en <Enlace a="/imprimir-caratulas">Imprimir carátulas</Enlace>.
+            </>
+          )}
+        </p>
         {escaneosCaratula.length > 0 && (
           <p>
             Original escaneado:{" "}

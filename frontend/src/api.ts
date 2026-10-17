@@ -231,6 +231,7 @@ export interface Caso {
   ultima_actividad: string | null;
   motivo: string | null;
   caratula: Caratula;
+  caratula_impresa_en?: string | null;
   responsables: UsuarioBreve[];
   persona?: PersonaResumen;
   historial_estados?: {
