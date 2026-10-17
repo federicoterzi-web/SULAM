@@ -337,9 +337,10 @@ ESTADOS = [
     {"valor": "cerrado", "texto": "Cerrado"},
 ]
 NEGATIVA = [
-    {"valor": "vigente", "texto": "Vigente"},
-    {"valor": "vencida", "texto": "Vencida"},
-    {"valor": "positiva", "texto": "Con beneficio (no es negativa)"},
+    {"valor": "vigente", "texto": "Negativa vigente"},
+    {"valor": "vencida", "texto": "Negativa vencida"},
+    {"valor": "con_registros", "texto": "Con beneficios registrados"},
+    {"valor": "no_emitida", "texto": "No emitida"},
 ]
 
 
@@ -397,10 +398,12 @@ def _negativa(op, v):
     def estado(x: str):
         base = Constancia.id == ultima
         if x == "vigente":
-            return and_(base, Constancia.resultado == "negativa", or_(Constancia.vence.is_(None), Constancia.vence >= hoy))
+            return and_(base, Constancia.resultado == "sin_registros", or_(Constancia.vence.is_(None), Constancia.vence >= hoy))
         if x == "vencida":
-            return and_(base, Constancia.resultado == "negativa", Constancia.vence < hoy)
-        return and_(base, Constancia.resultado != "negativa")
+            return and_(base, Constancia.resultado == "sin_registros", Constancia.vence < hoy)
+        if x not in ("con_registros", "no_emitida"):
+            raise FiltroInvalido("opción inexistente.")
+        return and_(base, Constancia.resultado == x)
 
     if op == "vacio":
         return not_(exists().where(Constancia.persona_id == Persona.id, Constancia.tipo == "negativa_anses"))

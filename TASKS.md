@@ -147,6 +147,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 ## Próximos pasos
 
 ### Antes de mostrar al equipo
+- [x] Datos de demostración para todos los roles y `probar-en-casa.bat` (README › Probar en casa).
 - [ ] Levantar con Docker en una computadora de la Dirección y recorrer con los usuarios de demostración.
 - [ ] Revisar con Ivana, Cristina y Nancy los roles propuestos y el texto de las pantallas.
 

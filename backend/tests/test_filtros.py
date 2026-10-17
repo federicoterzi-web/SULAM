@@ -98,3 +98,26 @@ def test_filtros_invalidos_y_permisos(admin, cliente):
     crear_usuario("mesa", "Mesa de Entrada")
     assert cliente("mesa").get("/api/filtros/ingresos").status_code == 200
     assert cliente("mesa").get("/api/filtros/casos").status_code == 403
+
+
+def test_filtro_negativa_anses(admin, db):
+    from datetime import timedelta
+
+    from sulam.models import Constancia
+
+    p1 = nueva_persona(admin, apellidos="VIGENTE", numero_documento="5555555")
+    p2 = nueva_persona(admin, apellidos="VENCIDA", nombres="Otra", numero_documento="6666666")
+    nueva_persona(admin, apellidos="SIN", nombres="Nadie", numero_documento="7777777")
+    hoy = date.today()
+    db.add(Constancia(persona_id=p1["id"], tipo="negativa_anses", fecha_emision=hoy, vence=hoy + timedelta(days=30), resultado="sin_registros"))
+    db.add(Constancia(persona_id=p2["id"], tipo="negativa_anses", fecha_emision=hoy - timedelta(days=200), vence=hoy - timedelta(days=100), resultado="sin_registros"))
+    db.commit()
+
+    def ap(o, v=None):
+        f = [{"c": "persona.negativa", "o": o, **({"v": v} if v else {})}]
+        return {p["apellidos"] for p in admin.get("/api/personas", params={"f": json.dumps(f)}).json()}
+
+    assert ap("es", ["vigente"]) == {"VIGENTE"}
+    assert ap("es", ["vencida"]) == {"VENCIDA"}
+    assert ap("vacio") == {"SIN"}
+    assert ap("no_es", ["vigente"]) == {"VENCIDA", "SIN"}

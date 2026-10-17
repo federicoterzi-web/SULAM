@@ -51,7 +51,8 @@ services:
     depends_on:
       - app
     environment:
-      SULAM_DOMINIO: ${SULAM_DOMINIO:?Definir SULAM_DOMINIO en .env para publicar con HTTPS}
+      # Obligatorio solo al publicar con HTTPS (perfil «publico»).
+      SULAM_DOMINIO: ${SULAM_DOMINIO:-}
     ports:
       - "80:80"
       - "443:443"

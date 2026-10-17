@@ -94,6 +94,8 @@ def _pdf_ficticio(titulo: str) -> bytes:
 
 
 def cmd_datos_demo(_args) -> None:
+    from datetime import date
+
     from . import audit
     from .config import get_settings
     from .db import session_factory
@@ -179,7 +181,7 @@ def cmd_datos_demo(_args) -> None:
         for idx, area, estado, tecnico, motivo in casos_def:
             anio, n, numero = nueva_actuacion(db)
             c = Caso(
-                numero=numero, numero_actuacion=n, anio_actuacion=anio,
+                numero=numero, numero_actuacion=n, anio_actuacion=anio, fecha_ingreso=date.today(),
                 persona_id=personas[idx].id, area_id=area.id,
                 estado=estado, motivo=motivo, creado_por=usuarios["carga"].id,
             )
@@ -239,6 +241,10 @@ def cmd_datos_demo(_args) -> None:
                     "tecnica1"].id,
             ))
         fichas_personal_demo(db, usuarios)
+        db.flush()
+        from .demo import cargar as cargar_ampliado
+
+        cargar_ampliado(db, usuarios, personas, casos, almacen)
         audit.registrar(db, None, "datos_demo", "sistema", detalle={"personas": len(personas)})
         db.commit()
         print("Datos de demostración cargados (todos FICTICIOS).")

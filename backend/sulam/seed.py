@@ -249,6 +249,8 @@ USUARIOS_DEMO = [
     ("adminarea", "Administrativo de Área (demo)", "Administrativo de Área", "División Cuidados y Promoción de Autonomía"),
     ("personal", "Personal (demo)", "Personal", "División Asistencia Administrativa"),
     ("registro", "Oficina de Registro (demo)", "Administrativo de Área", "Oficina de Registro"),
+    ("tecnica3", "Técnica Tres (demo)", "Técnico", "Departamento Admisión de Casos y Recepción de Denuncias"),
+    ("tecnico4", "Técnico Cuatro (demo)", "Técnico", "División Cuidados y Promoción de Autonomía"),
 ]
 
 PERSONAS_DEMO = [
@@ -273,10 +275,10 @@ def fichas_personal_demo(db: Session, usuarios: dict) -> int:
             continue
         a = Agente(
             nombre=nombre.replace(" (demo)", ""), usuario_id=u.id, area_id=u.area_id,
-            cargo=_rol, id_reloj=str(900 + n), boleta=f"D-{n:03d}", periodos=[{"desde": "2026-01-01", "hasta": None}],
+            cargo=_rol, id_reloj=str(900 + n), boleta=f"D-{n:03d}", periodos=[{"desde": f"{date.today().year - 1}-01-01", "hasta": None}],
         )
         db.add(a)
         db.flush()
-        db.add(Horario(agente_id=a.id, vigente_desde=date(2026, 1, 1), semana=turno, confirmado=True, fuente="Horario ficticio de demostración"))
+        db.add(Horario(agente_id=a.id, vigente_desde=date(date.today().year - 1, 1, 1), semana=turno, confirmado=True, fuente="Horario ficticio de demostración"))
         creadas += 1
     return creadas

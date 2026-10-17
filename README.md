@@ -13,6 +13,22 @@ Sistema de la **Dirección de Adultos Mayores de Tucumán** para centralizar el 
 
 ---
 
+## Probar en casa (datos ficticios, paso a paso)
+
+Sirve para recorrer SULAM desde todos los roles con datos **inventados**. No hace falta saber programar.
+
+1. **Instalar Docker Desktop** desde <https://www.docker.com/products/docker-desktop/> (Windows o Mac). En Windows, si lo pide, aceptar la instalación de WSL y reiniciar.
+2. **Abrir Docker Desktop** y esperar a que abajo a la izquierda diga *Engine running*.
+3. **Bajar SULAM**: en la página del repositorio en GitHub, botón verde **Code → Download ZIP**. Descomprimir el ZIP (por ejemplo, en *Documentos*).
+4. **Iniciar**: dentro de la carpeta, doble clic en **`probar-en-casa.bat`** (en Mac o Linux: `./probar-en-casa.sh` desde la terminal). La primera vez tarda entre 5 y 15 minutos porque descarga lo necesario; las siguientes, segundos.
+5. Se abre **http://localhost:8000**. Entrar con cualquiera de los [usuarios de demostración](#usuarios-de-demostración); la contraseña de todos es `demo-sulam-2026`.
+
+Para **apagarlo**: en la carpeta, clic derecho → *Abrir en Terminal* y escribir `docker compose down` (los datos quedan para la próxima). Para **empezar de cero** con datos nuevos: `docker compose down -v` y volver a abrir `probar-en-casa.bat`.
+
+**Desde el celular, en la misma wifi**: en el archivo `.env` (se crea en la carpeta al iniciar) agregar `SULAM_URL_PUBLICA=http://IP-DE-LA-COMPUTADORA:8000`, en `docker-compose.yml` cambiar `"127.0.0.1:8000:8000"` por `"8000:8000"`, y volver a iniciar. La IP se ve en Windows con `ipconfig` (dirección IPv4).
+
+Los datos de prueba incluyen unas 30 personas con casos repartidos en el año (indicadores, registros de demanda, evoluciones, reiteraciones), recursos y contactos en el mapa, ingresos de Mesa de Entrada, novedades, carpetas en papel con pases pendientes, negativas de ANSES (una vencida), un informe en borrador, tres semanas del reloj con incidencias, y pedidos de licencia, comisión y cambio de horario en todos los estados.
+
 ## Opción A · Con Docker (recomendada)
 
 Requisitos: [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows, macOS o Linux).
@@ -95,15 +111,16 @@ Creados por `datos-demo`. Contraseña de todos: `demo-sulam-2026`.
 
 | Usuario | Rol | Para probar |
 |---|---|---|
-| `direccion` | Dirección y Administración | Todo, incluida administración, auditoría y unificación |
-| `carga` | Carga de Datos | Alta y actualización de legajos y documentos |
-| `tecnica1` | Técnico (Admisión) | Inicio con sus casos por urgencia |
-| `tecnico2` | Técnico (Promoción) | Consulta de casos de otra área (sin poder modificarlos) |
-| `directora` | Directora | Inicio con el resumen general de la Dirección |
-| `jefa_admision` / `jefe_promocion` | Jefe/a de departamento | Inicio de su departamento: casos para asignar y carga del equipo |
-| `jefa_cuidados` | Jefe/a de división | Inicio de la División Cuidados y Promoción de Autonomía |
-| `mesa` | Mesa de Entrada | Ingresos sin legajo y su vinculación posterior |
-| `adminarea` | Administrativo de Área | Alcance limitado a su área |
+| `direccion` | Dirección y Administración | Todo: administración, auditoría, estadísticas de toda la Dirección, aprobar pedidos de personal |
+| `directora` | Directora | Inicio con el resumen de la Dirección, estadísticas, publicar novedades |
+| `jefa_admision` / `jefe_promocion` | Jefe/a de departamento | Casos para asignar, equipo, casos sin movimiento; aprobar pedidos de su gente (Mi asistencia); estadísticas de su área |
+| `jefa_cuidados` | Jefe/a de división | Lo mismo para la División Cuidados |
+| `tecnica1`, `tecnica3` (Admisión), `tecnico2` (Promoción), `tecnico4` (Cuidados) | Técnico | Mis casos por urgencia, evoluciones, informe en borrador, pedir carpetas, pedir licencias; también desde el celular |
+| `carga` | Carga de Datos | Casos sin registro de demanda, carga desde papel |
+| `mesa` | Mesa de Entrada | Ingresos sin legajo y su vinculación |
+| `registro` | Oficina de Registro | Carpetas para entregar y recibir (pases) |
+| `personal` | Personal | Planta, horarios, reloj, revisión de jornadas, pedidos para registrar, quién no está hoy, Excel de incidencias |
+| `adminarea` | Administrativo de Área | Alcance limitado a su área (hoy figura de licencia) |
 
 Además existe `admin` con la contraseña definida al inicializar.
 
