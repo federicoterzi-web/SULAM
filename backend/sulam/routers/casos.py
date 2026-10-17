@@ -94,6 +94,9 @@ def _asignar(db: Session, ctx: Contexto, caso: Caso, usuario_id: uuid.UUID, moti
 def listar_casos(
     estado: str | None = Query(None),
     asignados_a_mi: bool = False,
+    activos: bool = False,
+    sin_responsable: bool = False,
+    area_id: int | None = None,
     persona_id: uuid.UUID | None = None,
     q: str = Query("", max_length=200),
     limite: int = Query(50, ge=1, le=200),
@@ -108,6 +111,14 @@ def listar_casos(
     )
     if estado:
         consulta = consulta.where(Caso.estado == estado)
+    if activos:
+        consulta = consulta.where(Caso.estado != "cerrado")
+    if area_id is not None:
+        consulta = consulta.where(Caso.area_id == area_id)
+    if sin_responsable:
+        consulta = consulta.where(
+            ~Caso.id.in_(select(CasoAsignacion.caso_id).where(CasoAsignacion.hasta.is_(None)))
+        )
     if persona_id:
         consulta = consulta.where(Caso.persona_id == persona_id)
     if asignados_a_mi:

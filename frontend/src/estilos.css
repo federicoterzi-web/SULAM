@@ -2209,7 +2209,7 @@ a.indicador:hover {
 
 .inicio-columnas {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -3688,4 +3688,142 @@ h1.hoja-titulo {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 2px solid var(--primario);
+}
+
+/* ================================================================ inicio (revisión) */
+
+.tabla-compacta td {
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+.celda-motivo {
+  max-width: 28rem;
+  color: var(--texto-tenue);
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ver-todos {
+  margin: 0.5rem 0 0;
+  text-align: right;
+  font-weight: 600;
+}
+
+.lista-pendientes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lista-pendientes li {
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--borde);
+}
+
+.lista-pendientes li:first-child {
+  border-top: none;
+}
+
+.pendiente-tipo {
+  display: inline-block;
+  min-width: 16.5rem;
+  margin-right: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--advertencia);
+}
+
+.filtro-activo {
+  background: var(--info-claro);
+  border-radius: var(--radio);
+  padding: 0.5rem 0.8rem;
+}
+
+.m-indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+
+.m-indicador {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.m-indicador strong {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: var(--primario);
+}
+
+.m-indicador span {
+  font-size: 0.82rem;
+  color: var(--texto-tenue);
+  line-height: 1.25;
+}
+
+.m-indicador-alerta {
+  background: var(--advertencia-claro);
+  border-color: #e9c97a;
+}
+
+.m-indicador-alerta strong {
+  color: var(--advertencia);
+}
+
+.m-equipo {
+  padding: 4px 14px;
+}
+
+.m-equipo-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--borde);
+}
+
+.m-equipo-fila:first-child {
+  border-top: none;
+}
+
+.m-equipo-fila > span:first-child {
+  flex: 1 1 55%;
+}
+
+.m-equipo-fila > span:last-child {
+  flex: 0 1 45%;
+  text-align: right;
+}
+
+.tabla-areas td:first-child {
+  min-width: 11rem;
+}
+
+.tabla-areas td:not(:first-child),
+.tabla-areas th:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.inicio-columnas .seccion {
+  overflow-x: auto;
+}
+
+.tabla-areas th,
+.tabla-areas td {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }

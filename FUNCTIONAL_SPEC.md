@@ -161,6 +161,14 @@ Cada rol tiene una página de inicio (se elige en *Administración › Roles*). 
 
 Roles nuevos (propuesta, editables): **Directora** (ve todo, incluida la auditoría; no administra usuarios), **Jefe/a de departamento** y **Jefe/a de división** (mismos permisos; el departamento o la división sale del área del usuario: Participación y Sensibilización Ciudadana, Cuidados y Promoción de Autonomía, o quien cumple esa función en un departamento).
 
+
+**Revisión del 17/10/2026**
+- Dirección: columna «sin técnico» por departamento (enlaza a la lista filtrada), informes firmados en el mes y actividad reciente compacta; sin listas largas.
+- Jefaturas: el equipo (casos por persona) arriba; «Para asignar» con los 10 más antiguos y botón **Asignar equipo** en cada fila; enlace a la lista completa.
+- Técnico/a: bloque **Para terminar** con sus informes en borrador y los casos sin registro de demanda.
+- Carga de datos: primero los casos que ya tienen técnico a cargo; listas de 10.
+- Celular: inicio propio de cada perfil (números clave y su lista principal). «Agregar un lugar al mapa» solo para técnicos, jefaturas y Dirección. «Mis casos» muestra solo casos activos.
+- **Los vencimientos (negativa de ANSES, CUD y similares) no se muestran en los inicios**: si corresponde renovarlos depende del caso; se ven solo en el legajo.
 ## 5 sexies. Membrete institucional
 
 Las impresiones en **formato oficial** (carátula de legajo y registro de demanda) llevan el membrete de la Dirección (Ministerio de Desarrollo Social · Dirección de Adultos Mayores · Gobierno de Tucumán), centrado y del mismo tamaño que en el modelo de Word (11,3 × 2,5 cm). La carátula para carpeta y las fichas para escanear no lo llevan: la primera es de bajo consumo de tinta y en las fichas el logo podría confundir la lectura automática. Para actualizar el membrete se reemplaza `frontend/src/recursos/membrete-2024.jpg`.

@@ -1,4 +1,3 @@
-import { SeccionNegativa } from "./anses";
 import { SeccionInformes } from "./informes";
 import { FormEquipo } from "./equipo";
 import { SeccionArticulaciones } from "./articulaciones";
@@ -36,14 +35,45 @@ export function PaginaCasos() {
   const [mios, setMios] = useState(false);
   const [q, setQ] = useState("");
   const [filtroQ, setFiltroQ] = useState("");
+  // Filtros que llegan desde el inicio (p. ej., «casos sin técnico a cargo» de un área).
+  const [sinResponsable, setSinResponsable] = useState(parametro("sin_responsable") === "1");
+  const activos = parametro("activos") === "1";
+  const [area, setArea] = useState(parametro("area"));
+  const { catalogos } = useSesion();
   const { datos, error } = useDatos(
-    () => api.get<Caso[]>("/casos", { estado, asignados_a_mi: mios || undefined, q: filtroQ, limite: 100 }),
-    [estado, mios, filtroQ],
+    () =>
+      api.get<Caso[]>("/casos", {
+        estado,
+        asignados_a_mi: mios || undefined,
+        q: filtroQ,
+        limite: 200,
+        sin_responsable: sinResponsable || undefined,
+        activos: (sinResponsable && activos) || undefined,
+        area_id: area || undefined,
+      }),
+    [estado, mios, filtroQ, sinResponsable, area],
   );
+  const nombreArea = catalogos.areas.find((a) => String(a.id) === area)?.nombre;
 
   return (
     <>
       <h1>Casos</h1>
+      {(sinResponsable || area) && (
+        <p className="filtro-activo">
+          Mostrando {sinResponsable ? "casos activos sin técnico a cargo" : "casos"}
+          {nombreArea ? ` de ${nombreArea}` : ""}.{" "}
+          <button
+            type="button"
+            className="boton-enlace"
+            onClick={() => {
+              setSinResponsable(false);
+              setArea("");
+            }}
+          >
+            Quitar filtro
+          </button>
+        </p>
+      )}
       <form
         className="filtros"
         onSubmit={(e) => {
@@ -286,7 +316,6 @@ export function PaginaCaso({ id }: { id: string }) {
 
       <SeccionInformes casoId={c.id} puedeCrear={c.permisos.modificar} />
 
-      {c.persona && <SeccionNegativa personaId={c.persona.id} casoId={c.id} />}
 
       <SeccionArticulaciones casoId={c.id} puedeAgregar={c.permisos.modificar} />
 

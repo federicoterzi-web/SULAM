@@ -339,61 +339,294 @@ function FichaCaso({ c, conPersona }: { c: Caso; conPersona?: boolean }) {
 
 // ---------------------------------------------------------------- inicio
 
+interface InicioRespuesta {
+  perfil: string | null;
+  perfiles: { codigo: string; nombre: string }[];
+  datos?: any;
+}
+
+function leerPerfil(): string | null {
+  try {
+    return localStorage.getItem("sulam.inicio");
+  } catch {
+    return null;
+  }
+}
+
+function MiniIndicador({ valor, texto, alerta, a }: { valor: number; texto: string; alerta?: boolean; a?: string }) {
+  const contenido = (
+    <>
+      <strong>{valor}</strong>
+      <span>{texto}</span>
+    </>
+  );
+  const clase = `m-indicador ${alerta && valor > 0 ? "m-indicador-alerta" : ""}`;
+  return a ? (
+    <a className={clase} href={"#" + a}>
+      {contenido}
+    </a>
+  ) : (
+    <div className={clase}>{contenido}</div>
+  );
+}
+
 function InicioMovil() {
   const { yo, puede } = useSesion();
+  const [perfil, setPerfil] = useState<string | null>(leerPerfil());
   const consultaCasos = puede("casos", "consultar");
-  const mios = useDatos(
-    () => (consultaCasos ? api.get<Caso[]>("/casos", { asignados_a_mi: true, limite: 30 }) : Promise.resolve(null)),
-    [consultaCasos],
+  const inicio = useDatos(
+    () =>
+      api.get<InicioRespuesta>("/inicio", { perfil: perfil ?? undefined }).catch((e) => {
+        if (perfil && e?.status === 403) {
+          setPerfil(null);
+          return api.get<InicioRespuesta>("/inicio");
+        }
+        if (e?.status === 403) return { perfil: null, perfiles: [] } as InicioRespuesta;
+        throw e;
+      }),
+    [perfil],
   );
-  const recientes = useDatos(
-    () => (mios.datos && mios.datos.length === 0 ? api.get<Caso[]>("/casos", { limite: 15 }) : Promise.resolve(null)),
-    [mios.datos],
-  );
+  const r = inicio.datos;
+  const actual = r?.perfil ?? null;
+  // Cargar lugares en el mapa es tarea de quien sale a territorio o coordina.
+  const ofreceRecursos = puede("recursos", "crear") && (actual === "tecnico" || actual === "jefatura" || actual === "direccion");
   return (
     <>
       <p className="m-saludo">Hola, {yo.nombre_completo.split(" ")[0]}</p>
+      {r && r.perfiles.length > 1 && (
+        <div className="m-segmentado" role="tablist">
+          {r.perfiles.map((p) => (
+            <button
+              key={p.codigo}
+              role="tab"
+              aria-selected={p.codigo === actual}
+              className={p.codigo === actual ? "activo" : ""}
+              onClick={() => {
+                try {
+                  localStorage.setItem("sulam.inicio", p.codigo);
+                } catch {
+                  /* sin almacenamiento */
+                }
+                setPerfil(p.codigo);
+              }}
+            >
+              {p.nombre}
+            </button>
+          ))}
+        </div>
+      )}
       <CajaBusqueda inicial="" />
       <div className="m-acciones">
         {puede("mesa_entrada", "crear") && (
-          <Accion a="/m/ingreso" icono="⇲" principal={!consultaCasos}>
+          <Accion a="/m/ingreso" icono="⇲" principal={actual === "mesa"}>
             Registrar ingreso en Mesa de Entrada
           </Accion>
         )}
-        {consultaCasos && (
+        {consultaCasos && actual !== "mesa" && (
           <Accion a="/m/visitas" icono="⌖">
             Mapa de casos y salida de visitas
           </Accion>
         )}
-        {puede("recursos", "crear") && (
+        {ofreceRecursos && (
           <Accion a="/m/recursos/nuevo" icono="＋">
             Agregar un lugar al mapa de recursos
           </Accion>
         )}
       </div>
-      {consultaCasos && <h2 className="m-subtitulo">Mis casos</h2>}
-      {mios.error && <Aviso error={mios.error} />}
-      {!consultaCasos ? null : !mios.datos ? (
+      {inicio.error ? (
+        <Aviso error={inicio.error} />
+      ) : !r ? (
         <Cargando />
-      ) : mios.datos.length === 0 ? (
-        <p className="m-tenue">No tiene casos asignados.</p>
+      ) : actual === "tecnico" ? (
+        <InicioTecnicoMovil d={r.datos} />
+      ) : actual === "jefatura" ? (
+        <InicioJefaturaMovil d={r.datos} />
+      ) : actual === "direccion" ? (
+        <InicioDireccionMovil d={r.datos} />
+      ) : actual === "carga" ? (
+        <InicioCargaMovil d={r.datos} />
+      ) : actual === "mesa" ? (
+        <InicioMesaMovil d={r.datos} />
+      ) : actual === "administrativo_area" ? (
+        <ListaCasosMovil titulo={`Casos del área${r.datos.area ? ` · ${r.datos.area.replace(/^(Departamento|División) /, "")}` : ""}`} casos={r.datos.casos} vacio="No hay casos activos en el área." />
+      ) : null}
+    </>
+  );
+}
+
+function ListaCasosMovil({ titulo, casos, vacio, a }: { titulo: string; casos: Caso[]; vacio: string; a?: (c: Caso) => string }) {
+  return (
+    <>
+      <h2 className="m-subtitulo">{titulo}</h2>
+      {casos.length === 0 ? (
+        <p className="m-tenue">{vacio}</p>
       ) : (
-        mios.datos.map((c) => (
-          <Tarjeta key={c.id} a={`/m/caso/${c.id}`}>
+        casos.map((c) => (
+          <Tarjeta key={c.id} a={a ? a(c) : `/m/caso/${c.id}`}>
             <FichaCaso c={c} conPersona />
           </Tarjeta>
         ))
       )}
-      {recientes.datos && recientes.datos.length > 0 && (
+    </>
+  );
+}
+
+function InicioTecnicoMovil({ d }: { d: any }) {
+  const casos: (Caso & { alertas: Record<string, boolean> })[] = d.casos;
+  const n = (k: string) => casos.filter((c) => c.alertas[k]).length;
+  const sinRegistro = casos.filter((c) => c.alertas.sin_registro);
+  return (
+    <>
+      <div className="m-indicadores">
+        <MiniIndicador valor={casos.length} texto="casos a cargo" />
+        <MiniIndicador valor={n("maltrato")} texto="con maltrato" alerta />
+        <MiniIndicador valor={n("sin_actividad")} texto={`sin movimiento +${d.dias_sin_actividad} días`} alerta />
+      </div>
+      {(d.borradores.length > 0 || sinRegistro.length > 0) && (
         <>
-          <h2 className="m-subtitulo">Con actividad reciente</h2>
-          {recientes.datos.map((c) => (
-            <Tarjeta key={c.id} a={`/m/caso/${c.id}`}>
-              <FichaCaso c={c} conPersona />
+          <h2 className="m-subtitulo">Para terminar</h2>
+          {d.borradores.map((b: any) => (
+            <Tarjeta key={b.id} a={`/m/informe/${b.id}`}>
+              <span className="m-detalle">Informe en borrador</span>
+              <strong>{b.titulo}</strong>
+              <span className="m-detalle">
+                {nombre(b.persona)}
+                {b.actuacion ? ` · Actuación ${b.actuacion}` : ""}
+              </span>
+            </Tarjeta>
+          ))}
+          {sinRegistro.map((c) => (
+            <Tarjeta key={c.id} a={`/m/caso/${c.id}/demanda`}>
+              <span className="m-detalle">Falta el registro de demanda</span>
+              <strong>{c.persona && nombre(c.persona)}</strong>
+              <span className="m-detalle">Actuación {c.caratula?.numero_actuacion}/{c.caratula?.anio_actuacion}</span>
             </Tarjeta>
           ))}
         </>
       )}
+      <ListaCasosMovil titulo="Mis casos, por urgencia" casos={casos} vacio="No tiene casos activos a cargo." />
+    </>
+  );
+}
+
+function InicioJefaturaMovil({ d }: { d: any }) {
+  if (d.sin_area) return <p className="m-tenue">Su usuario no tiene un área asignada.</p>;
+  return (
+    <>
+      <p className="m-tenue">{d.area.nombre}</p>
+      <div className="m-indicadores">
+        <MiniIndicador valor={d.sin_responsable_cantidad} texto="sin técnico a cargo" alerta />
+        <MiniIndicador valor={d.activos} texto="casos activos" />
+        <MiniIndicador valor={d.sin_actividad_cantidad} texto={`sin movimiento +${d.dias_sin_actividad} días`} alerta />
+      </div>
+      <h2 className="m-subtitulo">Equipo</h2>
+      {d.equipo.length === 0 ? (
+        <p className="m-tenue">No hay otras personas cargadas en el área.</p>
+      ) : (
+        <div className="m-tarjeta m-equipo">
+          {d.equipo.map((e: any) => (
+            <div key={e.id} className="m-equipo-fila">
+              <span>{e.nombre_completo}</span>
+              <span>
+                <strong>{e.casos_activos}</strong> casos
+                {e.sin_actividad > 0 && <span className="texto-alerta"> · {e.sin_actividad} sin mov.</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      <ListaCasosMovil
+        titulo="Para asignar"
+        casos={d.sin_responsable}
+        vacio="Todos los casos activos tienen técnico a cargo."
+        a={(c) => `/m/caso/${c.id}/asignar`}
+      />
+      {d.sin_responsable_cantidad > d.sin_responsable.length && (
+        <p className="m-tenue">Se muestran {d.sin_responsable.length} de {d.sin_responsable_cantidad}.</p>
+      )}
+    </>
+  );
+}
+
+function InicioDireccionMovil({ d }: { d: any }) {
+  return (
+    <>
+      <div className="m-indicadores">
+        <MiniIndicador valor={d.totales.nuevas} texto={`actuaciones ${d.anio}`} />
+        <MiniIndicador valor={d.totales.activos} texto="casos activos" />
+        <MiniIndicador valor={d.sin_responsable.cantidad} texto="sin técnico a cargo" alerta />
+        <MiniIndicador valor={d.maltrato_mes.casos} texto="con maltrato este mes" alerta />
+      </div>
+      <h2 className="m-subtitulo">Por área</h2>
+      <div className="m-tarjeta m-equipo">
+        {d.por_area.map((a: any) => (
+          <div key={a.area} className="m-equipo-fila">
+            <span>{a.area.replace(/^(Departamento|División) /, "")}</span>
+            <span>
+              <strong>{a.activos}</strong> activos
+              {a.sin_responsable > 0 && <span className="texto-alerta"> · {a.sin_responsable} sin técnico</span>}
+            </span>
+          </div>
+        ))}
+      </div>
+      <ListaCasosMovil titulo="Actividad reciente" casos={d.recientes} vacio="Sin actividad." />
+    </>
+  );
+}
+
+function InicioCargaMovil({ d }: { d: any }) {
+  return (
+    <>
+      <div className="m-indicadores">
+        <MiniIndicador valor={d.sin_registro_cantidad} texto="sin registro de demanda" alerta />
+        <MiniIndicador valor={d.sin_escaneo_cantidad} texto="registros sin escaneo" alerta />
+        <MiniIndicador valor={d.pendientes_impresion} texto="carátulas por imprimir" />
+      </div>
+      <ListaCasosMovil
+        titulo="Falta cargar el registro de demanda"
+        casos={d.sin_registro}
+        vacio="Todos los casos activos tienen su registro."
+        a={(c) => `/m/caso/${c.id}/demanda`}
+      />
+      {d.sin_escaneo.length > 0 && (
+        <>
+          <h2 className="m-subtitulo">Falta el escaneo del original</h2>
+          {d.sin_escaneo.map((x: any) => (
+            <Tarjeta key={x.id} a={`/m/caso/${x.caso.id}/fotos?demanda=${x.id}`}>
+              <strong>{nombre(x.persona)}</strong>
+              <span className="m-detalle">
+                Registro del {fecha(x.fecha)} · Actuación {x.caso.actuacion} · tocar para fotografiarlo
+              </span>
+            </Tarjeta>
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
+function InicioMesaMovil({ d }: { d: any }) {
+  return (
+    <>
+      <div className="m-indicadores">
+        <MiniIndicador valor={d.hoy} texto="ingresos hoy" />
+        <MiniIndicador valor={d.sin_vincular_cantidad} texto="sin vincular a un legajo" alerta />
+      </div>
+      <h2 className="m-subtitulo">Para vincular</h2>
+      {d.sin_vincular.length === 0 ? (
+        <p className="m-tenue">Ninguno.</p>
+      ) : (
+        d.sin_vincular.map((i: any) => (
+          <Tarjeta key={i.id}>
+            <strong>{i.numero}</strong>
+            <span className="m-detalle">
+              {fecha(i.fecha_ingreso)} · {i.asunto}
+            </span>
+            {i.persona_mencionada && <span className="m-detalle">Persona mencionada: {i.persona_mencionada}</span>}
+          </Tarjeta>
+        ))
+      )}
+      <p className="m-tenue">Para vincular un ingreso a un legajo use la versión completa.</p>
     </>
   );
 }

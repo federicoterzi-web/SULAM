@@ -1,7 +1,9 @@
 // Página de inicio: cada rol ve lo que necesita para su trabajo (sulam/routers/inicio.py).
 import { useState, type ReactNode } from "react";
+import { FormEquipo } from "./equipo";
+import { rutaInforme } from "./informes";
 import { api, type Caso, type Documento, type Expediente, type Ingreso, type PersonaResumen } from "../api";
-import { Aviso, Cargando, ESTADOS, Enlace, Estado, Seccion, Vacio, fecha, nombre, useDatos, useSesion } from "../comun";
+import { Aviso, Cargando, ESTADOS, Enlace, Estado, Modal, Seccion, Vacio, fecha, fechaHora, nombre, useDatos, useSesion } from "../comun";
 import { TablaCasos } from "./legajo";
 import { textoDe } from "./formularios";
 
@@ -124,14 +126,62 @@ function Accesos({ children }: { children: ReactNode }) {
   return <div className="inicio-accesos">{children}</div>;
 }
 
+/** Lista corta de casos para el inicio: actuación, persona, motivo y apertura (sin repetir el área). */
+function CasosCompactos({ casos, accion }: { casos: Caso[]; accion?: (c: Caso) => ReactNode }) {
+  return (
+    <table className="tabla tabla-compacta">
+      <thead>
+        <tr>
+          <th>Actuación</th>
+          <th>Persona</th>
+          <th>Motivo</th>
+          <th>Abierto</th>
+          {accion && <th />}
+        </tr>
+      </thead>
+      <tbody>
+        {casos.map((c) => (
+          <tr key={c.id}>
+            <td>
+              <Actuacion c={c} />
+            </td>
+            <td>{c.persona ? nombre(c.persona) : "—"}</td>
+            <td className="celda-motivo">{c.motivo ?? ""}</td>
+            <td>{fecha(c.abierto_en)}</td>
+            {accion && <td className="celda-acciones">{accion(c)}</td>}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function VerTodos({ a, cantidad, mostrados }: { a: string; cantidad: number; mostrados: number }) {
+  if (cantidad <= mostrados) return null;
+  return (
+    <p className="ver-todos">
+      <Enlace a={a}>Ver los {cantidad} →</Enlace>
+    </p>
+  );
+}
+
 // ---------------------------------------------------------------- técnico
 
 interface CasoTecnico extends Caso {
   ultima_evolucion: { fecha: string; texto: string; autor: string | null } | null;
-  alertas: { maltrato: boolean; sin_actividad: boolean; reiteracion_reciente: boolean; nuevo: boolean };
+  alertas: { maltrato: boolean; sin_actividad: boolean; reiteracion_reciente: boolean; nuevo: boolean; sin_registro: boolean };
 }
 
-function InicioTecnico({ d }: { d: { casos: CasoTecnico[]; dias_sin_actividad: number } }) {
+interface Borrador {
+  id: string;
+  titulo: string;
+  version: number;
+  actualizado_en: string;
+  persona: PersonaResumen;
+  actuacion: string | null;
+}
+
+function InicioTecnico({ d }: { d: { casos: CasoTecnico[]; borradores: Borrador[]; dias_sin_actividad: number } }) {
   const n = (k: keyof CasoTecnico["alertas"]) => d.casos.filter((c) => c.alertas[k]).length;
   return (
     <>
@@ -141,6 +191,32 @@ function InicioTecnico({ d }: { d: { casos: CasoTecnico[]; dias_sin_actividad: n
         <Indicador valor={n("reiteracion_reciente")} texto="volvieron a consultar este mes" alerta={n("reiteracion_reciente") > 0} />
         <Indicador valor={n("sin_actividad")} texto={`sin movimiento hace más de ${d.dias_sin_actividad} días`} alerta={n("sin_actividad") > 0} />
       </div>
+      {(d.borradores.length > 0 || n("sin_registro") > 0) && (
+        <Seccion titulo="Para terminar">
+          <ul className="lista-pendientes">
+            {d.borradores.map((b) => (
+              <li key={b.id}>
+                <span className="pendiente-tipo">Informe en borrador</span>
+                <Enlace a={rutaInforme(b.id)}>
+                  {b.titulo}
+                  {b.version > 1 ? ` (versión ${b.version})` : ""}
+                </Enlace>{" "}
+                · {nombre(b.persona)}
+                {b.actuacion && ` · Actuación ${b.actuacion}`}
+                <span className="tenue"> · editado {fechaHora(b.actualizado_en)}</span>
+              </li>
+            ))}
+            {d.casos
+              .filter((c) => c.alertas.sin_registro)
+              .map((c) => (
+                <li key={c.id}>
+                  <span className="pendiente-tipo">Falta el registro de demanda</span>
+                  <Actuacion c={c} /> · {c.persona && nombre(c.persona)}
+                </li>
+              ))}
+          </ul>
+        </Seccion>
+      )}
       <Seccion titulo="Mis casos, por urgencia" acciones={<Enlace a="/legajos" className="boton">Buscar legajo</Enlace>}>
         {d.casos.length === 0 ? (
           <Vacio>No tiene casos activos asignados.</Vacio>
@@ -191,7 +267,9 @@ interface Jefatura {
   sin_area?: boolean;
   area: { id: number; nombre: string };
   sin_responsable: Caso[];
+  sin_responsable_cantidad: number;
   sin_actividad: Caso[];
+  sin_actividad_cantidad: number;
   equipo: { id: string; nombre_completo: string; casos_activos: number; sin_actividad: number }[];
   mes: { desde: string; nuevas: number; reiteraciones: number; cerrados: number };
   activos: number;
@@ -199,30 +277,30 @@ interface Jefatura {
   dias_sin_actividad: number;
 }
 
-function InicioJefatura({ d }: { d: Jefatura }) {
+function InicioJefatura({ d: inicial }: { d: Jefatura }) {
+  const [d, setD] = useState(inicial);
+  const [equipoDe, setEquipoDe] = useState<Caso | null>(null);
+  const recargar = async () => {
+    const r = await api.get<Respuesta<Jefatura>>("/inicio", { perfil: "jefatura" });
+    if (r.datos) setD(r.datos);
+  };
   if (d.sin_area) return <Aviso error="Su usuario no tiene un área asignada. Pida a quien administra SULAM que la cargue." tipo="info" />;
   const maximo = Math.max(1, ...d.equipo.map((e) => e.casos_activos));
   return (
     <>
       <p className="inicio-area">{d.area.nombre}</p>
       <div className="indicadores">
-        <Indicador valor={d.sin_responsable.length} texto="casos sin responsable" alerta={d.sin_responsable.length > 0} />
+        <Indicador
+          valor={d.sin_responsable_cantidad}
+          texto="casos sin técnico a cargo"
+          alerta={d.sin_responsable_cantidad > 0}
+          a={`/casos?sin_responsable=1&activos=1&area=${d.area.id}`}
+        />
         <Indicador valor={d.activos} texto="casos activos del departamento" a="/casos" />
         <Indicador valor={d.mes.nuevas} texto="actuaciones nuevas este mes" />
         <Indicador valor={d.mes.reiteraciones} texto="reiteraciones este mes" />
         <Indicador valor={d.pendientes_impresion} texto="carátulas por imprimir" a="/imprimir-caratulas" alerta={d.pendientes_impresion > 0} />
       </div>
-
-      <Seccion titulo="Para asignar">
-        {d.sin_responsable.length === 0 ? (
-          <Vacio>Todos los casos activos tienen responsable.</Vacio>
-        ) : (
-          <>
-            <p className="tenue">Abra el caso y use «Asignar» para elegir el técnico o técnica.</p>
-            <TablaCasos casos={d.sin_responsable} conPersona />
-          </>
-        )}
-      </Seccion>
 
       <Seccion titulo="Equipo">
         {d.equipo.length === 0 ? (
@@ -254,9 +332,48 @@ function InicioJefatura({ d }: { d: Jefatura }) {
         )}
       </Seccion>
 
-      <Seccion titulo={`Sin movimiento hace más de ${d.dias_sin_actividad} días`}>
-        {d.sin_actividad.length === 0 ? <Vacio>Ninguno.</Vacio> : <TablaCasos casos={d.sin_actividad} conPersona />}
+      <Seccion titulo="Para asignar">
+        {d.sin_responsable.length === 0 ? (
+          <Vacio>Todos los casos activos tienen técnico a cargo.</Vacio>
+        ) : (
+          <>
+            <CasosCompactos
+              casos={d.sin_responsable}
+              accion={(c) => (
+                <button className="boton boton-chico boton-primario" onClick={() => setEquipoDe(c)}>
+                  Asignar equipo
+                </button>
+              )}
+            />
+            <VerTodos a={`/casos?sin_responsable=1&activos=1&area=${d.area.id}`} cantidad={d.sin_responsable_cantidad} mostrados={d.sin_responsable.length} />
+          </>
+        )}
       </Seccion>
+
+      <Seccion titulo={`Sin movimiento hace más de ${d.dias_sin_actividad} días`}>
+        {d.sin_actividad.length === 0 ? (
+          <Vacio>Ninguno.</Vacio>
+        ) : (
+          <>
+            <CasosCompactos casos={d.sin_actividad} />
+            {d.sin_actividad_cantidad > d.sin_actividad.length && (
+              <p className="tenue">Se muestran los {d.sin_actividad.length} más antiguos de {d.sin_actividad_cantidad}.</p>
+            )}
+          </>
+        )}
+      </Seccion>
+
+      {equipoDe && (
+        <Modal titulo={`Equipo a cargo · ${equipoDe.persona ? nombre(equipoDe.persona) : equipoDe.numero}`} alCerrar={() => setEquipoDe(null)} ancho>
+          <FormEquipo
+            caso={equipoDe}
+            alGuardar={() => {
+              setEquipoDe(null);
+              recargar();
+            }}
+          />
+        </Modal>
+      )}
     </>
   );
 }
@@ -266,11 +383,12 @@ function InicioJefatura({ d }: { d: Jefatura }) {
 interface Direccion {
   anio: number;
   mes: string;
-  por_area: { area: string; nuevas: number; reiteraciones: number; activos: number; cerrados: number }[];
+  por_area: { area: string; area_id: number | null; nuevas: number; reiteraciones: number; activos: number; cerrados: number; sin_responsable: number }[];
   totales: { nuevas: number; reiteraciones: number; activos: number; cerrados: number };
   maltrato_mes: { casos: number; por_tipo: Record<string, number> };
-  sin_responsable: { cantidad: number; casos: Caso[] };
+  sin_responsable: { cantidad: number };
   sin_actividad: number;
+  informes_mes: number;
   recientes: Caso[];
   dias_sin_actividad: number;
 }
@@ -293,7 +411,7 @@ function InicioDireccion({ d }: { d: Direccion }) {
 
       <div className="inicio-columnas">
         <Seccion titulo="Por departamento">
-          <table className="tabla">
+          <table className="tabla tabla-areas">
             <thead>
               <tr>
                 <th>Área</th>
@@ -301,16 +419,26 @@ function InicioDireccion({ d }: { d: Direccion }) {
                 <th>Reiteraciones</th>
                 <th>Activos</th>
                 <th>Cerrados</th>
+                <th>Sin técnico</th>
               </tr>
             </thead>
             <tbody>
               {d.por_area.map((a) => (
                 <tr key={a.area}>
-                  <td>{a.area.replace(/^Departamento /, "")}</td>
+                  <td>{a.area.replace(/^(Departamento|División) /, "")}</td>
                   <td>{a.nuevas}</td>
                   <td>{a.reiteraciones}</td>
                   <td>{a.activos}</td>
                   <td>{a.cerrados}</td>
+                  <td>
+                    {a.sin_responsable > 0 && a.area_id !== null ? (
+                      <Enlace a={`/casos?sin_responsable=1&activos=1&area=${a.area_id}`} className="texto-alerta">
+                        {a.sin_responsable}
+                      </Enlace>
+                    ) : (
+                      a.sin_responsable || "—"
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -334,16 +462,21 @@ function InicioDireccion({ d }: { d: Direccion }) {
         </Seccion>
       </div>
 
-      <Seccion titulo="Alertas">
+      <Seccion titulo="Para seguir">
         <div className="indicadores">
-          <Indicador valor={d.sin_responsable.cantidad} texto="casos activos sin responsable" alerta={d.sin_responsable.cantidad > 0} />
+          <Indicador
+            valor={d.sin_responsable.cantidad}
+            texto="casos activos sin técnico a cargo"
+            alerta={d.sin_responsable.cantidad > 0}
+            a="/casos?sin_responsable=1&activos=1"
+          />
           <Indicador valor={d.sin_actividad} texto={`sin movimiento hace más de ${d.dias_sin_actividad} días`} alerta={d.sin_actividad > 0} />
+          <Indicador valor={d.informes_mes} texto={`informes firmados en ${mes}`} />
         </div>
-        {d.sin_responsable.casos.length > 0 && <TablaCasos casos={d.sin_responsable.casos} conPersona />}
       </Seccion>
 
       <Seccion titulo="Actividad reciente">
-        <TablaCasos casos={d.recientes} conPersona />
+        <CasosCompactos casos={d.recientes} />
       </Seccion>
     </>
   );
@@ -436,7 +569,17 @@ function InicioCarga({ d }: { d: Carga }) {
         </Enlace>
       </Accesos>
       <Seccion titulo="Falta cargar el registro de demanda">
-        {d.sin_registro.length === 0 ? <Vacio>Todos los casos activos tienen su registro.</Vacio> : <TablaCasos casos={d.sin_registro} conPersona />}
+        {d.sin_registro.length === 0 ? (
+          <Vacio>Todos los casos activos tienen su registro.</Vacio>
+        ) : (
+          <>
+            <p className="tenue">Primero los que ya tienen técnico a cargo.</p>
+            <TablaCasos casos={d.sin_registro} conPersona />
+            {d.sin_registro_cantidad > d.sin_registro.length && (
+              <p className="tenue">Se muestran {d.sin_registro.length} de {d.sin_registro_cantidad}.</p>
+            )}
+          </>
+        )}
       </Seccion>
       <Seccion titulo="Falta adjuntar el escaneo del original">
         {d.sin_escaneo.length === 0 ? (

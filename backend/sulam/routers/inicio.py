@@ -22,6 +22,7 @@ from ..models import (
     CasoEvolucion,
     Documento,
     Expediente,
+    Informe,
     Ingreso,
     Persona,
     RegistroDemanda,
@@ -122,6 +123,9 @@ def _tecnico(db: Session, ctx: Contexto) -> dict:
             select(Reiteracion.caso_id).where(Reiteracion.caso_id.in_(ids), Reiteracion.fecha >= hace30)
         ).scalars()
     )
+    con_registro = set(
+        db.execute(select(RegistroDemanda.caso_id).where(RegistroDemanda.caso_id.in_(ids))).scalars()
+    )
     limite = _limite_actividad()
     nuevo_desde = ahora() - timedelta(days=7)
     casos = []
@@ -138,6 +142,7 @@ def _tecnico(db: Session, ctx: Contexto) -> dict:
             "sin_actividad": c.ultima_actividad < limite,
             "reiteracion_reciente": c.id in reiterados,
             "nuevo": asignaciones[c.id] >= nuevo_desde,
+            "sin_registro": c.id not in con_registro,
         }
         casos.append(d)
     casos.sort(
@@ -149,7 +154,27 @@ def _tecnico(db: Session, ctx: Contexto) -> dict:
             d["ultima_actividad"] or "",
         )
     )
-    return {"casos": casos, "dias_sin_actividad": DIAS_SIN_ACTIVIDAD}
+    # Informes en borrador: los que redactó o los de sus casos.
+    borradores = []
+    for i, c, p in db.execute(
+        select(Informe, Caso, Persona)
+        .outerjoin(Caso, Caso.id == Informe.caso_id)
+        .join(Persona, Persona.id == Informe.persona_id)
+        .where(Informe.estado == "borrador", (Informe.creado_por == ctx.id) | Informe.caso_id.in_(ids))
+        .order_by(Informe.actualizado_en.desc())
+        .limit(10)
+    ).all():
+        borradores.append(
+            {
+                "id": str(i.id),
+                "titulo": i.titulo,
+                "version": i.version,
+                "actualizado_en": i.actualizado_en.isoformat(),
+                "persona": persona_resumen(p),
+                "actuacion": f"{c.numero_actuacion}/{c.anio_actuacion}" if c and c.numero_actuacion else None,
+            }
+        )
+    return {"casos": casos, "borradores": borradores, "dias_sin_actividad": DIAS_SIN_ACTIVIDAD}
 
 
 def _jefatura(db: Session, ctx: Contexto) -> dict:
@@ -163,16 +188,18 @@ def _jefatura(db: Session, ctx: Contexto) -> dict:
     limite = _limite_actividad()
 
     sin_responsable = _casos(
-        db, ctx, _base(ctx).where(Caso.area_id == area_id, _activos(), ~_con_responsable()).order_by(Caso.abierto_en).limit(50)
+        db, ctx, _base(ctx).where(Caso.area_id == area_id, _activos(), ~_con_responsable()).order_by(Caso.abierto_en).limit(10)
     )
+    sin_responsable_cantidad = _contar(db, del_area, _activos(), ~_con_responsable())
     sin_actividad = _casos(
         db,
         ctx,
         _base(ctx)
         .where(Caso.area_id == area_id, _activos(), _con_responsable(), Caso.ultima_actividad < limite)
         .order_by(Caso.ultima_actividad)
-        .limit(20),
+        .limit(10),
     )
+    sin_actividad_cantidad = _contar(db, del_area, _activos(), _con_responsable(), Caso.ultima_actividad < limite)
 
     # Carga de trabajo del equipo: personas del área con casos asignados.
     activos_por = dict(
@@ -206,7 +233,9 @@ def _jefatura(db: Session, ctx: Contexto) -> dict:
     return {
         "area": {"id": area.id, "nombre": area.nombre},
         "sin_responsable": sin_responsable,
+        "sin_responsable_cantidad": sin_responsable_cantidad,
         "sin_actividad": sin_actividad,
+        "sin_actividad_cantidad": sin_actividad_cantidad,
         "equipo": equipo,
         "mes": {
             "desde": mes.isoformat(),
@@ -231,7 +260,7 @@ def _direccion(db: Session, ctx: Contexto) -> dict:
     limite = _limite_actividad()
 
     nombres = {a.id: a.nombre for a in db.execute(select(Area)).scalars()}
-    por_area: dict = defaultdict(lambda: {"nuevas": 0, "reiteraciones": 0, "activos": 0, "cerrados": 0})
+    por_area: dict = defaultdict(lambda: {"nuevas": 0, "reiteraciones": 0, "activos": 0, "cerrados": 0, "sin_responsable": 0})
 
     def sumar(clave, consulta):
         for area_id, n in db.execute(consulta).all():
@@ -239,6 +268,10 @@ def _direccion(db: Session, ctx: Contexto) -> dict:
 
     sumar("nuevas", select(Caso.area_id, func.count(Caso.id)).where(visibles, Caso.anio_actuacion == anio).group_by(Caso.area_id))
     sumar("activos", select(Caso.area_id, func.count(Caso.id)).where(visibles, _activos()).group_by(Caso.area_id))
+    sumar(
+        "sin_responsable",
+        select(Caso.area_id, func.count(Caso.id)).where(visibles, _activos(), ~_con_responsable()).group_by(Caso.area_id),
+    )
     sumar(
         "cerrados",
         select(Caso.area_id, func.count(Caso.id))
@@ -253,7 +286,7 @@ def _direccion(db: Session, ctx: Contexto) -> dict:
         .group_by(Caso.area_id),
     )
     areas = sorted(
-        ({"area": nombres.get(k, "Sin área"), **v} for k, v in por_area.items()),
+        ({"area": nombres.get(k, "Sin área"), "area_id": k, **v} for k, v in por_area.items()),
         key=lambda x: -(x["nuevas"] + x["activos"]),
     )
 
@@ -263,7 +296,11 @@ def _direccion(db: Session, ctx: Contexto) -> dict:
     ).scalars().all()
     tipos = Counter(i for ind in con_maltrato for i in ind or [] if str(i).startswith("maltrato."))
 
-    sin_responsable_q = _base(ctx).where(_activos(), ~_con_responsable())
+    firmados_mes = db.execute(
+        select(func.count(Informe.id))
+        .join(Caso, Caso.id == Informe.caso_id)
+        .where(visibles, Informe.estado.in_(("firmado", "reemplazado")), Informe.firmado_en >= mes)
+    ).scalar_one()
     return {
         "anio": anio,
         "mes": mes.isoformat(),
@@ -275,12 +312,10 @@ def _direccion(db: Session, ctx: Contexto) -> dict:
             "cerrados": sum(a["cerrados"] for a in areas),
         },
         "maltrato_mes": {"casos": len(con_maltrato), "por_tipo": dict(tipos)},
-        "sin_responsable": {
-            "cantidad": _contar(db, visibles, _activos(), ~_con_responsable()),
-            "casos": _casos(db, ctx, sin_responsable_q.order_by(Caso.abierto_en).limit(8)),
-        },
+        "sin_responsable": {"cantidad": _contar(db, visibles, _activos(), ~_con_responsable())},
         "sin_actividad": _contar(db, visibles, _activos(), Caso.ultima_actividad < limite),
-        "recientes": _casos(db, ctx, _base(ctx).order_by(Caso.ultima_actividad.desc()).limit(10)),
+        "informes_mes": firmados_mes,
+        "recientes": _casos(db, ctx, _base(ctx).order_by(Caso.ultima_actividad.desc()).limit(8)),
         "dias_sin_actividad": DIAS_SIN_ACTIVIDAD,
     }
 
@@ -316,11 +351,14 @@ def _carga(db: Session, ctx: Contexto) -> dict:
         .join(Persona, Persona.id == RegistroDemanda.persona_id)
         .where(visibles, RegistroDemanda.cargado_desde_papel, ~escaneada)
         .order_by(RegistroDemanda.fecha)
-        .limit(20)
+        .limit(10)
     ).all()
     return {
         "sin_registro_cantidad": _contar(db, visibles, _activos(), sin_registro),
-        "sin_registro": _casos(db, ctx, _base(ctx).where(_activos(), sin_registro).order_by(Caso.abierto_en).limit(20)),
+        # Primero los que ya tienen técnico: son los que necesitan el registro para trabajarse.
+        "sin_registro": _casos(
+            db, ctx, _base(ctx).where(_activos(), sin_registro).order_by(~_con_responsable(), Caso.abierto_en).limit(10)
+        ),
         "sin_escaneo_cantidad": db.execute(
             select(func.count(RegistroDemanda.id))
             .join(Caso, Caso.id == RegistroDemanda.caso_id)

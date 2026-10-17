@@ -105,3 +105,28 @@ def test_jefe_de_division_igual_que_jefe_de_departamento_en_su_area(admin, clien
     assert jefa.get(f"/api/casos/{caso['id']}").json()["motivo"] == "caso de la división"
     roles = {x["nombre"]: x for x in admin.get("/api/admin/roles").json()}
     assert roles["Jefe/a de división"]["permisos"] == roles["Jefe/a de departamento"]["permisos"]
+
+
+def test_pendientes_del_tecnico_y_filtros(admin, cliente):
+    areas = _areas(admin)
+    crear_usuario("tec", "Técnico", AREA_ADMISION)
+    tec_id = _usuarios(admin)["Tec"]
+    p = nueva_persona(admin, apellidos="PEND", numero_documento="6666666")
+    caso = nuevo_caso(admin, p["id"], area_id=areas[AREA_ADMISION], responsables_ids=[tec_id])
+    cerrado = nuevo_caso(admin, nueva_persona(admin, apellidos="CERR", numero_documento="7777777")["id"], responsables_ids=[tec_id])
+    admin.post(f"/api/casos/{cerrado['id']}/estado", json={"estado": "cerrado", "motivo": "Prueba"})
+    tec = cliente("tec")
+    inf = tec.post("/api/informes", json={"caso_id": caso["id"]}).json()
+
+    d = tec.get("/api/inicio").json()["datos"]
+    assert [c["id"] for c in d["casos"]] == [caso["id"]]  # el cerrado no aparece
+    assert d["casos"][0]["alertas"]["sin_registro"] is True
+    assert [b["id"] for b in d["borradores"]] == [inf["id"]]
+
+    # Sin técnico a cargo, por área (enlaces del inicio).
+    sin = nuevo_caso(admin, nueva_persona(admin, apellidos="SIN", numero_documento="8888888")["id"], area_id=areas[AREA_ADMISION])
+    r = admin.get("/api/casos", params={"sin_responsable": True, "activos": True, "area_id": areas[AREA_ADMISION]}).json()
+    assert [c["id"] for c in r] == [sin["id"]]
+    dir_ = admin.get("/api/inicio", params={"perfil": "direccion"}).json()["datos"]
+    fila = next(a for a in dir_["por_area"] if a["area_id"] == areas[AREA_ADMISION])
+    assert fila["sin_responsable"] == 1 and "informes_mes" in dir_
