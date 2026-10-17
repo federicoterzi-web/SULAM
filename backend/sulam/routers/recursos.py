@@ -48,6 +48,17 @@ TIPOS = [
     {"codigo": "cuidador", "texto": "Cuidador/a domiciliario/a formado/a"},
 ]
 CODIGOS_TIPO = {t["codigo"] for t in TIPOS}
+
+# De dónde sale cada dato de la base institucional.
+ORIGENES = [
+    {"codigo": "relevamiento", "texto": "Relevamiento de la Dirección"},
+    {"codigo": "capacitacion", "texto": "Capacitación (Participación y Sensibilización Ciudadana)"},
+    {"codigo": "articulacion", "texto": "Articulación en un caso"},
+    {"codigo": "derivacion", "texto": "Derivación, nota u oficio recibido"},
+    {"codigo": "referencia", "texto": "Referencia de otra institución"},
+    {"codigo": "otro", "texto": "Otro"},
+]
+CODIGOS_ORIGEN = {o["codigo"] for o in ORIGENES}
 CATEGORIAS = {c["codigo"] for t in TIPOS for c in t.get("categorias", [])}
 
 # Tucumán, para limitar la búsqueda de direcciones y validar coordenadas.
@@ -56,7 +67,7 @@ CAJA_TUCUMAN = {"oeste": -66.3, "sur": -28.1, "este": -64.4, "norte": -26.0}
 CAMPOS = (
     "tipo", "categoria", "nombre", "direccion", "localidad", "departamento", "lat", "lng",
     "telefono", "telefono_alternativo", "email", "horario", "referente", "referente_cargo",
-    "servicios", "observaciones", "zonas", "formacion", "disponibilidad", "activo",
+    "servicios", "observaciones", "zonas", "formacion", "disponibilidad", "origen", "origen_detalle", "activo",
 )
 
 
@@ -80,10 +91,12 @@ class RecursoIn(Entrada):
     zonas: list[str] | None = None
     formacion: str | None = Field(default=None, max_length=3000)
     disponibilidad: str | None = Field(default=None, max_length=300)
+    origen: str | None = None
+    origen_detalle: str | None = Field(default=None, max_length=300)
     activo: bool = True
 
     _limpiar = field_validator(
-        "categoria", "direccion", "localidad", "departamento", "telefono", "telefono_alternativo",
+        "origen", "origen_detalle", "categoria", "direccion", "localidad", "departamento", "telefono", "telefono_alternativo",
         "email", "horario", "referente", "referente_cargo", "servicios", "observaciones",
         "formacion", "disponibilidad", mode="before",
     )(_vacio_a_none)
@@ -100,6 +113,8 @@ def _validar(v: dict) -> None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Tipo de recurso inválido.")
     if v.get("categoria") is not None and v["categoria"] not in CATEGORIAS:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Categoría inválida.")
+    if v.get("origen") is not None and v["origen"] not in CODIGOS_ORIGEN:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Origen inválido.")
     if (v.get("lat") is None) != (v.get("lng") is None):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indique latitud y longitud, o ninguna.")
     if v.get("lat") is not None:
@@ -133,6 +148,7 @@ def catalogo(ctx: Contexto = Depends(contexto)):
     cfg = get_settings()
     return {
         "tipos": TIPOS,
+        "origenes": ORIGENES,
         "departamentos": DEPARTAMENTOS,
         "mapa": {
             "teselas": cfg.mapa_teselas,

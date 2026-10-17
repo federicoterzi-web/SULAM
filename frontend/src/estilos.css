@@ -2629,3 +2629,16 @@ a.indicador:hover {
 .salida {
   margin-bottom: 1rem;
 }
+
+.resultados-busqueda {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie);
+}
+
+.resultados-busqueda li {
+  padding: 0.25rem 0;
+}

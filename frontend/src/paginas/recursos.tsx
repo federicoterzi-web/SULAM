@@ -13,6 +13,7 @@ export interface TipoRecurso {
 
 export interface CatalogoRecursos {
   tipos: TipoRecurso[];
+  origenes: { codigo: string; texto: string }[];
   departamentos: string[];
   mapa: ConfigMapa;
   geocodificador: boolean;
@@ -40,6 +41,8 @@ export interface Recurso {
   zonas: string[];
   formacion: string | null;
   disponibilidad: string | null;
+  origen: string | null;
+  origen_detalle: string | null;
   activo: boolean;
   creado_por: string | null;
   actualizado_en: string | null;
@@ -53,6 +56,43 @@ export function textoTipo(cat: CatalogoRecursos, r: Pick<Recurso, "tipo" | "cate
 
 export function telefonoLimpio(t: string) {
   return t.replace(/[^\d+]/g, "");
+}
+
+export function textoOrigen(cat: CatalogoRecursos, x: { origen: string | null; origen_detalle: string | null }): string | null {
+  if (!x.origen && !x.origen_detalle) return null;
+  const t = cat.origenes.find((o) => o.codigo === x.origen)?.texto;
+  return [t, x.origen_detalle].filter(Boolean).join(" · ");
+}
+
+/** De dónde salió el dato: alimenta la base institucional desde todas las fuentes. */
+export function CampoOrigen({
+  cat,
+  origen,
+  detalle,
+  alCambiar,
+}: {
+  cat: CatalogoRecursos;
+  origen: string;
+  detalle: string;
+  alCambiar: (origen: string, detalle: string) => void;
+}) {
+  return (
+    <div className="grilla">
+      <Campo etiqueta="Cómo se obtuvo el dato">
+        <select value={origen} onChange={(e) => alCambiar(e.target.value, detalle)}>
+          <option value="">—</option>
+          {cat.origenes.map((o) => (
+            <option key={o.codigo} value={o.codigo}>
+              {o.texto}
+            </option>
+          ))}
+        </select>
+      </Campo>
+      <Campo etiqueta="Detalle" ayuda="Ej.: nombre y fecha de la capacitación, caso, nota recibida.">
+        <input value={detalle} onChange={(e) => alCambiar(origen, e.target.value)} />
+      </Campo>
+    </div>
+  );
 }
 
 export function useCatalogoRecursos() {
@@ -252,6 +292,7 @@ export function PaginaRecurso({ id }: { id: string }) {
             {r.tipo === "cuidador" && fila("Formación", r.formacion)}
             {r.tipo === "cuidador" && fila("Disponibilidad", r.disponibilidad)}
             {fila("Observaciones", r.observaciones)}
+            {fila("Cómo se obtuvo", textoOrigen(c, r))}
           </dl>
           <p className="tenue">Actualizado el {fechaHora(r.actualizado_en)}.</p>
           <div className="fila-botones">
@@ -313,6 +354,8 @@ function FormRecurso({
     zonas: recurso?.zonas ?? ([] as string[]),
     formacion: recurso?.formacion ?? "",
     disponibilidad: recurso?.disponibilidad ?? "",
+    origen: recurso?.origen ?? "",
+    origen_detalle: recurso?.origen_detalle ?? "",
     activo: recurso?.activo ?? true,
   });
   const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(
@@ -442,6 +485,7 @@ function FormRecurso({
           <Campo etiqueta="Observaciones">
             <textarea rows={2} value={d.observaciones} onChange={(e) => set({ observaciones: e.target.value })} />
           </Campo>
+          <CampoOrigen cat={cat} origen={d.origen} detalle={d.origen_detalle} alCambiar={(o, det) => set({ origen: o, origen_detalle: det })} />
           {recurso && (
             <label className="casilla">
               <input type="checkbox" checked={!d.activo} onChange={(e) => set({ activo: !e.target.checked })} />

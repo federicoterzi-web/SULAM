@@ -133,6 +133,12 @@ SULAM genera las fichas oficiales en papel (*Fichas en papel* en el menú, o `su
 
 Técnicos de municipios y comunas y referentes de otras instituciones: nombre, cargo, institución (opcionalmente vinculada a un recurso del mapa), tipo de institución, localidad, departamento, teléfonos, WhatsApp, correo, temas con los que se articula y observaciones. Búsqueda por nombre, institución, cargo, localidad o tema; filtros por departamento y tipo. Botones para llamar, escribir por WhatsApp (el número se normaliza: «381 15 400-1111» → 5493814001111) y enviar correo. La ficha de cada institución del mapa muestra sus contactos. En el celular, *Recursos › Contactos*. Mismos permisos que la red de recursos; quien deja la institución se da de baja, no se borra.
 
+### Base institucional desde todas las fuentes
+
+Contactos y recursos registran **cómo se obtuvo el dato**: relevamiento de la Dirección, capacitación (Participación y Sensibilización Ciudadana), articulación en un caso, derivación o nota recibida, referencia de otra institución u otro, con un detalle (por ejemplo, el nombre y la fecha de la capacitación).
+
+**Articulación en casos**: cada caso tiene la sección *Articulación con otras instituciones* (fecha, con quién, motivo y resultado). Se elige un contacto del directorio o, si no está, se lo agrega en el momento: queda en el directorio con origen «Articulación en un caso» y el número de actuación. El directorio muestra en cuántos casos se articuló con cada contacto. Registrar requiere poder modificar el caso; queda en la auditoría.
+
 ## 5 decies. Casos en el mapa y salidas de visita
 
 - **Ubicación del domicilio** (legajo): se marca en el mapa o, durante una visita, con «Estoy en el domicilio: usar mi ubicación» (GPS del celular). Nunca se consulta a servicios externos con domicilios de casos. Queda en la auditoría.

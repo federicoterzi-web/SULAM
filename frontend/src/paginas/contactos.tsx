@@ -2,7 +2,7 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../api";
 import { Aviso, Campo, Cargando, Enlace, Modal, Vacio, useDatos, useEnvio, useSesion } from "../comun";
-import { telefonoLimpio, useCatalogoRecursos, type CatalogoRecursos } from "./recursos";
+import { CampoOrigen, telefonoLimpio, textoOrigen, useCatalogoRecursos, type CatalogoRecursos } from "./recursos";
 
 export interface Contacto {
   id: string;
@@ -20,6 +20,9 @@ export interface Contacto {
   email: string | null;
   temas: string | null;
   observaciones: string | null;
+  origen: string | null;
+  origen_detalle: string | null;
+  articulaciones: number;
   activo: boolean;
   creado_por: string | null;
 }
@@ -123,6 +126,12 @@ export function TablaContactos({ contactos, cat, alEditar }: { contactos: Contac
             <td>
               <strong>{x.nombre}</strong>
               {x.cargo && <div className="tenue">{x.cargo}</div>}
+              {textoOrigen(cat, x) && <div className="tenue origen">Origen: {textoOrigen(cat, x)}</div>}
+              {x.articulaciones > 0 && (
+                <div className="tenue">
+                  Articulado en {x.articulaciones} {x.articulaciones === 1 ? "caso" : "casos"}
+                </div>
+              )}
             </td>
             <td>
               {x.recurso ? <Enlace a={`/recursos/${x.recurso.id}`}>{x.institucion ?? x.recurso.nombre}</Enlace> : x.institucion ?? "—"}
@@ -179,6 +188,8 @@ export function FormContacto({
     email: contacto?.email ?? "",
     temas: contacto?.temas ?? "",
     observaciones: contacto?.observaciones ?? "",
+    origen: contacto?.origen ?? (recurso ? "relevamiento" : ""),
+    origen_detalle: contacto?.origen_detalle ?? "",
     activo: contacto?.activo ?? true,
   });
   const { enviando, error, ejecutar } = useEnvio();
@@ -241,6 +252,7 @@ export function FormContacto({
       <Campo etiqueta="Observaciones">
         <textarea rows={2} value={d.observaciones} onChange={(e) => set({ observaciones: e.target.value })} />
       </Campo>
+      <CampoOrigen cat={cat} origen={d.origen} detalle={d.origen_detalle} alCambiar={(o, det) => set({ origen: o, origen_detalle: det })} />
       {contacto && (
         <label className="casilla">
           <input type="checkbox" checked={!d.activo} onChange={(e) => set({ activo: !e.target.checked })} />

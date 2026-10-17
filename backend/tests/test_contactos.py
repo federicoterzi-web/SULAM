@@ -36,3 +36,46 @@ def test_directorio(admin, cliente):
     propio = tec.post("/api/contactos", json={"nombre": "Contacto del técnico"}).json()
     assert tec.patch(f"/api/contactos/{propio['id']}", json={"activo": False}).json()["activo"] is False
     assert len(tec.get("/api/contactos").json()) == 5
+
+
+def test_base_institucional_desde_articulaciones_y_capacitaciones(admin, cliente):
+    from conftest import AREA_ADMISION, nueva_persona, nuevo_caso
+
+    catalogo = admin.get("/api/recursos/catalogo").json()
+    assert {o["codigo"] for o in catalogo["origenes"]} >= {"capacitacion", "articulacion"}
+
+    # Participación carga lo relevado en una capacitación.
+    c1 = admin.post(
+        "/api/contactos",
+        json={"nombre": "Promotora Ficticia", "institucion": "CIC Barrio Ejemplo", "origen": "capacitacion",
+              "origen_detalle": "Taller de buen trato, octubre 2026"},
+    ).json()
+    assert c1["origen"] == "capacitacion" and c1["articulaciones"] == 0
+    assert admin.post("/api/contactos", json={"nombre": "X Y", "origen": "inventado"}).status_code == 400
+
+    # Un técnico articula en su caso con un contacto existente y con uno nuevo.
+    crear_usuario("tec", "Técnico", AREA_ADMISION)
+    tec_id = {u["nombre_completo"]: u["id"] for u in admin.get("/api/catalogos").json()["usuarios_asignables"]}["Tec"]
+    caso = nuevo_caso(admin, nueva_persona(admin)["id"], responsable_id=tec_id)
+    tec = cliente("tec")
+    r = tec.post(f"/api/casos/{caso['id']}/articulaciones", json={"contacto_id": c1["id"], "motivo": "Acompañamiento en el barrio"})
+    assert r.status_code == 201, r.text
+    r = tec.post(
+        f"/api/casos/{caso['id']}/articulaciones",
+        json={"nuevo_contacto": {"nombre": "Juez Ficticio", "institucion": "Juzgado de Familia (ficticio)", "categoria": "justicia"},
+              "motivo": "Pedido de informe", "resultado": "Se envió el informe"},
+    )
+    assert r.status_code == 201, r.text
+    nuevo = r.json()["contacto"]
+    assert nuevo["origen"] == "articulacion" and nuevo["origen_detalle"] == f"Caso {caso['caratula']['numero_actuacion']}/{caso['caratula']['anio_actuacion']}"
+
+    lista = tec.get(f"/api/casos/{caso['id']}/articulaciones").json()
+    assert [x["contacto"]["nombre"] for x in lista] == ["Juez Ficticio", "Promotora Ficticia"]
+    usos = {c["nombre"]: c["articulaciones"] for c in admin.get("/api/contactos").json()}
+    assert usos["Promotora Ficticia"] == 1 and usos["Juez Ficticio"] == 1
+    assert admin.get(f"/api/contactos/{c1['id']}/articulaciones").json()[0]["motivo"] == "Acompañamiento en el barrio"
+
+    # Sin el caso asignado no se puede registrar.
+    crear_usuario("otro", "Técnico", AREA_ADMISION)
+    assert cliente("otro").post(f"/api/casos/{caso['id']}/articulaciones", json={"contacto_id": c1["id"]}).status_code == 403
+    assert tec.post(f"/api/casos/{caso['id']}/articulaciones", json={"motivo": "sin nadie"}).status_code == 400

@@ -9,25 +9,29 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import Field, field_validator
-from sqlalchemy import or_, select
+from datetime import date
+
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from .. import audit
+from ._comun import obtener_caso, registrar_actividad_caso
 from ..db import get_db
 from ..deps import contexto
 from ..formularios import DEPARTAMENTOS
-from ..models import Contacto, Recurso
-from ..permissions import Contexto
+from ..models import Articulacion, Caso, Contacto, Persona, Recurso
+from ..permissions import Contexto, filtro_casos, requerir_caso
 from ..schemas import Entrada, _vacio_a_none
 from ..security import ahora
 from ..textutil import escapar_like, normalizar
-from .recursos import CATEGORIAS
+from .recursos import CATEGORIAS, CODIGOS_ORIGEN
 
 router = APIRouter(tags=["recursos"])
 
 CAMPOS = (
     "nombre", "cargo", "institucion", "categoria", "recurso_id", "localidad", "departamento",
-    "telefono", "telefono_alternativo", "whatsapp", "email", "temas", "observaciones", "activo",
+    "telefono", "telefono_alternativo", "whatsapp", "email", "temas", "observaciones", "origen", "origen_detalle",
+    "activo",
 )
 
 
@@ -45,10 +49,12 @@ class ContactoIn(Entrada):
     email: str | None = Field(default=None, max_length=200)
     temas: str | None = Field(default=None, max_length=3000)
     observaciones: str | None = Field(default=None, max_length=5000)
+    origen: str | None = None
+    origen_detalle: str | None = Field(default=None, max_length=300)
     activo: bool = True
 
     _limpiar = field_validator(
-        "cargo", "institucion", "categoria", "localidad", "departamento", "telefono",
+        "origen", "origen_detalle", "cargo", "institucion", "categoria", "localidad", "departamento", "telefono",
         "telefono_alternativo", "whatsapp", "email", "temas", "observaciones", mode="before",
     )(_vacio_a_none)
 
@@ -83,14 +89,17 @@ class ContactoPatch(ContactoIn):
 def _validar(db: Session, v: dict) -> None:
     if v.get("categoria") is not None and v["categoria"] not in CATEGORIAS:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Categoría inválida.")
+    if v.get("origen") is not None and v["origen"] not in CODIGOS_ORIGEN:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Origen inválido.")
     if v.get("departamento") is not None and v["departamento"] not in DEPARTAMENTOS:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Departamento inválido.")
     if v.get("recurso_id") is not None and db.get(Recurso, v["recurso_id"]) is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "El recurso vinculado no existe.")
 
 
-def contacto_out(c: Contacto) -> dict:
+def contacto_out(c: Contacto, articulaciones: int = 0) -> dict:
     d = {k: getattr(c, k) for k in CAMPOS}
+    d["articulaciones"] = articulaciones
     d["id"] = str(c.id)
     d["recurso_id"] = str(c.recurso_id) if c.recurso_id else None
     d["recurso"] = {"id": str(c.recurso.id), "nombre": c.recurso.nombre, "tipo": c.recurso.tipo} if c.recurso else None
@@ -132,7 +141,15 @@ def listar(
             )
         )
     consulta = consulta.order_by(Contacto.departamento.nulls_last(), Contacto.institucion_norm, Contacto.nombre_norm).limit(1000)
-    return [contacto_out(c) for c in db.execute(consulta).unique().scalars()]
+    contactos = list(db.execute(consulta).unique().scalars())
+    usos = dict(
+        db.execute(
+            select(Articulacion.contacto_id, func.count(Articulacion.id))
+            .where(Articulacion.contacto_id.in_([c.id for c in contactos]))
+            .group_by(Articulacion.contacto_id)
+        ).all()
+    )
+    return [contacto_out(c, usos.get(c.id, 0)) for c in contactos]
 
 
 @router.post("/contactos", status_code=201)
@@ -192,3 +209,120 @@ def modificar(
         db.commit()
         db.refresh(c)
     return contacto_out(c)
+
+
+
+# ---------------------------------------------------------------- articulaciones en casos
+
+
+class ArticulacionIn(Entrada):
+    contacto_id: uuid.UUID | None = None
+    recurso_id: uuid.UUID | None = None
+    # Si la persona todavía no está en el directorio, se la agrega al registrar la articulación.
+    nuevo_contacto: ContactoIn | None = None
+    fecha: date | None = None
+    motivo: str | None = Field(default=None, max_length=3000)
+    resultado: str | None = Field(default=None, max_length=3000)
+
+    _limpiar = field_validator("motivo", "resultado", mode="before")(_vacio_a_none)
+
+
+def articulacion_out(a: Articulacion) -> dict:
+    return {
+        "id": a.id,
+        "caso_id": str(a.caso_id),
+        "fecha": a.fecha.isoformat(),
+        "motivo": a.motivo,
+        "resultado": a.resultado,
+        "contacto": contacto_out(a.contacto) if a.contacto else None,
+        "recurso": {"id": str(a.recurso.id), "nombre": a.recurso.nombre, "tipo": a.recurso.tipo} if a.recurso else None,
+        "usuario": {"id": str(a.usuario.id), "nombre_completo": a.usuario.nombre_completo} if a.usuario else None,
+        "en": a.en.isoformat(),
+    }
+
+
+@router.get("/casos/{caso_id}/articulaciones")
+def articulaciones_del_caso(caso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    caso = obtener_caso(db, caso_id)
+    requerir_caso(db, ctx, caso, "casos", "consultar")
+    filas = db.execute(
+        select(Articulacion).where(Articulacion.caso_id == caso.id).order_by(Articulacion.fecha.desc(), Articulacion.id.desc())
+    ).unique().scalars()
+    return [articulacion_out(a) for a in filas]
+
+
+@router.post("/casos/{caso_id}/articulaciones", status_code=201)
+def registrar_articulacion(
+    caso_id: uuid.UUID, datos: ArticulacionIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)
+):
+    caso = obtener_caso(db, caso_id)
+    requerir_caso(db, ctx, caso, "casos", "modificar")
+    contacto_id = datos.contacto_id
+    if datos.nuevo_contacto is not None:
+        ctx.requerir("recursos", "crear")
+        v = datos.nuevo_contacto.model_dump()
+        v["origen"] = v.get("origen") or "articulacion"
+        v["origen_detalle"] = v.get("origen_detalle") or f"Caso {caso.numero_actuacion}/{caso.anio_actuacion}"
+        _validar(db, v)
+        nuevo = Contacto(
+            **v,
+            nombre_norm=normalizar(v["nombre"]),
+            institucion_norm=normalizar(v["institucion"]) if v["institucion"] else None,
+            creado_por=ctx.id,
+            actualizado_por=ctx.id,
+        )
+        db.add(nuevo)
+        db.flush()
+        audit.registrar(db, ctx, "crear", "contacto", nuevo.id, detalle={"nombre": nuevo.nombre, "desde_caso": caso.numero})
+        contacto_id = nuevo.id
+    if contacto_id is None and datos.recurso_id is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indique con quién se articuló.")
+    if contacto_id is not None and db.get(Contacto, contacto_id) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El contacto no existe.")
+    if datos.recurso_id is not None and db.get(Recurso, datos.recurso_id) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El recurso no existe.")
+    a = Articulacion(
+        caso_id=caso.id,
+        contacto_id=contacto_id,
+        recurso_id=datos.recurso_id,
+        fecha=datos.fecha or ahora().astimezone().date(),
+        motivo=datos.motivo,
+        resultado=datos.resultado,
+        usuario_id=ctx.id,
+    )
+    db.add(a)
+    registrar_actividad_caso(caso)
+    db.flush()
+    audit.registrar(
+        db, ctx, "articular", "caso", caso.id, caso.persona_id,
+        {"contacto_id": str(contacto_id) if contacto_id else None, "recurso_id": str(datos.recurso_id) if datos.recurso_id else None},
+    )
+    db.commit()
+    db.refresh(a)
+    return articulacion_out(a)
+
+
+@router.get("/contactos/{contacto_id}/articulaciones")
+def casos_del_contacto(contacto_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """En qué casos se articuló con este contacto (dentro del alcance de consulta del usuario)."""
+    ctx.requerir("recursos", "consultar")
+    alcance = ctx.alcance("casos", "consultar")
+    if alcance is None:
+        return []
+    filas = db.execute(
+        select(Articulacion, Caso, Persona)
+        .join(Caso, Caso.id == Articulacion.caso_id)
+        .join(Persona, Persona.id == Caso.persona_id)
+        .where(Articulacion.contacto_id == contacto_id, filtro_casos(ctx, alcance))
+        .order_by(Articulacion.fecha.desc())
+    ).unique().all()
+    return [
+        {
+            "fecha": a.fecha.isoformat(),
+            "motivo": a.motivo,
+            "resultado": a.resultado,
+            "caso": {"id": str(c.id), "actuacion": f"{c.numero_actuacion}/{c.anio_actuacion}"},
+            "persona": f"{p.apellidos.upper()}, {p.nombres}",
+        }
+        for a, c, p in filas
+    ]

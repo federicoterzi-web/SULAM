@@ -1,3 +1,4 @@
+import { SeccionArticulaciones } from "./articulaciones";
 import { useState, type FormEvent } from "react";
 import { api, type Caso, type Demanda, type Documento, type Evolucion, type Expediente, type Ingreso, type PersonaDetalle } from "../api";
 import {
@@ -279,6 +280,8 @@ export function PaginaCaso({ id }: { id: string }) {
       </Seccion>
 
       <SeccionEvolucion casoId={c.id} evoluciones={c.evoluciones} puedeAgregar={c.permisos.modificar} alAgregar={recargar} />
+
+      <SeccionArticulaciones casoId={c.id} puedeAgregar={c.permisos.modificar} />
 
       <Seccion titulo="Responsables">
         {c.asignaciones && c.asignaciones.length > 0 ? (

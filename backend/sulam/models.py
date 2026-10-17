@@ -602,6 +602,9 @@ class Recurso(Base):
     zonas: Mapped[list | None] = mapped_column(JSONB)
     formacion: Mapped[str | None] = mapped_column(Text)
     disponibilidad: Mapped[str | None] = mapped_column(String(300))
+    # De dónde salió el dato (ver routers/recursos.ORIGENES).
+    origen: Mapped[str | None] = mapped_column(String(30))
+    origen_detalle: Mapped[str | None] = mapped_column(String(300))
 
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
@@ -630,6 +633,8 @@ class Contacto(Base):
     email: Mapped[str | None] = mapped_column(String(200))
     temas: Mapped[str | None] = mapped_column(Text)
     observaciones: Mapped[str | None] = mapped_column(Text)
+    origen: Mapped[str | None] = mapped_column(String(30))
+    origen_detalle: Mapped[str | None] = mapped_column(String(300))
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
     creado_en: Mapped[datetime] = _ts()
@@ -637,3 +642,22 @@ class Contacto(Base):
     actualizado_en: Mapped[datetime] = _ts()
 
     recurso: Mapped["Recurso | None"] = relationship(lazy="joined")
+
+
+class Articulacion(Base):
+    """Articulación con otra institución o persona en un caso puntual."""
+
+    __tablename__ = "casos_articulaciones"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    caso_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("casos.id"), index=True)
+    contacto_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("contactos.id"), index=True)
+    recurso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("recursos.id"), index=True)
+    fecha: Mapped[date] = mapped_column(Date)
+    motivo: Mapped[str | None] = mapped_column(Text)
+    resultado: Mapped[str | None] = mapped_column(Text)
+    usuario_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    en: Mapped[datetime] = _ts()
+
+    contacto: Mapped["Contacto | None"] = relationship(lazy="joined")
+    recurso: Mapped["Recurso | None"] = relationship(lazy="joined")
+    usuario: Mapped[Usuario | None] = relationship(lazy="joined")
