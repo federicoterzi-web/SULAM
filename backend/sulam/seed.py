@@ -234,6 +234,11 @@ def _asegurar(db: Session, modelo, nombres: list[str]) -> None:
             db.add(obj)
 
 
+# Todos los roles pueden buscar antecedentes (nombre, documento, fecha de carátula y responsable, nada más).
+for _d in ROLES.values():
+    _d["permisos"].append(("antecedentes", "consultar", T))
+
+
 def inicializar_catalogos(db: Session) -> None:
     """Idempotente: agrega lo que falte sin modificar lo existente."""
     _asegurar(db, Area, AREAS)
@@ -256,7 +261,7 @@ def inicializar_catalogos(db: Session) -> None:
 
 # Módulos agregados después de la primera instalación: sus permisos se suman UNA vez a los roles ya existentes
 # (si después alguien los quita desde Administración, no se vuelven a poner).
-MODULOS_NUEVOS = ("agenda", "participacion", "residencias", "subsidios")
+MODULOS_NUEVOS = ("agenda", "participacion", "residencias", "subsidios", "antecedentes")
 
 
 def _permisos_de_modulos_nuevos(db: Session, roles_previos: set[str]) -> None:

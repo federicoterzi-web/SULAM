@@ -171,3 +171,6 @@ Los eventos de la división **son actividades de la agenda** (clase «evento»):
 
 ## D-042 — Baja de un usuario con casos a cargo
 **A pedido del Director (18/10/2026):** al dar de baja a un usuario con casos abiertos a su cargo, el sistema no lo permite hasta decidir: **pasarlos a otra persona activa** o **dejarlos para asignar** (aparecen en «casos sin responsable» de la jefatura). Las asignaciones del usuario se cierran con fecha y motivo «Baja del usuario» y quedan en el historial; los casos cerrados no se tocan. Queda en la auditoría. El alcance de lo que ve cada cuenta se define por rol (Personas › Consultar: todos, área, asignados o propios), no por cuenta.
+
+## D-043 — Antecedentes para todos los roles
+**A pedido del Director (18/10/2026):** todos los roles pueden buscar si una persona ya tiene legajo (módulo «antecedentes», alcance siempre «todos»), por apellido y nombre o por documento. La respuesta muestra **solo** nombre, documento, fecha de carátula de cada caso y responsable: ni número de caso, ni estado, ni datos del legajo, ni acceso a documentos. Mínimo de 3 caracteres, hasta 20 personas, y cada consulta queda en la auditoría. Está en el menú (grupo «Antecedentes») y en el menú del celular. Se suma una vez a los roles existentes al actualizar.

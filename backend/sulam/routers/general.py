@@ -18,6 +18,7 @@ from ..models import (
     Area,
     Auditoria,
     Caso,
+    CasoAsignacion,
     Expediente,
     Ingreso,
     Persona,
@@ -112,6 +113,46 @@ def buscar(
     audit.registrar(db, ctx, "busqueda", "general", detalle={"q": q[:200]})
     db.commit()
     return resultado
+
+
+@router.get("/antecedentes")
+def antecedentes(
+    q: str = Query(..., min_length=3, max_length=100),
+    ctx: Contexto = Depends(contexto),
+    db: Session = Depends(get_db),
+):
+    """Para saber si alguien ya tiene legajo: solo nombre, documento, fecha de carátula y responsable. Queda auditado."""
+    ctx.requerir("antecedentes", "consultar")
+    texto = normalizar(q)
+    doc = normalizar_documento(q)
+    condiciones = []
+    if doc and any(c.isdigit() for c in doc):
+        condiciones.append(Persona.numero_documento == doc)
+    palabras = texto.split()
+    if palabras:
+        condiciones.append(
+            and_(*[or_(Persona.apellidos_norm.like("%" + escapar_like(p) + "%"), Persona.nombres_norm.like("%" + escapar_like(p) + "%")) for p in palabras])
+        )
+    personas = db.execute(
+        select(Persona).where(Persona.unificada_en_id.is_(None), or_(*condiciones)).order_by(Persona.apellidos_norm, Persona.nombres_norm).limit(20)
+    ).scalars().all()
+    salida = []
+    for p in personas:
+        casos = db.execute(select(Caso).where(Caso.persona_id == p.id).order_by(Caso.fecha_ingreso.desc().nulls_last(), Caso.abierto_en.desc())).scalars().all()
+        items = []
+        for c in casos:
+            resp = db.execute(
+                select(Usuario.nombre_completo).join(CasoAsignacion, CasoAsignacion.usuario_id == Usuario.id).where(CasoAsignacion.caso_id == c.id, CasoAsignacion.hasta.is_(None))
+            ).scalars().all()
+            items.append({"fecha_caratula": (c.fecha_ingreso or c.abierto_en.date()).isoformat(), "responsables": sorted(resp)})
+        salida.append({
+            "nombre": f"{p.apellidos}, {p.nombres}",
+            "documento": None if p.sin_documento else f"{p.tipo_documento} {p.numero_documento}",
+            "casos": items,
+        })
+    audit.registrar(db, ctx, "consultar_antecedentes", "persona", None, None, {"consulta": q.strip()[:60], "resultados": len(salida)})
+    db.commit()
+    return salida
 
 
 @router.get("/localidades")

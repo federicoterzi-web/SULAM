@@ -8,6 +8,7 @@ import { BotonAvisos, type Notificaciones } from "../notificaciones";
 import { CarpetaFisica, PaginaPases, PasesPendientes } from "../paginas/archivo";
 import { PaginaMiAsistencia, PedidosParaAprobar } from "../paginas/miasistencia";
 import { NovedadesPendientes, PaginaNovedades } from "../paginas/novedades";
+import { PaginaAntecedentes } from "../paginas/antecedentes";
 import { PanelNegativa } from "../paginas/anses";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, type Caso, type Legajo, type PersonaResumen } from "../api";
@@ -95,6 +96,7 @@ export function Movil({ avisos, ruta, alSalir, alCambiarPassword }: { avisos: No
             <MenuUsuario />
             {puede("agenda", "consultar") && <a href="#/m/agenda">Agenda</a>}
             {puede("participacion", "consultar") && <a href="#/m/participacion">Participación y Sensibilización</a>}
+            {puede("antecedentes", "consultar") && <a href="#/m/antecedentes">Antecedentes</a>}
             <a href="#/m/novedades">Novedades</a>
             <a href="#/m/pases">Pases de carpetas</a>
             {puede("documentos", "crear") && <a href="#/m/bandeja">Capturar documentos</a>}
@@ -171,6 +173,8 @@ function titulo(p: string[]): string {
       return "Mesa de Entrada";
     case "novedades":
       return "Novedades";
+    case "antecedentes":
+      return "Antecedentes";
     case "pases":
       return "Pases de carpetas";
     case "mi-asistencia":
@@ -221,6 +225,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "contactos") return "/contactos";
   if (p[0] === "ingreso") return "/mesa";
   if (p[0] === "novedades") return "/novedades";
+  if (p[0] === "antecedentes") return "/antecedentes";
   if (p[0] === "pases") return "/pases";
   if (p[0] === "mi-asistencia") return "/mi-asistencia";
   if (p[0] === "bandeja") return "/bandeja";
@@ -251,6 +256,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       return <IngresoMovil />;
     case "novedades":
       return <PaginaNovedades movil />;
+    case "antecedentes":
+      return <PaginaAntecedentes />;
     case "pases":
       return <PaginaPases movil />;
     case "mi-asistencia":

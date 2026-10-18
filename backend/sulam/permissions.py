@@ -52,6 +52,10 @@ CATALOGO: dict[str, dict] = {
         "nombre": "Red de recursos (instituciones, centros, cuidadores)",
         "acciones": ["consultar", "crear", "modificar"],
     },
+    "antecedentes": {
+        "nombre": "Antecedentes: ver si una persona ya tiene legajo (solo nombre, documento, fecha de carátula y responsable); siempre con alcance «todos»",
+        "acciones": ["consultar"],
+    },
     "residencias": {
         "nombre": "Residencias e internaciones: documentación de las residencias y personas internadas (con «propios»: lo que cargó la persona)",
         "acciones": ["consultar", "crear", "modificar"],

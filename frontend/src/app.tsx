@@ -21,6 +21,7 @@ import { PaginaFichas } from "./paginas/fichas";
 import { PaginaColaImpresion } from "./paginas/cola";
 import { PaginaRecurso, PaginaRecursos } from "./paginas/recursos";
 import { PaginaResidencias } from "./paginas/residencias";
+import { PaginaAntecedentes } from "./paginas/antecedentes";
 import { PaginaSubsidio, PaginaSubsidios } from "./paginas/subsidios";
 import { PaginaContactos } from "./paginas/contactos";
 import { PaginaInforme } from "./paginas/informes";
@@ -241,6 +242,7 @@ const GRUPOS: { texto: string; miembros: ItemMenu[] }[] = [
       { ruta: "/visitas", texto: "Mapa de casos y salidas", permiso: ["casos", "consultar"] },
     ],
   },
+  { texto: "Antecedentes", miembros: [{ ruta: "/antecedentes", texto: "Antecedentes", permiso: ["antecedentes", "consultar"] }] },
   { texto: "Subsidios", miembros: [{ ruta: "/subsidios", texto: "Subsidios", permiso: ["subsidios", "consultar"] }] },
   { texto: "Participación y Sensibilización", miembros: [{ ruta: "/participacion", texto: "Participación y Sensibilización", permiso: ["participacion", "consultar"] }] },
   {
@@ -476,6 +478,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return p[1] ? <PaginaSubsidio id={p[1]} key={p[1]} /> : <PaginaSubsidios />;
     case "residencias":
       return <PaginaResidencias />;
+    case "antecedentes":
+      return <PaginaAntecedentes />;
     case "recursos":
       return p[1] ? <PaginaRecurso id={p[1]} key={p[1]} /> : <PaginaRecursos />;
     case "imprimir-caratulas":
