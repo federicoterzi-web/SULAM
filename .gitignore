@@ -12,3 +12,7 @@ node_modules/
 frontend/dist/
 .DS_Store
 Thumbs.db
+
+# Datos reales del personal y credenciales: nunca al repositorio
+personal-real*.json
+credenciales*.csv

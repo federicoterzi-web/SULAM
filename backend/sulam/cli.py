@@ -265,6 +265,27 @@ def cmd_fichas(args) -> None:
         print(f"Generada: {ruta}")
 
 
+def cmd_importar_personal(args) -> None:
+    from .db import session_factory
+    from .personal_importar import ErrorImportacion, guardar_credenciales, importar
+
+    db = session_factory()()
+    try:
+        r = importar(db, Path(args.archivo), crear_usuarios=args.crear_usuarios, password_comun=args.password_comun)
+        db.commit()
+    except ErrorImportacion as e:
+        db.rollback()
+        raise SystemExit(f"No se importó nada: {e}")
+    finally:
+        db.close()
+    print(f"Fichas creadas: {r['fichas']}. Cuentas creadas: {r['cuentas']}.")
+    for o in r["omitidos"]:
+        print(f"  Omitido: {o}")
+    if r["credenciales"]:
+        guardar_credenciales(r, Path(args.credenciales))
+        print(f"Usuarios y contraseñas temporales guardados en {args.credenciales}. Entregalos en mano y borrá el archivo.")
+
+
 def cmd_servidor(args) -> None:
     import uvicorn
 
@@ -356,6 +377,13 @@ def main(argv: list[str] | None = None) -> None:
     p = sub.add_parser("fichas")
     p.add_argument("--destino", default="fichas")
     p.set_defaults(func=cmd_fichas)
+
+    p = sub.add_parser("importar-personal", help="Carga fichas, horarios y cuentas desde un archivo JSON local")
+    p.add_argument("archivo")
+    p.add_argument("--crear-usuarios", action="store_true", help="Crea también una cuenta por persona (cambia la contraseña al primer ingreso)")
+    p.add_argument("--password-comun", default=None, help="Contraseña temporal igual para todas las cuentas (por defecto, una distinta por persona)")
+    p.add_argument("--credenciales", default="credenciales-personal.csv")
+    p.set_defaults(func=cmd_importar_personal)
 
     p = sub.add_parser("servidor")
     p.add_argument("--host", default="127.0.0.1")

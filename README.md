@@ -109,6 +109,19 @@ SULAM tiene una versión para celular en la misma dirección: al ingresar desde 
 
 Alternativa más cerrada: no exponer SULAM a internet y entrar por una VPN institucional; la versión celular funciona igual.
 
+## Cargar el personal real y crear sus cuentas (sin pasar por el repositorio)
+
+Los datos del personal (nombres, id de reloj, boletas, horarios) **no se guardan en el repositorio**: viven en un archivo JSON que prepara la Dirección y se carga en su propia computadora o servidor. El formato está documentado en `backend/sulam/personal_importar.py`; los archivos `personal-real*.json` y `credenciales*.csv` están excluidos de git.
+
+Con Docker, desde la carpeta de SULAM (PowerShell):
+
+```
+docker compose cp personal-real.json app:/tmp/personal.json
+docker compose exec app python -m sulam.cli importar-personal /tmp/personal.json --crear-usuarios --password-comun "UnaClaveTemporal-2026"
+```
+
+Crea la ficha (período, id de reloj, boleta, horario sin confirmar) y una cuenta por persona, con usuario `apellido.nombre`, el rol y el área que indique el archivo, y la obligación de cambiar la contraseña al primer ingreso. Sin `--password-comun` genera una contraseña distinta por persona y la guarda en un CSV (`--credenciales /datos/credenciales.csv`, que se retira con `docker compose cp app:/datos/credenciales.csv .`). Se puede repetir sin duplicar: omite a quien ya tiene ficha (mismo id de reloj) o cuenta.
+
 ## Usuarios de demostración
 
 Creados por `datos-demo`. Contraseña de todos: `demo-sulam-2026`.
@@ -134,6 +147,7 @@ Además existe `admin` con la contraseña definida al inicializar.
 python -m sulam.cli migrar              Crea o actualiza las tablas
 python -m sulam.cli inicializar         Catálogos, roles y primer administrador
 python -m sulam.cli datos-demo          Datos ficticios (no disponible con SULAM_ENV=produccion)
+python -m sulam.cli importar-personal   Fichas, horarios y cuentas desde un JSON local
 python -m sulam.cli servidor            Inicia la aplicación (http://127.0.0.1:8000)
 python -m sulam.cli respaldar           Respaldo completo (base + archivos) en un .tar.gz
 python -m sulam.cli restaurar ARCHIVO --confirmar
