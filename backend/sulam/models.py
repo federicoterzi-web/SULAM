@@ -13,6 +13,7 @@ Principios que este modelo implementa:
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 from datetime import date, datetime
 
 from sqlalchemy import (
@@ -25,6 +26,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     SmallInteger,
     String,
     Text,
@@ -879,6 +881,81 @@ class Internacion(Base):
     actualizado_en: Mapped[datetime] = _ts()
 
     recurso: Mapped[Recurso | None] = relationship(lazy="joined")
+
+
+class Subsidio(Base):
+    """Subsidio que gestiona la Dirección para una persona: residencia de larga estadía, cuidador domiciliario,
+    alimentario, materiales u otro. Tiene un trámite (con su lista de papeles) y pagos mensuales."""
+
+    __tablename__ = "subsidios"
+    __table_args__ = (CheckConstraint("hasta IS NULL OR desde IS NULL OR hasta >= desde", name="ck_subsidios_fechas"),)
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    persona_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("personas.id"), index=True)
+    caso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("casos.id"))
+    expediente_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("expedientes.id"))
+    internacion_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("internaciones.id"))
+    tipo: Mapped[str] = mapped_column(String(20), index=True)
+    estado: Mapped[str] = mapped_column(String(20), default="en_tramite", server_default="en_tramite", index=True)
+    # Residencia o cuidador (del mapa de recursos) que presta el servicio, o su nombre escrito.
+    recurso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("recursos.id"), index=True)
+    prestador_texto: Mapped[str | None] = mapped_column(String(300))
+    solicitante_nombre: Mapped[str | None] = mapped_column(String(200))
+    solicitante_dni: Mapped[str | None] = mapped_column(String(20))
+    solicitante_vinculo: Mapped[str | None] = mapped_column(String(100))
+    solicitante_telefono: Mapped[str | None] = mapped_column(String(100))
+    horas_semanales: Mapped[Decimal | None] = mapped_column(Numeric(5, 1))
+    detalle: Mapped[str | None] = mapped_column(Text)
+    monto_mensual: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    fecha_solicitud: Mapped[date | None] = mapped_column(Date)
+    fecha_elevacion: Mapped[date | None] = mapped_column(Date)
+    resolucion_numero: Mapped[str | None] = mapped_column(String(100))
+    resolucion_fecha: Mapped[date | None] = mapped_column(Date)
+    desde: Mapped[date | None] = mapped_column(Date)
+    hasta: Mapped[date | None] = mapped_column(Date)
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()
+
+    recurso: Mapped[Recurso | None] = relationship(lazy="joined")
+
+
+class SubsidioPago(Base):
+    """Un mes de un subsidio: documentación del período y pago."""
+
+    __tablename__ = "subsidio_pagos"
+    __table_args__ = (Index("uq_subsidio_pago_periodo", "subsidio_id", "periodo", unique=True),)
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    subsidio_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("subsidios.id", ondelete="CASCADE"), index=True)
+    periodo: Mapped[date] = mapped_column(Date, index=True)  # primer día del mes
+    monto: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    estado: Mapped[str] = mapped_column(String(25), default="pendiente", server_default="pendiente")
+    fecha_pago: Mapped[date | None] = mapped_column(Date)
+    comprobante: Mapped[str | None] = mapped_column(String(100))
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()
+
+
+class SubsidioRequisito(Base):
+    """Un papel de la lista del trámite (``pago_id`` vacío) o de la documentación de un mes."""
+
+    __tablename__ = "subsidio_requisitos"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    subsidio_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("subsidios.id", ondelete="CASCADE"), index=True)
+    pago_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("subsidio_pagos.id", ondelete="CASCADE"), index=True)
+    grupo: Mapped[str] = mapped_column(String(20))
+    codigo: Mapped[str | None] = mapped_column(String(40))
+    texto: Mapped[str] = mapped_column(Text)
+    estado: Mapped[str] = mapped_column(String(20), default="pendiente", server_default="pendiente")
+    fecha_presentado: Mapped[date | None] = mapped_column(Date)
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    orden: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()
 
 
 class Contacto(Base):

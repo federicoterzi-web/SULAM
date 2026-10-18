@@ -19,9 +19,13 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .subsidios_catalogo import requisitos_de
 from .models import (
     Internacion,
     RecursoDocumento,
+    Subsidio,
+    SubsidioPago,
+    SubsidioRequisito,
     Campania,
     EventoAgenda,
     EventoParticipacion,
@@ -140,6 +144,54 @@ def _residencias(db: Session, U: dict[str, Usuario], recursos: list[Recurso], pe
     for p, r, dias in zip(personas[6:9], (san_roque, san_roque, santa_rita), (420, 95, 30)):
         db.add(Internacion(persona_id=p.id, recurso_id=r.id, modalidad="residencia", desde=hoy - timedelta(days=dias),
                            observaciones="Ingreso por derivación de la Dirección (ficticio).", creado_por=U["direccion"].id, actualizado_por=U["direccion"].id))
+    db.flush()
+
+    # Subsidios: dos de residencia aprobados (con meses pagados y uno en liquidación), uno en trámite con papeles a medias,
+    # uno de cuidados y uno alimentario.
+    def subsidio(persona, tipo, estado, recurso=None, **kw):
+        sub = Subsidio(persona_id=persona.id, tipo=tipo, estado=estado, recurso_id=recurso.id if recurso else None, fecha_solicitud=hoy - timedelta(days=120),
+                       creado_por=U["direccion"].id, actualizado_por=U["direccion"].id, **kw)
+        db.add(sub)
+        db.flush()
+        for orden, (grupo, codigo, texto) in enumerate(requisitos_de(tipo)):
+            db.add(SubsidioRequisito(subsidio_id=sub.id, grupo=grupo, codigo=codigo, texto=texto, orden=orden, estado="presentado" if estado in ("aprobado", "elevado") else "pendiente",
+                                     fecha_presentado=hoy - timedelta(days=100) if estado in ("aprobado", "elevado") else None, actualizado_por=U["direccion"].id))
+        return sub
+
+    def mes(sub, atras, estado, completos):
+        periodo = (hoy.replace(day=1) - timedelta(days=30 * atras)).replace(day=1) if atras else hoy.replace(day=1)
+        pago = SubsidioPago(subsidio_id=sub.id, periodo=periodo, monto=sub.monto_mensual, estado=estado, creado_por=U["direccion"].id, actualizado_por=U["direccion"].id,
+                            fecha_pago=periodo + timedelta(days=20) if estado == "pagado" else None, comprobante=f"OP {rnd_op(sub, atras)}" if estado == "pagado" else None)
+        db.add(pago)
+        db.flush()
+        for orden, (grupo, codigo, texto) in enumerate(requisitos_de(sub.tipo, True)):
+            db.add(SubsidioRequisito(subsidio_id=sub.id, pago_id=pago.id, grupo=grupo, codigo=codigo, texto=texto, orden=orden,
+                                     estado="presentado" if orden < completos else "pendiente", fecha_presentado=periodo + timedelta(days=5) if orden < completos else None,
+                                     actualizado_por=U["direccion"].id))
+
+    def rnd_op(sub, atras):
+        return 4000 + (sub.id.int + atras) % 900
+
+    a, b, c = personas[6], personas[7], personas[8]
+    s1 = subsidio(a, "residencia", "aprobado", san_roque, monto_mensual=450000, resolucion_numero="RM 2301/2026 (ficticia)", resolucion_fecha=hoy - timedelta(days=90),
+                  desde=hoy - timedelta(days=95), solicitante_nombre="Hija Ficticia", solicitante_vinculo="Hija")
+    s2 = subsidio(b, "residencia", "aprobado", san_roque, monto_mensual=450000, resolucion_numero="RM 1105/2025 (ficticia)", resolucion_fecha=hoy - timedelta(days=380),
+                  desde=hoy - timedelta(days=370))
+    s3 = subsidio(c, "residencia", "en_tramite", santa_rita, monto_mensual=420000, solicitante_nombre="Sobrino Ficticio", solicitante_vinculo="Sobrino")
+    for r in db.execute(select(SubsidioRequisito).where(SubsidioRequisito.subsidio_id == s3.id, SubsidioRequisito.codigo.in_(("nota_solicitud", "dni_solicitante", "dni_beneficiario", "supervivencia")))).scalars():
+        r.estado, r.fecha_presentado = "presentado", hoy - timedelta(days=10)
+    mes(s1, 2, "pagado", 16)
+    mes(s1, 1, "pagado", 16)
+    mes(s1, 0, "documentacion_completa", 16)
+    mes(s2, 2, "pagado", 16)
+    mes(s2, 1, "en_liquidacion", 16)
+    mes(s2, 0, "pendiente", 9)
+    cuidada = personas[9] if len(personas) > 9 else personas[5]
+    s4 = subsidio(cuidada, "cuidados", "aprobado", None, monto_mensual=180000, horas_semanales=20, prestador_texto="Cuidadora Ficticia, Graciela",
+                  resolucion_numero="RM 1890/2026 (ficticia)", resolucion_fecha=hoy - timedelta(days=60), desde=hoy - timedelta(days=60))
+    mes(s4, 1, "pagado", 1)
+    mes(s4, 0, "pendiente", 0)
+    subsidio(personas[10] if len(personas) > 10 else personas[4], "alimentario", "elevado", None, detalle="Módulo alimentario mensual (ficticio)")
     db.flush()
 
 

@@ -21,6 +21,7 @@ import { PaginaFichas } from "./paginas/fichas";
 import { PaginaColaImpresion } from "./paginas/cola";
 import { PaginaRecurso, PaginaRecursos } from "./paginas/recursos";
 import { PaginaResidencias } from "./paginas/residencias";
+import { PaginaSubsidio, PaginaSubsidios } from "./paginas/subsidios";
 import { PaginaContactos } from "./paginas/contactos";
 import { PaginaInforme } from "./paginas/informes";
 import { PaginaPlantillas } from "./paginas/plantillas";
@@ -240,6 +241,7 @@ const GRUPOS: { texto: string; miembros: ItemMenu[] }[] = [
       { ruta: "/visitas", texto: "Mapa de casos y salidas", permiso: ["casos", "consultar"] },
     ],
   },
+  { texto: "Subsidios", miembros: [{ ruta: "/subsidios", texto: "Subsidios", permiso: ["subsidios", "consultar"] }] },
   { texto: "Participación y Sensibilización", miembros: [{ ruta: "/participacion", texto: "Participación y Sensibilización", permiso: ["participacion", "consultar"] }] },
   {
     texto: "Documentos",
@@ -470,6 +472,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return <PaginaParticipacion />;
     case "buscar-documentos":
       return <PaginaBuscarDocumentos />;
+    case "subsidios":
+      return p[1] ? <PaginaSubsidio id={p[1]} key={p[1]} /> : <PaginaSubsidios />;
     case "residencias":
       return <PaginaResidencias />;
     case "recursos":

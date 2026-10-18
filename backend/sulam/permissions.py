@@ -56,6 +56,10 @@ CATALOGO: dict[str, dict] = {
         "nombre": "Residencias e internaciones: documentación de las residencias y personas internadas (con «propios»: lo que cargó la persona)",
         "acciones": ["consultar", "crear", "modificar"],
     },
+    "subsidios": {
+        "nombre": "Subsidios (residencia, cuidados, alimentarios, materiales): trámite, papeles y pagos (administrar: resolver el trámite y registrar liquidación y pago)",
+        "acciones": ["consultar", "crear", "modificar", "administrar"],
+    },
     "plantillas": {
         "nombre": "Plantillas de informes (con alcance «área»: las del área propia)",
         "acciones": ["modificar"],

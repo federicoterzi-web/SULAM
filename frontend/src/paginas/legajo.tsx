@@ -25,6 +25,7 @@ import {
 } from "../comun";
 import { FormDocumento, TablaDocumentos } from "./documentos";
 import { SeccionInternacion } from "./residencias";
+import { SeccionSubsidios } from "./subsidios";
 import { FormCaratula, textoDe, textoLista } from "./formularios";
 import { FormPersona, SelectorPersona } from "./legajos";
 
@@ -142,6 +143,8 @@ export function PaginaLegajo({ id }: { id: string }) {
       <SeccionNegativa personaId={l.id} />
 
       <SeccionInternacion personaId={l.id} />
+
+      <SeccionSubsidios personaId={l.id} />
 
       <Seccion titulo="Ubicación del domicilio">
         <UbicacionDomicilio persona={l} puedeModificar={l.permisos.modificar} alCambiar={recargar} />

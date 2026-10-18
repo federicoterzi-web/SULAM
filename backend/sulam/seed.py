@@ -70,6 +70,7 @@ ROLES: dict[str, dict] = {
             ("plantillas", "modificar", T),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("residencias", "consultar", T), ("residencias", "crear", T), ("residencias", "modificar", T),
+            ("subsidios", "consultar", T), ("subsidios", "crear", T), ("subsidios", "modificar", T), ("subsidios", "administrar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
             ("personas", "administrar", T),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", T), ("casos", "derivar", T),
@@ -92,6 +93,7 @@ ROLES: dict[str, dict] = {
             ("plantillas", "modificar", T),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("residencias", "consultar", T), ("residencias", "crear", T), ("residencias", "modificar", T),
+            ("subsidios", "consultar", T), ("subsidios", "crear", T), ("subsidios", "modificar", T), ("subsidios", "administrar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", T), ("casos", "derivar", T),
             ("expedientes", "consultar", T), ("expedientes", "crear", T), ("expedientes", "modificar", T),
@@ -111,6 +113,7 @@ ROLES: dict[str, dict] = {
             ("plantillas", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("residencias", "consultar", T), ("residencias", "crear", T), ("residencias", "modificar", T),
+            ("subsidios", "consultar", T), ("subsidios", "crear", T), ("subsidios", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AR),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AR), ("casos", "derivar", AR),
             ("expedientes", "consultar", T), ("expedientes", "crear", AR), ("expedientes", "modificar", AR),
@@ -129,6 +132,7 @@ ROLES: dict[str, dict] = {
             ("plantillas", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("residencias", "consultar", T), ("residencias", "crear", T), ("residencias", "modificar", T),
+            ("subsidios", "consultar", T), ("subsidios", "crear", T), ("subsidios", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AR),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AR), ("casos", "derivar", AR),
             ("expedientes", "consultar", T), ("expedientes", "crear", AR), ("expedientes", "modificar", AR),
@@ -172,6 +176,7 @@ ROLES: dict[str, dict] = {
             ("agenda", "consultar", AR), ("agenda", "crear", AR), ("agenda", "modificar", P),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", P),
             ("residencias", "consultar", T), ("residencias", "crear", T), ("residencias", "modificar", P),
+            ("subsidios", "consultar", T), ("subsidios", "crear", T), ("subsidios", "modificar", P),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AS),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AS),
             ("expedientes", "consultar", T), ("expedientes", "crear", AS),
@@ -209,6 +214,7 @@ ROLES: dict[str, dict] = {
             ("agenda", "consultar", AR), ("agenda", "crear", AR), ("agenda", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", P),
             ("residencias", "consultar", T), ("residencias", "crear", T), ("residencias", "modificar", P),
+            ("subsidios", "consultar", AR), ("subsidios", "crear", AR), ("subsidios", "modificar", AR),
             ("personas", "consultar", AR),
             ("casos", "consultar", AR),
             ("expedientes", "consultar", AR), ("expedientes", "crear", AR),
@@ -250,7 +256,7 @@ def inicializar_catalogos(db: Session) -> None:
 
 # Módulos agregados después de la primera instalación: sus permisos se suman UNA vez a los roles ya existentes
 # (si después alguien los quita desde Administración, no se vuelven a poner).
-MODULOS_NUEVOS = ("agenda", "participacion", "residencias")
+MODULOS_NUEVOS = ("agenda", "participacion", "residencias", "subsidios")
 
 
 def _permisos_de_modulos_nuevos(db: Session, roles_previos: set[str]) -> None:
