@@ -3,6 +3,7 @@
 // cámara integrada. Nada se guarda en el teléfono: todo va directo al servidor.
 import { PaginaBandeja } from "../paginas/bandeja";
 import { PaginaAgenda } from "../paginas/agenda";
+import { PaginaParticipacion } from "../paginas/participacion";
 import { BotonAvisos, type Notificaciones } from "../notificaciones";
 import { CarpetaFisica, PaginaPases, PasesPendientes } from "../paginas/archivo";
 import { PaginaMiAsistencia, PedidosParaAprobar } from "../paginas/miasistencia";
@@ -93,6 +94,7 @@ export function Movil({ avisos, ruta, alSalir, alCambiarPassword }: { avisos: No
           <nav className="m-menu" onClick={(e) => e.stopPropagation()}>
             <MenuUsuario />
             {puede("agenda", "consultar") && <a href="#/m/agenda">Agenda</a>}
+            {puede("participacion", "consultar") && <a href="#/m/participacion">Participación y Sensibilización</a>}
             <a href="#/m/novedades">Novedades</a>
             <a href="#/m/pases">Pases de carpetas</a>
             {puede("documentos", "crear") && <a href="#/m/bandeja">Capturar documentos</a>}
@@ -177,6 +179,8 @@ function titulo(p: string[]): string {
       return "Capturar documentos";
     case "agenda":
       return "Agenda";
+    case "participacion":
+      return "Participación";
     case "informe":
       return "Informe";
     case "visitas":
@@ -221,6 +225,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "mi-asistencia") return "/mi-asistencia";
   if (p[0] === "bandeja") return "/bandeja";
   if (p[0] === "agenda") return "/agenda";
+  if (p[0] === "participacion") return "/participacion";
   if (p[0] === "informe" && p[1]) return `/informes/${p[1]}`;
   if (p[0] === "visitas") return "/visitas";
   return "/";
@@ -254,6 +259,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       return <PaginaBandeja movil />;
     case "agenda":
       return <PaginaAgenda movil />;
+    case "participacion":
+      return <PaginaParticipacion movil />;
     case "informe":
       return <PaginaInforme id={p[1]} movil key={p[1]} />;
     case "visitas":
@@ -476,6 +483,11 @@ function InicioMovil() {
         {puede("agenda", "consultar") && (
           <Accion a="/m/agenda" icono="📅">
             Mi agenda
+          </Accion>
+        )}
+        {puede("participacion", "consultar") && (
+          <Accion a="/m/participacion" icono="🤝">
+            Participación: eventos y campañas
           </Accion>
         )}
         {puede("documentos", "crear") && (

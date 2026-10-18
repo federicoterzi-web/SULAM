@@ -83,15 +83,17 @@ const kb = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${
 
 type Pestana = "semana" | "campanias" | "tipos";
 
-export function PaginaParticipacion() {
+export function PaginaParticipacion({ movil = false }: { movil?: boolean }) {
   const { puede } = useSesion();
   const [pestana, setPestana] = useState<Pestana>("semana");
   if (!puede("participacion", "consultar")) return <Aviso error="No tiene acceso a Participación y Sensibilización." />;
   return (
-    <div className="participacion">
-      <div className="titulo-pagina">
-        <h1>Participación y Sensibilización</h1>
-      </div>
+    <div className={movil ? "participacion participacion-movil" : "participacion"}>
+      {!movil && (
+        <div className="titulo-pagina">
+          <h1>Participación y Sensibilización</h1>
+        </div>
+      )}
       <div className="segmentado" role="tablist">
         {(
           [
@@ -509,9 +511,14 @@ function Cierre({ evento: e, alCambiar }: { evento: EventoCompleto; alCambiar: (
       </div>
       <Aviso error={errorFoto} />
       {x.puedo_descargar_brief && (
-        <a className="boton" href={`/api/participacion/eventos/${e.id}/brief.docx`}>
-          Exportar brief para Comunicación (Word)
-        </a>
+        <div className="acciones">
+          <a className="boton" href={`/api/participacion/eventos/${e.id}/brief.docx`}>
+            Brief para Comunicación (Word)
+          </a>
+          <a className="boton" href={`/api/participacion/eventos/${e.id}/brief.pdf`}>
+            Brief (PDF)
+          </a>
+        </div>
       )}
     </section>
   );
@@ -974,9 +981,14 @@ function DetalleCampania({ id, alCerrar }: { id: string; alCerrar: () => void })
               </>
             )}
             {puede("participacion", "descargar") && (
-              <a className="boton" href={`/api/participacion/campanias/${c.id}/brief.docx`}>
-                Exportar brief de la campaña (Word)
-              </a>
+              <>
+                <a className="boton" href={`/api/participacion/campanias/${c.id}/brief.docx`}>
+                  Brief de la campaña (Word)
+                </a>
+                <a className="boton" href={`/api/participacion/campanias/${c.id}/brief.pdf`}>
+                  Brief de la campaña (PDF)
+                </a>
+              </>
             )}
           </div>
 

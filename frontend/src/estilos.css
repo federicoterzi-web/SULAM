@@ -4892,3 +4892,11 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 .part-materiales { list-style: none; padding: 0; margin: 4px 0 8px; }
 .part-materiales li { padding: 3px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 @media (max-width: 1000px) { .part-semana { grid-template-columns: 1fr; } .part-dia { min-height: 0; } }
+
+/* Participación en el celular */
+.participacion-movil .segmentado { display: flex; overflow-x: auto; }
+.participacion-movil .segmentado button { flex: 0 0 auto; min-height: 44px; }
+.participacion-movil .boton, .participacion-movil button { min-height: 44px; }
+.participacion-movil .part-fotos img, .participacion-movil .part-subir { width: 100%; }
+.participacion-movil .part-campanias { grid-template-columns: 1fr; }
+.participacion-movil .acciones { display: flex; flex-direction: column; gap: 8px; }

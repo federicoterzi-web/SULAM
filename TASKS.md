@@ -228,6 +228,6 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Brief para Comunicación del Ministerio en Word, por evento y por campaña | ✅ |
 | Pestaña «Participación y Sensibilización» en Estadísticas (pantalla, Excel y PDF) | ✅ |
 | Datos de demostración (usuario `participacion`) | ✅ |
-| Versión para celular de Participación | ⏳ |
-| Avisos por reprogramación de eventos | ⏳ |
-| Brief en PDF (hoy solo Word, a pedido) | ⏳ |
+| Versión para celular de Participación (semana, campañas, asistentes, fotos, brief) | ✅ |
+| Avisos (notificación del navegador) por reprogramación o cambio de lugar: a quien lo creó, a los participantes y a la Directora si se sugiere su presencia | ✅ |
+| Brief en PDF, además del Word | ✅ |

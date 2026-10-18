@@ -10,12 +10,12 @@ from __future__ import annotations
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..deps import contexto
-from ..models import Caso, CasoAsignacion, EventoAgenda, Novedad, ParticipanteAgenda, SolicitudPersonal
+from ..models import Caso, CasoAsignacion, CambioAgenda, EventoAgenda, EventoParticipacion, Novedad, ParticipanteAgenda, SolicitudPersonal
 from ..permissions import Contexto, filtro_casos
 from ..security import ahora
 from .archivo import _para_mi
@@ -110,5 +110,33 @@ def avisos(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
                 .order_by(EventoAgenda.inicio)
             ).scalars()
         )
+
+    # Participación: eventos próximos que se reprogramaron o cambiaron de lugar en la última semana. Los recibe quien los creó,
+    # quien participa y, si se sugiere la presencia de la Dirección, quien tiene alcance total. No avisa de los cambios propios.
+    if ctx.tiene("participacion", "consultar"):
+        ahora_ = ahora()
+        condicion = or_(
+            EventoAgenda.creado_por == ctx.id,
+            EventoAgenda.id.in_(select(ParticipanteAgenda.evento_id).where(ParticipanteAgenda.usuario_id == ctx.id)),
+        )
+        if ctx.alcance("participacion", "consultar") == "todos":
+            condicion = or_(condicion, EventoParticipacion.sugerir_directora.is_(True))
+        cambios: dict = {}
+        for c, e in db.execute(
+            select(CambioAgenda, EventoAgenda)
+            .join(EventoAgenda, EventoAgenda.id == CambioAgenda.evento_id)
+            .join(EventoParticipacion, EventoParticipacion.evento_id == EventoAgenda.id)
+            .where(
+                condicion,
+                EventoAgenda.estado == "programado",
+                EventoAgenda.inicio >= ahora_,
+                CambioAgenda.en >= ahora_ - timedelta(days=7),
+                CambioAgenda.usuario_id != ctx.id,
+            )
+            .order_by(CambioAgenda.en)
+        ):
+            if set(c.cambios) & {"inicio", "fin", "lugar", "todo_el_dia"}:
+                cambios[e.id] = f"{e.id}:{c.id}"  # queda el último cambio: si vuelve a cambiar, se avisa de nuevo
+        salida["participacion_cambios"] = _ids(cambios.values())
 
     return {"avisos": salida}

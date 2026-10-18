@@ -233,3 +233,44 @@ def test_roles_existentes_reciben_permisos_de_participacion(db):
     db.commit()
     dire = db.execute(select(Rol).where(Rol.nombre == "Directora")).scalar_one()
     assert {(x.accion, x.alcance) for x in dire.permisos if x.modulo == "participacion"} == {("consultar", "todos"), ("descargar", "todos")}
+
+
+def test_brief_en_pdf_de_evento_y_campania(admin, cliente):
+    crear_usuario("part", ROL, DIV)
+    p = cliente("part")
+    ev = _evento(p, _tipo(p, "Feria"), nombre_flyer="Feria de la Salud", resumen="Chequeos.")
+    camp = p.post("/api/participacion/campanias", json={"nombre": "Octubre Rosa"}).json()
+    p.patch(f"/api/participacion/eventos/{ev['id']}", json={"campania_id": camp["id"]})
+    assert p.get(f"/api/participacion/eventos/{ev['id']}/brief.pdf").status_code == 409  # todavía no se realizó
+    _realizar(p, ev["id"])
+    p.post(f"/api/participacion/eventos/{ev['id']}/fotos", files={"archivo": ("a.jpg", _foto(), "image/jpeg")})
+    p.post(f"/api/participacion/eventos/{ev['id']}/fotos", files={"archivo": ("b.png", _png(), "image/png")})
+    for url in (f"/api/participacion/eventos/{ev['id']}/brief.pdf", f"/api/participacion/campanias/{camp['id']}/brief.pdf"):
+        r = p.get(url)
+        assert r.status_code == 200 and r.headers["content-type"] == "application/pdf" and r.content.startswith(b"%PDF")
+        assert ".pdf" in r.headers["content-disposition"]
+    assert admin.get(f"/api/participacion/eventos/{ev['id']}/brief.pdf").status_code == 200
+
+
+def test_aviso_de_reprogramacion(admin, cliente):
+    crear_usuario("part", ROL, DIV)
+    crear_usuario("part2", ROL, DIV)
+    crear_usuario("dir", "Directora", "Dirección de Adultos Mayores")
+    p, otro, d = cliente("part"), cliente("part2"), cliente("dir")
+    t = _tipo(p, "Charla")
+    ev = _evento(p, t, sugerir_directora=True)
+    sin_aviso = _evento(p, t)
+    avisos = lambda c: c.get("/api/avisos").json()["avisos"].get("participacion_cambios", [])
+    assert avisos(p) == [] and avisos(d) == []
+    # La reprogramación la hace otra persona del área: avisa a quien lo creó y a la Directora (se sugiere su presencia).
+    r = otro.patch(f"/api/participacion/eventos/{ev['id']}", json={"inicio": _cuando(3), "aplicar_a": "esta"})
+    assert r.status_code == 200, r.text
+    a1 = avisos(p)
+    assert len(a1) == 1 and a1[0].startswith(ev["id"]) and len(avisos(d)) == 1
+    assert avisos(otro) == []  # no se avisa de los cambios propios
+    # Un evento sin presencia sugerida no le llega a la Directora.
+    otro.patch(f"/api/participacion/eventos/{sin_aviso['id']}", json={"lugar": "Otro salón", "aplicar_a": "esta"})
+    assert len(avisos(p)) == 2 and len(avisos(d)) == 1
+    # Un cambio nuevo del mismo evento vuelve a avisar (cambia el identificador).
+    otro.patch(f"/api/participacion/eventos/{ev['id']}", json={"lugar": "Plaza", "aplicar_a": "esta"})
+    assert set(avisos(p)) != set(a1) and len(avisos(d)) == 1

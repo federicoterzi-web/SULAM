@@ -712,42 +712,65 @@ def quitar_material(campania_id: uuid.UUID, material_id: uuid.UUID, ctx: Context
 
 # ---------------------------------------------------------------- brief para Comunicación (Word)
 
-def _nombre_archivo(prefijo: str, texto: str) -> str:
+def _nombre_archivo(prefijo: str, texto: str, ext: str = "docx") -> str:
     limpio = "".join(ch if ch.isalnum() else "-" for ch in texto.lower()).strip("-")
     while "--" in limpio:
         limpio = limpio.replace("--", "-")
-    return f"{prefijo}-{limpio[:60] or 'sin-titulo'}.docx"
+    return f"{prefijo}-{limpio[:60] or 'sin-titulo'}.{ext}"
 
 
 def _descarga(contenido: bytes, nombre: str) -> Response:
+    tipo = "application/pdf" if nombre.endswith(".pdf") else DOCX
     return Response(
-        contenido, media_type=DOCX,
+        contenido, media_type=tipo,
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(nombre)}", "Cache-Control": "no-store"},
     )
 
 
-@router.get("/participacion/eventos/{evento_id}/brief.docx")
-def brief_evento(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
-    from ..participacion_brief import brief_de_evento
+def _modulo_brief(formato: str):
+    if formato == "pdf":
+        from .. import participacion_brief_pdf as m
+    else:
+        from .. import participacion_brief as m
+    return m
 
+
+def _brief_evento(evento_id: uuid.UUID, formato: str, ctx: Contexto, db: Session) -> Response:
     e, x = _evento_part(db, ctx, evento_id, "descargar")
     if e.estado != "realizado":
         raise HTTPException(status.HTTP_409_CONFLICT, "El brief se arma una vez realizado el evento.")
     fotos = db.execute(select(FotoParticipacion).where(FotoParticipacion.evento_id == e.id).order_by(FotoParticipacion.orden)).scalars().all()
-    contenido = brief_de_evento(e, x, [(f.nombre, _bytes(f)) for f in fotos], ctx.usuario.nombre_completo)
-    audit.registrar(db, ctx, "brief_exportado", "participacion_evento", e.id, None, {"fotos": len(fotos)})
+    contenido = _modulo_brief(formato).brief_de_evento(e, x, [(f.nombre, _bytes(f)) for f in fotos], ctx.usuario.nombre_completo)
+    audit.registrar(db, ctx, "brief_exportado", "participacion_evento", e.id, None, {"fotos": len(fotos), "formato": formato})
     db.commit()
-    return _descarga(contenido, _nombre_archivo("brief", f"{_local(e.inicio).date().isoformat()} {e.titulo}"))
+    return _descarga(contenido, _nombre_archivo("brief", f"{_local(e.inicio).date().isoformat()} {e.titulo}", formato))
+
+
+def _brief_campania(campania_id: uuid.UUID, formato: str, ctx: Contexto, db: Session) -> Response:
+    c = _campania(db, ctx, campania_id)
+    ctx.requerir("participacion", "descargar")
+    filas = [(e, x, [(f.nombre, _bytes(f)) for f in db.execute(select(FotoParticipacion).where(FotoParticipacion.evento_id == e.id).order_by(FotoParticipacion.orden)).scalars()]) for e, x in _eventos_de(db, c.id)]
+    contenido = _modulo_brief(formato).brief_de_campania(c, filas, ctx.usuario.nombre_completo)
+    audit.registrar(db, ctx, "brief_exportado", "campania", c.id, None, {"eventos": len(filas), "formato": formato})
+    db.commit()
+    return _descarga(contenido, _nombre_archivo("brief-campania", c.nombre, formato))
+
+
+@router.get("/participacion/eventos/{evento_id}/brief.docx")
+def brief_evento(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    return _brief_evento(evento_id, "docx", ctx, db)
+
+
+@router.get("/participacion/eventos/{evento_id}/brief.pdf")
+def brief_evento_pdf(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    return _brief_evento(evento_id, "pdf", ctx, db)
 
 
 @router.get("/participacion/campanias/{campania_id}/brief.docx")
 def brief_campania(campania_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
-    from ..participacion_brief import brief_de_campania
+    return _brief_campania(campania_id, "docx", ctx, db)
 
-    c = _campania(db, ctx, campania_id)
-    ctx.requerir("participacion", "descargar")
-    filas = [(e, x, [(f.nombre, _bytes(f)) for f in db.execute(select(FotoParticipacion).where(FotoParticipacion.evento_id == e.id).order_by(FotoParticipacion.orden)).scalars()]) for e, x in _eventos_de(db, c.id)]
-    contenido = brief_de_campania(c, filas, ctx.usuario.nombre_completo)
-    audit.registrar(db, ctx, "brief_exportado", "campania", c.id, None, {"eventos": len(filas)})
-    db.commit()
-    return _descarga(contenido, _nombre_archivo("brief-campania", c.nombre))
+
+@router.get("/participacion/campanias/{campania_id}/brief.pdf")
+def brief_campania_pdf(campania_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    return _brief_campania(campania_id, "pdf", ctx, db)
