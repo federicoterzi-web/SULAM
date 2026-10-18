@@ -4820,3 +4820,4 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 .txt-hoja img { display: block; width: 100%; height: auto; }
 .txt-caja { position: absolute; mix-blend-mode: multiply; opacity: 0.55; border-radius: 2px; pointer-events: auto; }
 .txt-hoja-interna { position: relative; }
+.band-grupos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }

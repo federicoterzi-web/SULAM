@@ -22,7 +22,7 @@ from .. import audit, reconocimiento
 from ..config import get_settings
 from ..db import get_db
 from ..deps import contexto
-from ..models import Persona, PaginaCaptura, TipoDocumental
+from ..models import Documento, Persona, PaginaCaptura, TipoDocumental
 from ..permissions import Contexto
 from ..schemas import Entrada
 from ..storage import almacenamiento_actual, almacenamiento_por_nombre, detectar_mime
@@ -212,7 +212,19 @@ def leer(datos: LeerIn, ctx: Contexto = Depends(contexto), db: Session = Depends
             c = candidatas[0]
             persona = {"id": str(c.id), "nombre": f"{c.apellidos}, {c.nombres}", "documento": c.numero_documento}
     tipos = db.execute(select(TipoDocumental).where(TipoDocumental.activo.is_(True))).scalars().all()
-    probables = reconocimiento.tipos_probables(todo, [(t.id, t.nombre, t.descripcion) for t in tipos])
+    filas = db.execute(
+        select(Documento.tipo_documental_id, Documento.texto_busqueda)
+        .where(Documento.eliminado_en.is_(None), Documento.texto_estado == "listo")
+        .order_by(Documento.cargado_en.desc())
+        .limit(400)
+    ).all()
+    por_tipo: dict[int, list[str]] = {}
+    for tid, t in filas:
+        if t and len(por_tipo.setdefault(tid, [])) < 40:
+            por_tipo[tid].append(t[:20000])
+    probables = reconocimiento.tipos_probables(
+        todo, [(t.id, t.nombre, t.descripcion) for t in tipos], reconocimiento.palabras_aprendidas(por_tipo)
+    )
     fechas = reconocimiento.fechas_en(todo)
     marcas = [reconocimiento.pagina_de(t) for t in textos]
     return {

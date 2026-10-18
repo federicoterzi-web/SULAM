@@ -279,3 +279,40 @@ def test_marcas_sobre_la_imagen_de_la_hoja(admin):
     assert 0 <= m["x"] <= 1 and 0 < m["w"] <= 1
     assert admin.get(f"/api/documentos/{doc['id']}/hojas/1/imagen").headers["content-type"] == "image/jpeg"
     assert admin.get(f"/api/documentos/{doc['id']}/hojas/2/marcas").status_code == 404
+
+
+def test_palabras_aprendidas_de_documentos_confirmados():
+    from sulam import reconocimiento as r
+
+    textos = {1: ["constancia residencia comisaria barrio centro", "constancia residencia comisaria vecino", "constancia residencia comisaria testigo"],
+              2: ["resolucion ministerio salud", "resolucion ministerio pension", "resolucion ministerio informe"]}
+    ap = r.palabras_aprendidas(textos)
+    assert "residencia" in ap[1] and "ministerio" in ap[2]
+    # «Informe interno» no se parece por el nombre, pero el texto trae las palabras que siempre aparecen en ese tipo.
+    prob = r.tipos_probables("constancia de residencia emitida por la comisaria", [(1, "Informe interno", None), (2, "Otro", None)], ap)
+    assert prob and prob[0][0] == 1
+
+
+def test_leer_agrupa_hojas_por_numero_de_pagina(admin):
+    import pytest
+    from PIL import ImageDraw, ImageFont
+
+    from sulam import reconocimiento
+
+    if not reconocimiento.disponible():
+        pytest.skip("Tesseract no está instalado")
+    try:
+        f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 56)
+    except OSError:
+        f = ImageFont.load_default(56)
+
+    def hoja(texto):
+        img = Image.new("RGB", (1200, 500), "white")
+        ImageDraw.Draw(img).text((60, 200), texto, fill="black", font=f)
+        b = io.BytesIO()
+        img.save(b, "JPEG")
+        return admin.post("/api/capturas", files={"foto": ("h.jpg", b.getvalue(), "image/jpeg")}).json()["id"]
+
+    a, b_, c = hoja("Pagina 1 de 2"), hoja("Pagina 2 de 2"), hoja("Hoja suelta")
+    g = admin.post("/api/capturas/leer", json={"paginas": [a, b_, c]}).json()["grupos"]
+    assert g == [[a, b_], [c]]

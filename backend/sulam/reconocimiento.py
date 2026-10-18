@@ -135,7 +135,31 @@ def _significativas(texto: str) -> list[str]:
     return [w for w in normalizar(texto).split() if w not in _PALABRAS_VACIAS and len(w) > 2]
 
 
-def tipos_probables(texto: str, tipos: list[tuple[int, str, str | None]]) -> list[tuple[int, float]]:
+def palabras_aprendidas(textos_por_tipo: dict[int, list[str]], minimo_docs: int = 3, cuantas: int = 12) -> dict[int, list[str]]:
+    """Palabras que aparecen en al menos el 60 % de los documentos ya cargados de cada tipo (y no en casi todos los tipos)."""
+    from collections import Counter
+
+    por_tipo: dict[int, Counter] = {}
+    for tid, textos in textos_por_tipo.items():
+        if len(textos) < minimo_docs:
+            continue
+        c: Counter = Counter()
+        for t in textos:
+            c.update({w for w in t.split() if len(w) > 3 and not w.isdigit()})
+        por_tipo[tid] = Counter({w: n for w, n in c.items() if n / len(textos) >= 0.6})
+    en_tipos: Counter = Counter()
+    for c in por_tipo.values():
+        en_tipos.update(c.keys())
+    limite = max(2, len(por_tipo) // 2 + 1)
+    return {
+        tid: [w for w, _ in c.most_common() if en_tipos[w] < limite][:cuantas]
+        for tid, c in por_tipo.items()
+    }
+
+
+def tipos_probables(
+    texto: str, tipos: list[tuple[int, str, str | None]], aprendidas: dict[int, list[str]] | None = None
+) -> list[tuple[int, float]]:
     """Tipos ordenados por parecido: fracción de las palabras del nombre (y peso menor de la descripción) halladas."""
     palabras = set(normalizar(texto).split())
     puntajes = []
@@ -147,7 +171,10 @@ def tipos_probables(texto: str, tipos: list[tuple[int, str, str | None]]) -> lis
         pd = _significativas(desc or "")
         if pd:
             p += 0.3 * sum(1 for w in pd if w in palabras) / len(pd)
-        if p >= 0.5:
+        ap = (aprendidas or {}).get(tid)
+        if ap:
+            p += 0.6 * sum(1 for w in ap if w in palabras) / len(ap)
+        if p >= 0.5 or (ap and p >= 0.4):
             puntajes.append((tid, round(p, 2)))
     return sorted(puntajes, key=lambda x: -x[1])
 

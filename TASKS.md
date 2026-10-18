@@ -142,7 +142,8 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Vencimiento visible en el legajo | ✅ |
 | Editar la plantilla de un tipo existente (desde la clasificación de hojas; no se quitan datos ya definidos) | ✅ |
 | Lectura automática (OCR local, Tesseract español): sugiere legajo por DNI/CUIL, tipo por palabras del nombre, emisión, vencimiento y número; la persona confirma | ✅ |
-| Reconocimiento: aprender palabras de documentos ya confirmados; agrupar solas las hojas de la bandeja (el servidor ya detecta «Página X de Y»); calibrar con documentos reales | ⏳ |
+| Reconocimiento: el tipo también se sugiere por las palabras que repiten los documentos ya cargados de cada tipo; la bandeja detecta hojas del mismo documento («Página X de Y») | ✅ |
+| Calibrar el reconocimiento con documentos reales (DNI, certificados) y con el idioma español | ⏳ |
 | Texto de cada documento guardado (PDF con texto u OCR), buscador «Buscar en documentos» respetando permisos y auditado, vista del texto con marcas en nombre/DNI/CUIL de la persona y menciones a la Dirección, alerta si el legajo no coincide; comando `indexar-textos` para los ya cargados | ✅ |
 | Resaltar sobre la imagen de la hoja (se ubican las palabras al abrir la vista; requiere permiso de descarga y queda auditado) | ✅ |
 | Sugerir el tipo leyendo la foto (OCR local) | ⏳ |

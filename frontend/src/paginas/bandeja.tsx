@@ -28,6 +28,8 @@ export function PaginaBandeja({ movil = false }: { movil?: boolean }) {
   const [errorSubida, setErrorSubida] = useState<unknown>(null);
   const [clasificando, setClasificando] = useState(false);
   const [guardado, setGuardado] = useState<string | null>(null);
+  const [grupos, setGrupos] = useState<string[][] | null>(null);
+  const [detectando, setDetectando] = useState(false);
   const camara = useRef<HTMLInputElement>(null);
   const galeria = useRef<HTMLInputElement>(null);
 
@@ -59,6 +61,26 @@ export function PaginaBandeja({ movil = false }: { movil?: boolean }) {
       if (camara.current) camara.current.value = "";
       if (galeria.current) galeria.current.value = "";
       recargar();
+    }
+  };
+
+  // Lee las fotos (OCR en el servidor propio) y propone qué hojas forman un mismo documento según «Página 2 de 3».
+  const detectar = async () => {
+    if (!datos) return;
+    setDetectando(true);
+    setErrorSubida(null);
+    try {
+      const ids = datos.paginas.map((p) => p.id);
+      const todos: string[][] = [];
+      for (let i = 0; i < ids.length; i += 20) {
+        const r = await api.post<{ disponible: boolean; grupos: string[][] }>("/capturas/leer", { paginas: ids.slice(i, i + 20) });
+        todos.push(...r.grupos);
+      }
+      setGrupos(todos.filter((g) => g.length > 1));
+    } catch (e) {
+      setErrorSubida(e);
+    } finally {
+      setDetectando(false);
     }
   };
 
@@ -106,6 +128,26 @@ export function PaginaBandeja({ movil = false }: { movil?: boolean }) {
             <strong>{datos.cantidad}</strong> {datos.cantidad === 1 ? "foto" : "fotos"} sin clasificar. Toque las hojas de un mismo documento, en
             orden.
           </p>
+          {datos.paginas.length > 1 && (
+            <p>
+              <button type="button" className="boton boton-chico" disabled={detectando} onClick={detectar}>
+                {detectando ? "Leyendo las hojas…" : "Detectar documentos de varias hojas"}
+              </button>
+            </p>
+          )}
+          {grupos && (
+            <div className="band-grupos" role="status">
+              {grupos.length === 0 ? (
+                <small className="tenue">No se detectaron hojas seguidas de un mismo documento (se buscan marcas como «Página 2 de 3»).</small>
+              ) : (
+                grupos.map((g, i) => (
+                  <button key={i} type="button" className="boton boton-chico" onClick={() => setElegidas(g)}>
+                    Elegir las {g.length} hojas del posible documento {i + 1}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
           <div className="band-grilla">
             {datos.paginas.map((p, i) => {
               const n = elegidas.indexOf(p.id);
