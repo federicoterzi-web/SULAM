@@ -6,6 +6,7 @@ import { Aviso, Campo, Cargando, Enlace, Seccion, Vacio, fechaHora, navegar, use
 import { MapaRecursos, MapaSelector, enlaceComoLlegar, type ConfigMapa, type Punto } from "../mapa";
 import { ContactosDelRecurso } from "./contactos";
 import { DocumentacionDelRecurso, PersonasInternadas } from "./residencias";
+import { DocumentacionMensual } from "./subsidios";
 import { ubicacionActual } from "./ubicacion";
 
 export interface TipoRecurso {
@@ -332,6 +333,7 @@ export function PaginaRecurso({ id }: { id: string }) {
       )}
       {(r.tipo === "residencia" || r.tipo === "centro_dia") && <DocumentacionDelRecurso recursoId={r.id} nombre={r.nombre} />}
       {r.tipo === "residencia" && <PersonasInternadas recursoId={r.id} />}
+      {r.tipo === "residencia" && <DocumentacionMensual recursoId={r.id} />}
     </>
   );
 }

@@ -958,6 +958,23 @@ class SubsidioRequisito(Base):
     actualizado_en: Mapped[datetime] = _ts()
 
 
+class RecursoPeriodoRequisito(Base):
+    """Papel que una residencia presenta UNA vez por mes (nota de reintegro, factura, CAE…): vale para todos sus residentes."""
+
+    __tablename__ = "recurso_periodo_requisitos"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    recurso_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recursos.id", ondelete="CASCADE"), index=True)
+    periodo: Mapped[date] = mapped_column(Date, index=True)  # primer día del mes
+    codigo: Mapped[str | None] = mapped_column(String(40))
+    texto: Mapped[str] = mapped_column(Text)
+    estado: Mapped[str] = mapped_column(String(20), default="pendiente", server_default="pendiente")
+    fecha_presentado: Mapped[date | None] = mapped_column(Date)
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    orden: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()
+
+
 class Contacto(Base):
     """Personas de contacto: técnicos de gobiernos locales y de otras instituciones."""
 

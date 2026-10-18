@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
-from ..models import Caso, Expediente, Internacion, Persona, Recurso, Subsidio, SubsidioPago, SubsidioRequisito
+from ..models import Caso, Expediente, Internacion, Persona, Recurso, RecursoPeriodoRequisito, Subsidio, SubsidioPago, SubsidioRequisito
 from ..permissions import Contexto, filtro_personas, persona_en_alcance
 from ..schemas import Entrada
 from ..security import ahora
@@ -37,6 +37,7 @@ from ..subsidios_catalogo import (
     ESTADOS_REQUISITO,
     ESTADOS_RESERVADOS,
     GRUPOS,
+    MENSUAL_INSTITUCION,
     MENSUALES,
     PAGO_RESERVADO,
     TIPOS,
@@ -65,11 +66,13 @@ def _periodo_texto(d: date) -> str:
 
 # ---------------------------------------------------------------- salida
 
-def _requisito_out(r: SubsidioRequisito) -> dict:
+def _requisito_out(r: SubsidioRequisito | RecursoPeriodoRequisito) -> dict:
+    compartido = isinstance(r, RecursoPeriodoRequisito)
     return {
+        "compartido": compartido,
         "id": str(r.id),
-        "grupo": r.grupo,
-        "grupo_texto": GRUPOS.get(r.grupo, r.grupo),
+        "grupo": "institucion" if compartido else r.grupo,
+        "grupo_texto": GRUPOS["institucion"] if compartido else GRUPOS.get(r.grupo, r.grupo),
         "codigo": r.codigo,
         "texto": r.texto,
         "estado": r.estado,
@@ -240,6 +243,32 @@ def _validar_vinculos(db: Session, persona_id: uuid.UUID, v: dict) -> None:
 def _agregar_requisitos(db: Session, s: Subsidio, ctx: Contexto, tipo: str, mensual: bool, pago: SubsidioPago | None) -> None:
     for orden, (grupo, codigo, texto) in enumerate(requisitos_de(tipo, mensual)):
         db.add(SubsidioRequisito(subsidio_id=s.id, pago_id=pago.id if pago else None, grupo=grupo, codigo=codigo, texto=texto, orden=orden, actualizado_por=ctx.id))
+    # Papeles de la institución: se cargan una vez por residencia y mes. Sin residencia del mapa, quedan en cada pago.
+    if mensual and tipo == "residencia" and pago is not None:
+        if s.recurso_id is not None:
+            _asegurar_periodo(db, ctx, s.recurso_id, pago.periodo)
+        else:
+            base = len(requisitos_de(tipo, True))
+            for i, (codigo, texto) in enumerate(MENSUAL_INSTITUCION):
+                db.add(SubsidioRequisito(subsidio_id=s.id, pago_id=pago.id, grupo="institucion", codigo=codigo, texto=texto, orden=base + i, actualizado_por=ctx.id))
+
+
+def _asegurar_periodo(db: Session, ctx: Contexto, recurso_id: uuid.UUID, periodo: date) -> bool:
+    """Arma la lista de papeles mensuales de la residencia si todavía no existe. Devuelve si la creó."""
+    if db.execute(select(RecursoPeriodoRequisito.id).where(RecursoPeriodoRequisito.recurso_id == recurso_id, RecursoPeriodoRequisito.periodo == periodo).limit(1)).first():
+        return False
+    for orden, (codigo, texto) in enumerate(MENSUAL_INSTITUCION):
+        db.add(RecursoPeriodoRequisito(recurso_id=recurso_id, periodo=periodo, codigo=codigo, texto=texto, orden=orden, actualizado_por=ctx.id))
+    db.flush()
+    return True
+
+
+def _requisitos_de_pago(db: Session, pago: SubsidioPago, s: Subsidio) -> list:
+    """Papeles del mes de un subsidio: los propios y, en residencias del mapa, los de la institución (compartidos)."""
+    propios = list(db.execute(select(SubsidioRequisito).where(SubsidioRequisito.pago_id == pago.id).order_by(SubsidioRequisito.orden, SubsidioRequisito.actualizado_en)).scalars())
+    if s.tipo == "residencia" and s.recurso_id is not None:
+        propios += list(db.execute(select(RecursoPeriodoRequisito).where(RecursoPeriodoRequisito.recurso_id == s.recurso_id, RecursoPeriodoRequisito.periodo == pago.periodo).order_by(RecursoPeriodoRequisito.orden, RecursoPeriodoRequisito.actualizado_en)).scalars())
+    return propios
 
 
 @router.get("/personas/{persona_id}/subsidios")
@@ -303,14 +332,10 @@ def ver(subsidio_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session =
     s, p, _a = _subsidio(db, ctx, subsidio_id)
     reqs = db.execute(select(SubsidioRequisito).where(SubsidioRequisito.subsidio_id == s.id).order_by(SubsidioRequisito.orden, SubsidioRequisito.actualizado_en)).scalars().all()
     tramite = [r for r in reqs if r.pago_id is None]
-    por_pago: dict[uuid.UUID, list[SubsidioRequisito]] = {}
-    for r in reqs:
-        if r.pago_id is not None:
-            por_pago.setdefault(r.pago_id, []).append(r)
     pagos = db.execute(select(SubsidioPago).where(SubsidioPago.subsidio_id == s.id).order_by(SubsidioPago.periodo.desc())).scalars().all()
     d = _sub_out(s, _conteo(tramite), p)
     d["requisitos"] = [_requisito_out(r) for r in tramite]
-    d["pagos"] = [_pago_out(x, por_pago.get(x.id, [])) for x in pagos]
+    d["pagos"] = [_pago_out(x, _requisitos_de_pago(db, x, s)) for x in pagos]
     d["total_pagado"] = float(sum((x.monto or 0) for x in pagos if x.estado == "pagado"))
     return d
 
@@ -391,10 +416,17 @@ def _sincronizar_pago(db: Session, pago_id: uuid.UUID | None) -> None:
     pago = db.get(SubsidioPago, pago_id)
     if pago is None or pago.estado not in ("pendiente", "documentacion_completa"):
         return
-    reqs = db.execute(select(SubsidioRequisito).where(SubsidioRequisito.pago_id == pago_id)).scalars().all()
+    reqs = _requisitos_de_pago(db, pago, db.get(Subsidio, pago.subsidio_id))
     completo = bool(reqs) and _conteo(reqs)["faltan"] == 0
     pago.estado = "documentacion_completa" if completo else "pendiente"
 
+
+def _sincronizar_periodo(db: Session, recurso_id: uuid.UUID, periodo: date) -> None:
+    """Cuando cambia un papel de la residencia, se recalcula el mes de todos sus residentes."""
+    db.flush()
+    ids = db.execute(select(SubsidioPago.id).join(Subsidio, Subsidio.id == SubsidioPago.subsidio_id).where(Subsidio.recurso_id == recurso_id, Subsidio.tipo == "residencia", SubsidioPago.periodo == periodo)).scalars().all()
+    for i in ids:
+        _sincronizar_pago(db, i)
 
 @router.patch("/subsidios/requisitos/{requisito_id}")
 def marcar_requisito(requisito_id: uuid.UUID, datos: RequisitoPatch, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
@@ -456,6 +488,129 @@ def quitar_requisito(requisito_id: uuid.UUID, ctx: Contexto = Depends(contexto),
     return Response(status_code=204)
 
 
+# ------------------------------------------- papeles mensuales de la residencia
+
+class PeriodoRequisitoIn(Entrada):
+    texto: str = Field(min_length=3, max_length=500)
+
+
+def _periodo_de(texto: str) -> date:
+    try:
+        anio, mes = int(texto[:4]), int(texto[5:7])
+        if len(texto) != 7 or texto[4] != "-":
+            raise ValueError
+        return date(anio, mes, 1)
+    except ValueError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Mes inválido (use AAAA-MM).")
+
+
+def _recurso_residencia(db: Session, recurso_id: uuid.UUID) -> Recurso:
+    rec = db.get(Recurso, recurso_id)
+    if rec is None:
+        raise no_encontrado("Residencia")
+    return rec
+
+
+@router.get("/subsidios/residencias/{recurso_id}/{periodo}")
+def documentacion_mensual(recurso_id: uuid.UUID, periodo: str, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """Papeles que la residencia presenta una vez al mes, y cómo está el mes de cada residente con subsidio."""
+    ctx.requerir("subsidios", "consultar")
+    alcance = ctx.requerir("personas", "consultar")
+    inicio = _periodo_de(periodo)
+    rec = _recurso_residencia(db, recurso_id)
+    reqs = db.execute(select(RecursoPeriodoRequisito).where(RecursoPeriodoRequisito.recurso_id == recurso_id, RecursoPeriodoRequisito.periodo == inicio).order_by(RecursoPeriodoRequisito.orden, RecursoPeriodoRequisito.actualizado_en)).scalars().all()
+    filas = db.execute(
+        select(SubsidioPago, Subsidio, Persona)
+        .join(Subsidio, Subsidio.id == SubsidioPago.subsidio_id)
+        .join(Persona, Persona.id == Subsidio.persona_id)
+        .where(Subsidio.recurso_id == recurso_id, Subsidio.tipo == "residencia", SubsidioPago.periodo == inicio, filtro_personas(ctx, alcance))
+        .order_by(Persona.apellidos, Persona.nombres)
+    ).all()
+    residentes = []
+    for pago, s, per in filas:
+        propios = db.execute(select(SubsidioRequisito).where(SubsidioRequisito.pago_id == pago.id)).scalars().all()
+        residentes.append({
+            "pago_id": str(pago.id), "subsidio_id": str(s.id), "estado": pago.estado, "monto": _num(pago.monto),
+            "papeles": _conteo(propios), "persona": {"id": str(per.id), "numero_legajo": per.numero_legajo, "nombre": f"{per.apellidos}, {per.nombres}"},
+        })
+    return {"recurso": {"id": str(rec.id), "nombre": rec.nombre}, "periodo": periodo, "armado": bool(reqs), "papeles": [_requisito_out(r) for r in reqs], "conteo": _conteo(reqs), "residentes": residentes}
+
+
+@router.post("/subsidios/residencias/{recurso_id}/{periodo}", status_code=201)
+def armar_documentacion(recurso_id: uuid.UUID, periodo: str, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    ctx.requerir("subsidios", "modificar")
+    inicio = _periodo_de(periodo)
+    _recurso_residencia(db, recurso_id)
+    creada = _asegurar_periodo(db, ctx, recurso_id, inicio)
+    if creada:
+        audit.registrar(db, ctx, "subsidio_documentacion_mensual", "recurso", recurso_id, None, {"periodo": _periodo_texto(inicio)})
+        _sincronizar_periodo(db, recurso_id, inicio)
+    db.commit()
+    return documentacion_mensual(recurso_id, periodo, ctx, db)
+
+
+def _periodo_requisito(db: Session, ctx: Contexto, requisito_id: uuid.UUID) -> RecursoPeriodoRequisito:
+    ctx.requerir("subsidios", "modificar")
+    r = db.get(RecursoPeriodoRequisito, requisito_id)
+    if r is None:
+        raise no_encontrado("Papel")
+    return r
+
+
+@router.patch("/subsidios/periodo-requisitos/{requisito_id}")
+def marcar_papel_residencia(requisito_id: uuid.UUID, datos: RequisitoPatch, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    r = _periodo_requisito(db, ctx, requisito_id)
+    cambios = datos.model_dump(exclude_unset=True)
+    if cambios.get("estado") is not None and cambios["estado"] not in CODIGOS_ESTADO_REQUISITO:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Estado inválido.")
+    if cambios.get("estado") is None:
+        cambios.pop("estado", None)
+    anterior = r.estado
+    for k, v in cambios.items():
+        if isinstance(v, str):
+            v = v.strip() or None
+        setattr(r, k, v)
+    if r.estado == "presentado" and r.fecha_presentado is None:
+        r.fecha_presentado = _hoy()
+    if r.estado != "presentado":
+        r.fecha_presentado = None
+    r.actualizado_por = ctx.id
+    r.actualizado_en = ahora()
+    _sincronizar_periodo(db, r.recurso_id, r.periodo)
+    if anterior != r.estado:
+        audit.registrar(db, ctx, "subsidio_papel_residencia", "recurso", r.recurso_id, None, {"papel": r.codigo or r.texto[:60], "periodo": _periodo_texto(r.periodo), "antes": anterior, "despues": r.estado})
+    db.commit()
+    return _requisito_out(r)
+
+
+@router.post("/subsidios/residencias/{recurso_id}/{periodo}/requisitos", status_code=201)
+def agregar_papel_residencia(recurso_id: uuid.UUID, periodo: str, datos: PeriodoRequisitoIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    ctx.requerir("subsidios", "modificar")
+    inicio = _periodo_de(periodo)
+    _recurso_residencia(db, recurso_id)
+    _asegurar_periodo(db, ctx, recurso_id, inicio)
+    ultimo = db.execute(select(func.coalesce(func.max(RecursoPeriodoRequisito.orden), 0)).where(RecursoPeriodoRequisito.recurso_id == recurso_id, RecursoPeriodoRequisito.periodo == inicio)).scalar_one()
+    r = RecursoPeriodoRequisito(recurso_id=recurso_id, periodo=inicio, codigo=None, texto=datos.texto.strip(), orden=min(ultimo + 1, 32000), actualizado_por=ctx.id)
+    db.add(r)
+    _sincronizar_periodo(db, recurso_id, inicio)
+    audit.registrar(db, ctx, "subsidio_papel_residencia_agregado", "recurso", recurso_id, None, {"texto": r.texto[:100]})
+    db.commit()
+    return _requisito_out(r)
+
+
+@router.delete("/subsidios/periodo-requisitos/{requisito_id}", status_code=204)
+def quitar_papel_residencia(requisito_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    r = _periodo_requisito(db, ctx, requisito_id)
+    if r.codigo is not None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Los papeles del catálogo no se quitan: márquelos «No corresponde».")
+    rid, per = r.recurso_id, r.periodo
+    audit.registrar(db, ctx, "subsidio_papel_residencia_quitado", "recurso", rid, None, {"texto": r.texto[:100]})
+    db.delete(r)
+    _sincronizar_periodo(db, rid, per)
+    db.commit()
+    return Response(status_code=204)
+
+
 # ---------------------------------------------------------------- pagos
 
 class PagoIn(Entrada):
@@ -501,8 +656,7 @@ def agregar_pago(subsidio_id: uuid.UUID, datos: PagoIn, ctx: Contexto = Depends(
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe el mes " + _periodo_texto(periodo) + ".")
     pago = _crear_pago(db, ctx, s, periodo, datos.monto)
     db.commit()
-    reqs = db.execute(select(SubsidioRequisito).where(SubsidioRequisito.pago_id == pago.id).order_by(SubsidioRequisito.orden)).scalars().all()
-    return _pago_out(pago, reqs)
+    return _pago_out(pago, _requisitos_de_pago(db, pago, s))
 
 
 @router.post("/subsidios/pagos/generar")
@@ -547,8 +701,7 @@ def modificar_pago(pago_id: uuid.UUID, datos: PagoPatch, ctx: Contexto = Depends
         if (estado in PAGO_RESERVADO or p.estado in PAGO_RESERVADO) and not administra:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo quien administra los subsidios liquida y registra el pago.")
         if estado in PAGO_RESERVADO and p.estado not in PAGO_RESERVADO:
-            reqs = db.execute(select(SubsidioRequisito).where(SubsidioRequisito.pago_id == p.id)).scalars().all()
-            faltan = _conteo(reqs)["faltan"]
+            faltan = _conteo(_requisitos_de_pago(db, p, s))["faltan"]
             if faltan and not forzar:
                 raise HTTPException(status.HTTP_409_CONFLICT, {"mensaje": f"Faltan {faltan} papeles de este mes. Complételos o confirme que desea liquidar igual.", "faltan": faltan})
             if faltan:
@@ -573,8 +726,7 @@ def modificar_pago(pago_id: uuid.UUID, datos: PagoPatch, ctx: Contexto = Depends
         audit.registrar(db, ctx, "subsidio_pago_modificado", "subsidio", s.id, s.persona_id, {"periodo": _periodo_texto(p.periodo), "cambios": diff})
         db.commit()
         db.refresh(p)
-    reqs = db.execute(select(SubsidioRequisito).where(SubsidioRequisito.pago_id == p.id).order_by(SubsidioRequisito.orden)).scalars().all()
-    return _pago_out(p, reqs)
+    return _pago_out(p, _requisitos_de_pago(db, p, s))
 
 
 @router.delete("/subsidios/pagos/{pago_id}", status_code=204)
@@ -620,6 +772,14 @@ def pagos_del_mes(
     if ids:
         for r in db.execute(select(SubsidioRequisito).where(SubsidioRequisito.pago_id.in_(ids))).scalars():
             conteo.setdefault(r.pago_id, []).append(r)
+        rids = {s.recurso_id for _p, s, _x in filas if s.tipo == "residencia" and s.recurso_id}
+        compartidos: dict[tuple, list] = {}
+        if rids:
+            for r in db.execute(select(RecursoPeriodoRequisito).where(RecursoPeriodoRequisito.recurso_id.in_(rids), RecursoPeriodoRequisito.periodo == inicio)).scalars():
+                compartidos.setdefault(r.recurso_id, []).append(r)
+        for pago, s, _x in filas:
+            if s.tipo == "residencia" and s.recurso_id:
+                conteo.setdefault(pago.id, []).extend(compartidos.get(s.recurso_id, []))
     items = []
     for pago, s, per in filas:
         d = _pago_out(pago)

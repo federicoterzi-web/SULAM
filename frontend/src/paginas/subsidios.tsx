@@ -33,6 +33,7 @@ interface Requisito {
   fecha_presentado: string | null;
   observaciones: string | null;
   propio: boolean;
+  compartido?: boolean;
 }
 interface Pago {
   id: string;
@@ -335,7 +336,7 @@ function ListaPapeles({ items, puedeMarcar, alCambiar, pagoId, subsidioId }: { i
     g.items.push(r);
   }
   const marcar = async (r: Requisito, cambios: Record<string, unknown>) => {
-    await envio.ejecutar(() => api.patch(`/subsidios/requisitos/${r.id}`, cambios));
+    await envio.ejecutar(() => api.patch(`/subsidios/${r.compartido ? "periodo-requisitos" : "requisitos"}/${r.id}`, cambios));
     alCambiar();
   };
   const agregar = async (e: React.FormEvent) => {
@@ -358,6 +359,7 @@ function ListaPapeles({ items, puedeMarcar, alCambiar, pagoId, subsidioId }: { i
       {grupos.map((g) => (
         <div key={g.grupo}>
           <h3>{g.texto}</h3>
+          {g.items[0]?.compartido && <p className="tenue">Estos papeles los presenta la residencia una sola vez por mes y valen para todos sus residentes con subsidio.</p>}
           <table className="tabla">
             <tbody>
               {g.items.map((r) => (
@@ -381,7 +383,7 @@ function ListaPapeles({ items, puedeMarcar, alCambiar, pagoId, subsidioId }: { i
                   </td>
                   <td>{r.fecha_presentado ? fecha(r.fecha_presentado) : ""}</td>
                   <td>
-                    {puedeMarcar && r.propio && (
+                    {puedeMarcar && r.propio && !r.compartido && (
                       <button className="boton boton-chico" onClick={() => quitar(r)}>
                         Quitar
                       </button>
@@ -974,5 +976,142 @@ function PagosDelMes() {
         </table>
       )}
     </>
+  );
+}
+
+
+// ------------------------------------------- papeles mensuales de una residencia
+
+interface DocMensual {
+  armado: boolean;
+  papeles: Requisito[];
+  conteo: Papeles;
+  residentes: { pago_id: string; subsidio_id: string; estado: string; monto: number | null; papeles: Papeles; persona: { id: string; numero_legajo: string; nombre: string } }[];
+}
+
+export function DocumentacionMensual({ recursoId }: { recursoId: string }) {
+  const { puede } = useSesion();
+  const cat = useCatalogo();
+  const [periodo, setPeriodo] = useState(mesActual());
+  const [nuevo, setNuevo] = useState("");
+  const envio = useEnvio();
+  const datos = useDatos(() => api.get<DocMensual>(`/subsidios/residencias/${recursoId}/${periodo}`), [recursoId, periodo]);
+  if (!puede("subsidios", "consultar")) return null;
+  const puedeModificar = puede("subsidios", "modificar");
+  const d = datos.datos;
+  const armar = async () => {
+    await envio.ejecutar(() => api.post(`/subsidios/residencias/${recursoId}/${periodo}`, {}));
+    datos.recargar();
+  };
+  const agregar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (nuevo.trim().length < 3) return;
+    const ok = await envio.ejecutar(() => api.post(`/subsidios/residencias/${recursoId}/${periodo}/requisitos`, { texto: nuevo }));
+    if (ok) {
+      setNuevo("");
+      datos.recargar();
+    }
+  };
+  const quitar = async (r: Requisito) => {
+    await envio.ejecutar(() => api.delete(`/subsidios/periodo-requisitos/${r.id}`));
+    datos.recargar();
+  };
+  const marcar = async (r: Requisito, estado: string) => {
+    await envio.ejecutar(() => api.patch(`/subsidios/periodo-requisitos/${r.id}`, { estado }));
+    datos.recargar();
+  };
+  return (
+    <Seccion
+      titulo="Documentación del mes para el subsidio"
+      acciones={<input type="month" value={periodo} onChange={(e) => e.target.value && setPeriodo(valor(e))} aria-label="Mes" />}
+    >
+      <p className="tenue">Se cargan una sola vez por residencia y mes; se reflejan en los papeles de cada residente con subsidio.</p>
+      {envio.error ? <Aviso error={envio.error} /> : null}
+      {datos.error ? <Aviso error={datos.error} /> : !d || !cat.datos ? <Cargando /> : !d.armado ? (
+        <div>
+          <Vacio>Todavía no se armó la lista de papeles de este mes.</Vacio>
+          {puedeModificar && (
+            <button className="boton" onClick={armar} disabled={envio.enviando}>
+              Armar la lista del mes
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <p>
+            <Avance p={d.conteo} />
+          </p>
+          <table className="tabla">
+            <tbody>
+              {d.papeles.map((r) => (
+                <tr key={r.id} className={r.estado === "no_corresponde" ? "fila-inactiva" : ""}>
+                  <td style={{ width: "55%" }}>{r.texto}</td>
+                  <td>
+                    {puedeModificar ? (
+                      <select value={r.estado} onChange={(e) => marcar(r, valor(e))} aria-label={`Estado de: ${r.texto}`}>
+                        {cat.datos!.estados_requisito.map((x) => (
+                          <option key={x.codigo} value={x.codigo}>
+                            {x.texto}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className={`marca ${r.estado === "presentado" ? "marca-info" : "marca-alerta"}`}>{r.estado === "presentado" ? "Presentado" : r.estado === "no_corresponde" ? "No corresponde" : "Falta"}</span>
+                    )}
+                  </td>
+                  <td>{r.fecha_presentado ? fecha(r.fecha_presentado) : ""}</td>
+                  <td>
+                    {puedeModificar && r.propio && (
+                      <button className="boton boton-chico" onClick={() => quitar(r)}>
+                        Quitar
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {puedeModificar && (
+            <form onSubmit={agregar} className="fila-botones">
+              <input value={nuevo} onChange={(e) => setNuevo(valor(e))} placeholder="Agregar otro papel que se pida" aria-label="Agregar otro papel de la residencia" maxLength={500} style={{ flex: 1 }} />
+              <button className="boton boton-chico" disabled={envio.enviando || nuevo.trim().length < 3}>
+                Agregar
+              </button>
+            </form>
+          )}
+          <h3>Residentes con subsidio este mes</h3>
+          {d.residentes.length === 0 ? (
+            <Vacio>Ningún residente tiene el mes generado todavía.</Vacio>
+          ) : (
+            <table className="tabla">
+              <thead>
+                <tr>
+                  <th>Residente</th>
+                  <th>Papeles propios</th>
+                  <th>Pago</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {d.residentes.map((x) => (
+                  <tr key={x.pago_id}>
+                    <td>
+                      <Enlace a={`/legajos/${x.persona.id}`}>{x.persona.nombre}</Enlace>
+                    </td>
+                    <td>
+                      <Avance p={x.papeles} />
+                    </td>
+                    <td>{cat.datos!.estados_pago.find((e) => e.codigo === x.estado)?.texto ?? x.estado}</td>
+                    <td>
+                      <Enlace a={`/subsidios/${x.subsidio_id}`}>Abrir</Enlace>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
+    </Seccion>
   );
 }

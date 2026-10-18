@@ -103,6 +103,8 @@ TRAMITE: dict[str, list[tuple[str, list[tuple[str, str]]]]] = {
 }
 
 # Documentación mensual para pagar la estadía (circular a los referentes de residencias, 15/5/2026).
+# La del residente se pide por cada subsidio; la de la institución se carga UNA vez por residencia y por mes
+# y vale para todos sus residentes (ver ``MENSUAL_INSTITUCION``).
 MENSUAL: dict[str, list[tuple[str, list[tuple[str, str]]]]] = {
     "residencia": [
         (
@@ -118,22 +120,20 @@ MENSUAL: dict[str, list[tuple[str, list[tuple[str, str]]]]] = {
                 ("m_egreso", "Acta de egreso o acta de defunción (en caso de corresponder)"),
             ],
         ),
-        (
-            "institucion",
-            [
-                ("m_nota_reintegro", "Nota de pedido de reintegro con el monto y los datos completos del residente"),
-                ("m_habilitacion", "Habilitación del SIPROSA"),
-                ("m_categorizacion", "Categorización de la residencia"),
-                ("m_fiscal", "Cumplimiento fiscal"),
-                ("m_inscripcion", "Constancia de inscripción"),
-                ("m_cbu", "Constancia de CBU de la institución"),
-                ("m_factura", "Factura correspondiente al período a cobrar"),
-                ("m_cae", "CAE (código de autorización electrónico)"),
-            ],
-        ),
     ],
     "cuidados": [("beneficiario", [("m_comprobantes", "Comprobantes de gastos de cuidado del mes")])],
 }
+
+MENSUAL_INSTITUCION: list[tuple[str, str]] = [
+    ("m_nota_reintegro", "Nota de pedido de reintegro con el monto y los datos completos de los residentes"),
+    ("m_habilitacion", "Habilitación del SIPROSA"),
+    ("m_categorizacion", "Categorización de la residencia"),
+    ("m_fiscal", "Cumplimiento fiscal"),
+    ("m_inscripcion", "Constancia de inscripción"),
+    ("m_cbu", "Constancia de CBU de la institución"),
+    ("m_factura", "Factura correspondiente al período a cobrar"),
+    ("m_cae", "CAE (código de autorización electrónico)"),
+]
 
 
 def requisitos_de(tipo: str, mensual: bool = False) -> list[tuple[str, str, str]]:

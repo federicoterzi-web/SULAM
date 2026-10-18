@@ -69,13 +69,18 @@ def test_pagos_mensuales(admin):
     r = admin.patch(f"/api/subsidios/pagos/{pago['id']}", json={"estado": "en_liquidacion"})
     assert r.status_code == 409 and r.json()["detail"]["faltan"] == 16
     # Al completar todos los papeles, el mes pasa solo a «documentación completa».
+    assert sum(1 for x in pago["requisitos"] if x["compartido"]) == 8
     for x in pago["requisitos"]:
-        admin.patch(f"/api/subsidios/requisitos/{x['id']}", json={"estado": "presentado"})
+        ruta = "periodo-requisitos" if x["compartido"] else "requisitos"
+        admin.patch(f"/api/subsidios/{ruta}/{x['id']}", json={"estado": "presentado"})
     det = admin.get(f"/api/subsidios/{s['id']}").json()
     assert det["pagos"][0]["estado"] == "documentacion_completa" and det["pagos"][0]["papeles"]["faltan"] == 0
     # Si se desmarca uno, vuelve a pendiente.
     admin.patch(f"/api/subsidios/requisitos/{pago['requisitos'][0]['id']}", json={"estado": "pendiente"})
     assert admin.get(f"/api/subsidios/{s['id']}").json()["pagos"][0]["estado"] == "pendiente"
+    admin.patch(f"/api/subsidios/requisitos/{pago['requisitos'][0]['id']}", json={"estado": "presentado"})
+    assert admin.get(f"/api/subsidios/{s['id']}").json()["pagos"][0]["estado"] == "documentacion_completa"
+    admin.patch(f"/api/subsidios/requisitos/{pago['requisitos'][0]['id']}", json={"estado": "pendiente"})
     forzado = admin.patch(f"/api/subsidios/pagos/{pago['id']}", json={"estado": "en_liquidacion", "forzar": True})
     assert forzado.status_code == 200 and forzado.json()["estado"] == "en_liquidacion"
     ok = admin.patch(f"/api/subsidios/pagos/{pago['id']}", json={"estado": "pagado", "comprobante": "OP 5567"}).json()
@@ -125,3 +130,33 @@ def test_permisos(admin, cliente):
     assert tec.patch(f"/api/subsidios/{ms['id']}", json={"estado": "aprobado", "resolucion_numero": "X", "desde": date.today().isoformat()}).status_code == 403
     assert tec.patch(f"/api/subsidios/{ms['id']}", json={"observaciones": "Hablé con la hija"}).status_code == 200
     assert tec.post("/api/subsidios/pagos/generar", json={"periodo": date.today().isoformat()}).status_code == 403
+
+
+def test_papeles_de_la_residencia_se_cargan_una_vez(admin):
+    rid = _residencia(admin)
+    hoy = date.today()
+    mes = hoy.strftime("%Y-%m")
+    pagos = []
+    for ap, nom, doc in (("GUTIERREZ", "Marta", "2000001"), ("ORELLANA", "Julio", "2000002")):
+        p = nueva_persona(admin, apellidos=ap, nombres=nom, numero_documento=doc)
+        s = _nuevo(admin, p["id"], recurso_id=rid, monto_mensual="100000")
+        _aprobar(admin, s["id"])
+        pagos.append(admin.post(f"/api/subsidios/{s['id']}/pagos", json={"periodo": hoy.isoformat()}).json())
+    # La lista de la residencia se armó sola, una vez, y ambos residentes la comparten.
+    doc = admin.get(f"/api/subsidios/residencias/{rid}/{mes}").json()
+    assert doc["armado"] and len(doc["papeles"]) == 8 and len(doc["residentes"]) == 2
+    assert all(r["papeles"]["total"] == 8 for r in doc["residentes"])
+    # Se completan los 8 papeles de la institución: los dos meses lo reflejan.
+    for x in doc["papeles"]:
+        assert admin.patch(f"/api/subsidios/periodo-requisitos/{x['id']}", json={"estado": "presentado"}).status_code == 200
+    mesliq = admin.get("/api/subsidios-pagos", params={"periodo": mes}).json()
+    assert all(i["papeles"]["total"] == 16 and i["papeles"]["faltan"] == 8 for i in mesliq["items"])
+    # Papel extra para la residencia: se puede quitar; los del catálogo, no.
+    extra = admin.post(f"/api/subsidios/residencias/{rid}/{mes}/requisitos", json={"texto": "Acta de inspección"}).json()
+    assert admin.delete(f"/api/subsidios/periodo-requisitos/{extra['id']}").status_code == 204
+    assert admin.delete(f"/api/subsidios/periodo-requisitos/{doc['papeles'][0]['id']}").status_code == 400
+    # Armar la lista de otro mes es idempotente.
+    otro = (hoy.replace(day=1) + timedelta(days=40)).strftime("%Y-%m")
+    assert admin.post(f"/api/subsidios/residencias/{rid}/{otro}").json()["papeles"].__len__() == 8
+    assert admin.post(f"/api/subsidios/residencias/{rid}/{otro}").json()["papeles"].__len__() == 8
+    assert admin.get(f"/api/subsidios/residencias/{rid}/2026-13").status_code == 400

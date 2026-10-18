@@ -19,10 +19,11 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .subsidios_catalogo import requisitos_de
+from .subsidios_catalogo import MENSUAL_INSTITUCION, requisitos_de
 from .models import (
     Internacion,
     RecursoDocumento,
+    RecursoPeriodoRequisito,
     Subsidio,
     SubsidioPago,
     SubsidioRequisito,
@@ -168,6 +169,12 @@ def _residencias(db: Session, U: dict[str, Usuario], recursos: list[Recurso], pe
             db.add(SubsidioRequisito(subsidio_id=sub.id, pago_id=pago.id, grupo=grupo, codigo=codigo, texto=texto, orden=orden,
                                      estado="presentado" if orden < completos else "pendiente", fecha_presentado=periodo + timedelta(days=5) if orden < completos else None,
                                      actualizado_por=U["direccion"].id))
+        # Papeles de la institución: una sola vez por residencia y mes.
+        if sub.tipo == "residencia" and sub.recurso_id and not db.execute(select(RecursoPeriodoRequisito.id).where(RecursoPeriodoRequisito.recurso_id == sub.recurso_id, RecursoPeriodoRequisito.periodo == periodo).limit(1)).first():
+            for orden, (codigo, texto) in enumerate(MENSUAL_INSTITUCION):
+                ok = completos >= 16
+                db.add(RecursoPeriodoRequisito(recurso_id=sub.recurso_id, periodo=periodo, codigo=codigo, texto=texto, orden=orden, estado="presentado" if ok else "pendiente",
+                                               fecha_presentado=periodo + timedelta(days=5) if ok else None, actualizado_por=U["direccion"].id))
 
     def rnd_op(sub, atras):
         return 4000 + (sub.id.int + atras) % 900
@@ -185,7 +192,7 @@ def _residencias(db: Session, U: dict[str, Usuario], recursos: list[Recurso], pe
     mes(s1, 0, "documentacion_completa", 16)
     mes(s2, 2, "pagado", 16)
     mes(s2, 1, "en_liquidacion", 16)
-    mes(s2, 0, "pendiente", 9)
+    mes(s2, 0, "pendiente", 5)
     cuidada = personas[9] if len(personas) > 9 else personas[5]
     s4 = subsidio(cuidada, "cuidados", "aprobado", None, monto_mensual=180000, horas_semanales=20, prestador_texto="Cuidadora Ficticia, Graciela",
                   resolucion_numero="RM 1890/2026 (ficticia)", resolucion_fecha=hoy - timedelta(days=60), desde=hoy - timedelta(days=60))
