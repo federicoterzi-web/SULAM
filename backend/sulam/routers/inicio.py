@@ -10,12 +10,14 @@ from collections import Counter, defaultdict
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import Field
 from sqlalchemy import and_, exists, func, select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..deps import contexto
 from ..models import (
+    Rol,
     Area,
     Caso,
     CasoAsignacion,
@@ -31,6 +33,8 @@ from ..models import (
 )
 from ..permissions import Contexto, filtro_casos
 from ..security import ahora
+from .. import audit, tableros
+from ..schemas import Entrada
 from .participacion import datos_de_la_semana, listar_campanias, pendientes
 from ..serializers import caso_out, documento_out, expediente_out, ingreso_out, persona_resumen
 
@@ -502,4 +506,64 @@ def inicio(
         "perfil": perfil,
         "perfiles": [{"codigo": p, "nombre": PERFILES[p]} for p in propios],
         "datos": datos,
+        # Bloques que se ven, en orden y con su ancho (doceavos de la fila), según lo que se armó en Administración.
+        "diseno": [{"id": w["id"], "ancho": w["ancho"]} for w in tableros.diseno(db, perfil) if w["visible"]],
     }
+
+
+# ---------------------------------------------------------------- diseño de los tableros (Administración)
+
+class ItemDiseno(Entrada):
+    id: str
+    ancho: int = Field(ge=tableros.ANCHO_MIN, le=tableros.ANCHO_MAX)
+    visible: bool = True
+
+
+class DisenoIn(Entrada):
+    bloques: list[ItemDiseno]
+
+
+def _perfil_valido(perfil: str) -> None:
+    if perfil not in PERFILES:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tablero inexistente.")
+
+
+@router.get("/inicio/disenos")
+def disenos(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    ctx.requerir("administracion", "administrar")
+    return [
+        {
+            "codigo": p,
+            "nombre": nombre,
+            "personalizado": tableros.personalizado(db, p),
+            "catalogo": tableros.catalogo(p),
+            "diseno": tableros.diseno(db, p),
+            "roles": [r.nombre for r in db.execute(select(Rol).where(Rol.inicio == p, Rol.activo).order_by(Rol.nombre)).scalars()],
+        }
+        for p, nombre in PERFILES.items()
+    ]
+
+
+@router.put("/inicio/disenos/{perfil}")
+def guardar_diseno(perfil: str, datos: DisenoIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    ctx.requerir("administracion", "administrar")
+    _perfil_valido(perfil)
+    cat = {w["id"] for w in tableros.catalogo(perfil)}
+    ids = [b.id for b in datos.bloques]
+    if len(set(ids)) != len(ids) or not set(ids) <= cat:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El diseño incluye bloques repetidos o que no existen en ese tablero.")
+    if not any(b.visible for b in datos.bloques):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El tablero tiene que mostrar al menos un bloque.")
+    guardado = tableros.guardar(db, perfil, [b.model_dump() for b in datos.bloques])
+    audit.registrar(db, ctx, "tablero_diseno", "tablero", None, None, {"perfil": perfil, "visibles": [b["id"] for b in guardado if b["visible"]]})
+    db.commit()
+    return guardado
+
+
+@router.delete("/inicio/disenos/{perfil}", status_code=204)
+def restablecer_diseno(perfil: str, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    ctx.requerir("administracion", "administrar")
+    _perfil_valido(perfil)
+    tableros.restablecer(db, perfil)
+    audit.registrar(db, ctx, "tablero_restablecido", "tablero", None, None, {"perfil": perfil})
+    db.commit()

@@ -2,7 +2,7 @@
 import { PasesPendientes } from "./archivo";
 import { NovedadesPendientes } from "./novedades";
 import { PedidosParaAprobar } from "./miasistencia";
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { FormEquipo } from "./equipo";
 import { rutaInforme } from "./informes";
 import { api, type Caso, type Documento, type Expediente, type Ingreso, type PersonaResumen } from "../api";
@@ -12,6 +12,7 @@ import { textoDe } from "./formularios";
 import { ResumenSemanal, type Campania, type EventoResumen, type SemanaDatos } from "./participacion";
 
 interface Respuesta<T = any> {
+  diseno?: Diseno;
   perfil: string | null;
   perfiles: { codigo: string; nombre: string }[];
   datos?: T;
@@ -31,6 +32,23 @@ function guardarPreferido(p: string) {
   } catch {
     /* sin almacenamiento: se usa el inicio por defecto */
   }
+}
+
+/** Diseño del tablero (qué bloques se ven, en qué orden y de qué ancho), armado en Administración › Tableros. */
+type Diseno = { id: string; ancho: number }[];
+const DisenoCtx = createContext<Diseno | null>(null);
+
+/** Un bloque (widget) del tablero. El orden y el ancho salen del diseño; si el diseño no lo incluye, no se muestra. */
+function Bloque({ id, children }: { id: string; children: ReactNode }) {
+  const diseno = useContext(DisenoCtx);
+  const i = diseno ? diseno.findIndex((b) => b.id === id) : 0;
+  if (diseno && i < 0) return null;
+  const ancho = diseno ? diseno[i].ancho : 12;
+  return (
+    <div className="tablero-bloque" data-bloque={id} style={{ gridColumn: `span ${ancho}`, order: i }}>
+      {children}
+    </div>
+  );
 }
 
 export function PaginaTablero() {
@@ -78,9 +96,17 @@ export function PaginaTablero() {
   return (
     <>
       {saludo}
-      <NovedadesPendientes />
-      <PasesPendientes />
-      <PedidosParaAprobar />
+      <DisenoCtx.Provider value={datos.perfil ? (datos.diseno ?? null) : null}>
+      <div className="tablero-grilla">
+      <Bloque id="novedades">
+        <NovedadesPendientes />
+      </Bloque>
+      <Bloque id="pases">
+        <PasesPendientes />
+      </Bloque>
+      <Bloque id="pedidos">
+        <PedidosParaAprobar />
+      </Bloque>
       {datos.perfil === "tecnico" ? (
         <InicioTecnico d={d} />
       ) : datos.perfil === "jefatura" ? (
@@ -98,8 +124,12 @@ export function PaginaTablero() {
       ) : datos.perfil === "administrativo_area" ? (
         <InicioAdministrativo d={d} />
       ) : (
-        <InicioGeneral />
+        <div style={{ gridColumn: "1 / -1" }}>
+          <InicioGeneral />
+        </div>
       )}
+      </div>
+      </DisenoCtx.Provider>
     </>
   );
 }
@@ -196,12 +226,15 @@ function InicioTecnico({ d }: { d: { casos: CasoTecnico[]; borradores: Borrador[
   const n = (k: keyof CasoTecnico["alertas"]) => d.casos.filter((c) => c.alertas[k]).length;
   return (
     <>
+      <Bloque id="indicadores">
       <div className="indicadores">
         <Indicador valor={d.casos.length} texto="casos activos asignados a usted" />
         <Indicador valor={n("maltrato")} texto="con indicadores de maltrato" alerta={n("maltrato") > 0} />
         <Indicador valor={n("reiteracion_reciente")} texto="volvieron a consultar este mes" alerta={n("reiteracion_reciente") > 0} />
         <Indicador valor={n("sin_actividad")} texto={`sin movimiento hace más de ${d.dias_sin_actividad} días`} alerta={n("sin_actividad") > 0} />
       </div>
+      </Bloque>
+      <Bloque id="para_terminar">
       {(d.borradores.length > 0 || n("sin_registro") > 0) && (
         <Seccion titulo="Para terminar">
           <ul className="lista-pendientes">
@@ -228,6 +261,8 @@ function InicioTecnico({ d }: { d: { casos: CasoTecnico[]; borradores: Borrador[
           </ul>
         </Seccion>
       )}
+      </Bloque>
+      <Bloque id="mis_casos">
       <Seccion titulo="Mis casos, por urgencia" acciones={<Enlace a="/legajos" className="boton">Buscar legajo</Enlace>}>
         {d.casos.length === 0 ? (
           <Vacio>No tiene casos activos asignados.</Vacio>
@@ -268,6 +303,7 @@ function InicioTecnico({ d }: { d: { casos: CasoTecnico[]; borradores: Borrador[
           </ul>
         )}
       </Seccion>
+      </Bloque>
     </>
   );
 }
@@ -295,10 +331,11 @@ function InicioJefatura({ d: inicial }: { d: Jefatura }) {
     const r = await api.get<Respuesta<Jefatura>>("/inicio", { perfil: "jefatura" });
     if (r.datos) setD(r.datos);
   };
-  if (d.sin_area) return <Aviso error="Su usuario no tiene un área asignada. Pida a quien administra SULAM que la cargue." tipo="info" />;
+  if (d.sin_area) return <div style={{ gridColumn: "1 / -1" }}><Aviso error="Su usuario no tiene un área asignada. Pida a quien administra SULAM que la cargue." tipo="info" /></div>;
   const maximo = Math.max(1, ...d.equipo.map((e) => e.casos_activos));
   return (
     <>
+      <Bloque id="indicadores">
       <p className="inicio-area">{d.area.nombre}</p>
       <div className="indicadores">
         <Indicador
@@ -312,7 +349,9 @@ function InicioJefatura({ d: inicial }: { d: Jefatura }) {
         <Indicador valor={d.mes.reiteraciones} texto="reiteraciones este mes" />
         <Indicador valor={d.pendientes_impresion} texto="carátulas por imprimir" a="/imprimir-caratulas" alerta={d.pendientes_impresion > 0} />
       </div>
+      </Bloque>
 
+      <Bloque id="equipo">
       <Seccion titulo="Equipo">
         {d.equipo.length === 0 ? (
           <Vacio>No hay otras personas cargadas en el área.</Vacio>
@@ -342,7 +381,9 @@ function InicioJefatura({ d: inicial }: { d: Jefatura }) {
           </table>
         )}
       </Seccion>
+      </Bloque>
 
+      <Bloque id="para_asignar">
       <Seccion titulo="Para asignar">
         {d.sin_responsable.length === 0 ? (
           <Vacio>Todos los casos activos tienen técnico a cargo.</Vacio>
@@ -360,7 +401,9 @@ function InicioJefatura({ d: inicial }: { d: Jefatura }) {
           </>
         )}
       </Seccion>
+      </Bloque>
 
+      <Bloque id="sin_movimiento">
       <Seccion titulo={`Sin movimiento hace más de ${d.dias_sin_actividad} días`}>
         {d.sin_actividad.length === 0 ? (
           <Vacio>Ninguno.</Vacio>
@@ -373,6 +416,7 @@ function InicioJefatura({ d: inicial }: { d: Jefatura }) {
           </>
         )}
       </Seccion>
+      </Bloque>
 
       {equipoDe && (
         <Modal titulo={`Equipo a cargo · ${equipoDe.persona ? nombre(equipoDe.persona) : equipoDe.numero}`} alCerrar={() => setEquipoDe(null)} ancho>
@@ -401,16 +445,20 @@ interface InicioPart {
 function InicioParticipacion({ d }: { d: InicioPart }) {
   return (
     <>
+      <Bloque id="indicadores">
       <div className="indicadores">
         <Indicador valor={d.semana.total} texto="eventos esta semana" a="/participacion" />
         <Indicador valor={d.semana.con_presencia_sugerida} texto="con presencia de la Directora sugerida" />
         <Indicador valor={d.sin_asistentes.length} texto="eventos sin asistentes cargados" a="/participacion" alerta={d.sin_asistentes.length > 0} />
         <Indicador valor={d.campanias.length} texto="campañas activas" a="/participacion" />
       </div>
-      <div className="inicio-columnas">
+      </Bloque>
+      <Bloque id="resumen_semana">
         <Seccion titulo="Resumen de la semana" acciones={<Enlace a="/participacion">Planificación semanal</Enlace>}>
           <ResumenSemanal inicial={d.semana} />
         </Seccion>
+      </Bloque>
+      <Bloque id="para_completar">
         <Seccion titulo="Para completar">
           {d.sin_asistentes.length === 0 && d.sin_fotos === 0 ? (
             <p className="tenue">No hay nada pendiente.</p>
@@ -428,7 +476,8 @@ function InicioParticipacion({ d }: { d: InicioPart }) {
             </ul>
           )}
         </Seccion>
-      </div>
+      </Bloque>
+      <Bloque id="campanias">
       {d.campanias.length > 0 && (
         <Seccion titulo="Campañas activas">
           <ul className="lista-simple">
@@ -440,6 +489,7 @@ function InicioParticipacion({ d }: { d: InicioPart }) {
           </ul>
         </Seccion>
       )}
+      </Bloque>
     </>
   );
 }
@@ -468,6 +518,7 @@ function InicioDireccion({ d }: { d: Direccion }) {
   const tipos = Object.entries(d.maltrato_mes.por_tipo).sort((a, b) => b[1] - a[1]);
   return (
     <>
+      <Bloque id="indicadores">
       <h2 className="inicio-subtitulo">Año {d.anio}</h2>
       <div className="indicadores">
         <Indicador valor={d.totales.nuevas} texto="actuaciones nuevas" />
@@ -475,7 +526,9 @@ function InicioDireccion({ d }: { d: Direccion }) {
         <Indicador valor={d.totales.activos} texto="casos activos hoy" a="/casos" />
         <Indicador valor={d.totales.cerrados} texto="casos cerrados" a="/casos?estado=cerrado" />
       </div>
+      </Bloque>
 
+      <Bloque id="participacion">
       {d.participacion && (
         <Seccion titulo="Participación y Sensibilización · resumen semanal" acciones={<Enlace a="/participacion">Ver la planificación</Enlace>}>
           {d.participacion.con_presencia_sugerida > 0 && (
@@ -486,8 +539,9 @@ function InicioDireccion({ d }: { d: Direccion }) {
           <ResumenSemanal inicial={d.participacion} />
         </Seccion>
       )}
+      </Bloque>
 
-      <div className="inicio-columnas">
+      <Bloque id="por_departamento">
         <Seccion titulo="Por departamento">
           <table className="tabla tabla-areas">
             <thead>
@@ -522,7 +576,9 @@ function InicioDireccion({ d }: { d: Direccion }) {
             </tbody>
           </table>
         </Seccion>
+      </Bloque>
 
+      <Bloque id="maltrato">
         <Seccion titulo={`Maltrato · ${mes}`}>
           <p className="inicio-numero">
             <strong>{d.maltrato_mes.casos}</strong> {d.maltrato_mes.casos === 1 ? "caso ingresó" : "casos ingresaron"} con indicadores de
@@ -538,8 +594,9 @@ function InicioDireccion({ d }: { d: Direccion }) {
             </ul>
           )}
         </Seccion>
-      </div>
+      </Bloque>
 
+      <Bloque id="para_seguir">
       <Seccion titulo="Para seguir">
         <div className="indicadores">
           <Indicador
@@ -552,10 +609,13 @@ function InicioDireccion({ d }: { d: Direccion }) {
           <Indicador valor={d.informes_mes} texto={`informes firmados en ${mes}`} />
         </div>
       </Seccion>
+      </Bloque>
 
+      <Bloque id="actividad_reciente">
       <Seccion titulo="Actividad reciente">
         <CasosCompactos casos={d.recientes} />
       </Seccion>
+      </Bloque>
     </>
   );
 }
@@ -593,10 +653,13 @@ function ListaIngresos({ ingresos }: { ingresos: Ingreso[] }) {
 function InicioMesa({ d }: { d: { hoy: number; sin_vincular_cantidad: number; sin_vincular: Ingreso[]; mios: Ingreso[] } }) {
   return (
     <>
+      <Bloque id="indicadores">
       <div className="indicadores">
         <Indicador valor={d.hoy} texto="ingresos registrados hoy" />
         <Indicador valor={d.sin_vincular_cantidad} texto="ingresos sin vincular a un legajo" alerta={d.sin_vincular_cantidad > 0} a="/mesa" />
       </div>
+      </Bloque>
+      <Bloque id="accesos">
       <Accesos>
         <Enlace a="/mesa" className="boton boton-primario">
           Registrar un ingreso
@@ -605,12 +668,17 @@ function InicioMesa({ d }: { d: { hoy: number; sin_vincular_cantidad: number; si
           Buscar legajo
         </Enlace>
       </Accesos>
+      </Bloque>
+      <Bloque id="para_vincular">
       <Seccion titulo="Para vincular">
         <ListaIngresos ingresos={d.sin_vincular} />
       </Seccion>
+      </Bloque>
+      <Bloque id="mis_ingresos">
       <Seccion titulo="Mis últimos ingresos">
         <ListaIngresos ingresos={d.mios} />
       </Seccion>
+      </Bloque>
     </>
   );
 }
@@ -629,6 +697,7 @@ interface Carga {
 function InicioCarga({ d }: { d: Carga }) {
   return (
     <>
+      <Bloque id="indicadores">
       <div className="indicadores">
         <Indicador valor={d.sin_registro_cantidad} texto="casos sin registro de demanda cargado" alerta={d.sin_registro_cantidad > 0} />
         <Indicador valor={d.sin_escaneo_cantidad} texto="registros sin el escaneo del original" alerta={d.sin_escaneo_cantidad > 0} />
@@ -638,6 +707,8 @@ function InicioCarga({ d }: { d: Carga }) {
         Hoy cargó {d.hoy.casos} {d.hoy.casos === 1 ? "caso" : "casos"}, {d.hoy.registros} {d.hoy.registros === 1 ? "registro" : "registros"} de
         demanda y {d.hoy.evoluciones} {d.hoy.evoluciones === 1 ? "evolución" : "evoluciones"}.
       </p>
+      </Bloque>
+      <Bloque id="accesos">
       <Accesos>
         <Enlace a="/legajos" className="boton boton-primario">
           Buscar o crear legajo
@@ -646,6 +717,8 @@ function InicioCarga({ d }: { d: Carga }) {
           Fichas en papel
         </Enlace>
       </Accesos>
+      </Bloque>
+      <Bloque id="sin_registro">
       <Seccion titulo="Falta cargar el registro de demanda">
         {d.sin_registro.length === 0 ? (
           <Vacio>Todos los casos activos tienen su registro.</Vacio>
@@ -659,6 +732,8 @@ function InicioCarga({ d }: { d: Carga }) {
           </>
         )}
       </Seccion>
+      </Bloque>
+      <Bloque id="sin_escaneo">
       <Seccion titulo="Falta adjuntar el escaneo del original">
         {d.sin_escaneo.length === 0 ? (
           <Vacio>Todos los registros cargados desde papel tienen su escaneo.</Vacio>
@@ -685,6 +760,7 @@ function InicioCarga({ d }: { d: Carga }) {
           </table>
         )}
       </Seccion>
+      </Bloque>
     </>
   );
 }
@@ -694,14 +770,19 @@ function InicioCarga({ d }: { d: Carga }) {
 function InicioAdministrativo({ d }: { d: { area: string | null; casos: Caso[]; expedientes: (Expediente & { persona: PersonaResumen })[]; documentos: Documento[]; pendientes_impresion: number } }) {
   return (
     <>
+      <Bloque id="indicadores">
       {d.area && <p className="inicio-area">{d.area}</p>}
       <div className="indicadores">
         <Indicador valor={d.casos.length} texto="casos activos con movimiento reciente" />
         <Indicador valor={d.pendientes_impresion} texto="carátulas por imprimir" a="/imprimir-caratulas" alerta={d.pendientes_impresion > 0} />
       </div>
+      </Bloque>
+      <Bloque id="casos_area">
       <Seccion titulo="Casos del área">
         {d.casos.length === 0 ? <Vacio>No hay casos activos.</Vacio> : <TablaCasos casos={d.casos} conPersona />}
       </Seccion>
+      </Bloque>
+      <Bloque id="expedientes">
       <Seccion titulo="Expedientes recientes">
         {d.expedientes.length === 0 ? (
           <Vacio>Ninguno.</Vacio>
@@ -715,6 +796,8 @@ function InicioAdministrativo({ d }: { d: { area: string | null; casos: Caso[]; 
           </ul>
         )}
       </Seccion>
+      </Bloque>
+      <Bloque id="documentos">
       <Seccion titulo="Documentos que cargué">
         {d.documentos.length === 0 ? (
           <Vacio>Ninguno.</Vacio>
@@ -728,6 +811,7 @@ function InicioAdministrativo({ d }: { d: { area: string | null; casos: Caso[]; 
           </ul>
         )}
       </Seccion>
+      </Bloque>
     </>
   );
 }
@@ -764,6 +848,7 @@ function InicioPersonal({ d }: { d: PersonalInicio }) {
   };
   return (
     <>
+      <Bloque id="indicadores">
       <div className="indicadores" onClickCapture={(e) => ir((e.target as HTMLElement).closest("[data-pestana]")?.getAttribute("data-pestana") ?? "Resumen")}>
         <span className="sin-caja" data-pestana="Pedidos">
           <Indicador valor={d.para_registrar} texto="pedidos aprobados para registrar" a="/personal" alerta={d.para_registrar > 0} />
@@ -787,6 +872,8 @@ function InicioPersonal({ d }: { d: PersonalInicio }) {
           <Enlace a="/personal">importar semana</Enlace>
         </span>
       </p>
+      </Bloque>
+      <Bloque id="hoy_no_estan">
       <Seccion titulo="Hoy no están">
         {d.hoy_no_estan.length === 0 ? (
           <Vacio>No hay licencias ni comisiones registradas para hoy.</Vacio>
@@ -800,6 +887,7 @@ function InicioPersonal({ d }: { d: PersonalInicio }) {
           </ul>
         )}
       </Seccion>
+      </Bloque>
     </>
   );
 }

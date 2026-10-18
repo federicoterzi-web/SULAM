@@ -4924,3 +4924,24 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 @media print { .subnav { display: none; } }
 
 .menu-insignias { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }
+
+/* Tablero armado con bloques (widgets): grilla de 12 columnas, orden y ancho según el diseño del perfil */
+.tablero-grilla { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0 1rem; align-items: start; }
+.tablero-bloque { min-width: 0; }
+.tablero-bloque:empty { display: none; }
+@media (max-width: 1000px) { .tablero-bloque { grid-column: 1 / -1 !important; } }
+
+/* Editor de tableros (Administración) */
+.tablero-editor { margin-top: 1rem; }
+.te-grilla { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px; padding: 12px; border: 1px dashed var(--borde, #d0d7de); border-radius: 8px; background: color-mix(in srgb, #2563eb 4%, transparent); }
+.te-bloque { position: relative; min-height: 96px; padding: 10px 14px 10px 10px; border: 1px solid var(--borde, #d0d7de); border-left: 4px solid var(--primario, #1f4e79); border-radius: 6px; background: var(--superficie, #fff); display: flex; flex-direction: column; gap: 8px; cursor: grab; }
+.te-bloque.arrastrando { opacity: .45; }
+.te-bloque.destino { outline: 2px solid #2563eb; }
+.te-cabecera { display: flex; gap: 6px; align-items: flex-start; }
+.te-asa { color: #6b7280; font-size: 1.2em; line-height: 1; }
+.te-controles { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: auto; }
+.te-controles select { min-height: 32px; }
+.te-estirar { position: absolute; top: 0; right: 0; bottom: 0; width: 10px; cursor: ew-resize; background: color-mix(in srgb, #2563eb 25%, transparent); border-radius: 0 6px 6px 0; touch-action: none; }
+.te-estirar:hover { background: color-mix(in srgb, #2563eb 55%, transparent); }
+.te-ocultos { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+@media (max-width: 800px) { .te-bloque { grid-column: 1 / -1 !important; } }

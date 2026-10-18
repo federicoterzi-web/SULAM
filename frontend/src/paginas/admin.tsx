@@ -1,3 +1,4 @@
+import { Tableros } from "./admin-tableros";
 import { useState, type FormEvent } from "react";
 import { api } from "../api";
 import { Calibracion, HistorialPases } from "./admin-extra";
@@ -70,11 +71,14 @@ export function PaginaAdmin({ pestaña }: { pestaña: string }) {
         <Enlace a="/admin/pases" className={pestaña === "pases" ? "activo" : ""}>
           Historial de pases
         </Enlace>
+        <Enlace a="/admin/tableros" className={pestaña === "tableros" ? "activo" : ""}>
+          Tableros
+        </Enlace>
         <Enlace a="/admin/calibracion" className={pestaña === "calibracion" ? "activo" : ""}>
           Calibración
         </Enlace>
       </nav>
-      {pestaña === "roles" ? <Roles /> : pestaña === "catalogos" ? <Catalogos /> : pestaña === "pases" ? <HistorialPases /> : pestaña === "calibracion" ? <Calibracion /> : <Usuarios />}
+      {pestaña === "roles" ? <Roles /> : pestaña === "catalogos" ? <Catalogos /> : pestaña === "pases" ? <HistorialPases /> : pestaña === "calibracion" ? <Calibracion /> : pestaña === "tableros" ? <Tableros /> : <Usuarios />}
     </>
   );
 }

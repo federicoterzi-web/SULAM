@@ -232,3 +232,9 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Versión para celular de Participación (semana, campañas, asistentes, fotos, brief) | ✅ |
 | Avisos (notificación del navegador) por reprogramación o cambio de lugar: a quien lo creó, a los participantes y a la Directora si se sugiere su presencia | ✅ |
 | Brief en PDF, además del Word | ✅ |
+
+## Tableros y menú
+| Tarea | Estado |
+|---|---|
+| Menú lateral agrupado en 11 entradas con solapas (D-036) | ✅ |
+| Tableros como widgets acomodables por perfil: arrastrar, estirar, ocultar, restablecer (Administración › Tableros, D-037) | ✅ |
