@@ -52,6 +52,10 @@ CATALOGO: dict[str, dict] = {
         "nombre": "Red de recursos (instituciones, centros, cuidadores)",
         "acciones": ["consultar", "crear", "modificar"],
     },
+    "residencias": {
+        "nombre": "Residencias e internaciones: documentación de las residencias y personas internadas (con «propios»: lo que cargó la persona)",
+        "acciones": ["consultar", "crear", "modificar"],
+    },
     "plantillas": {
         "nombre": "Plantillas de informes (con alcance «área»: las del área propia)",
         "acciones": ["modificar"],

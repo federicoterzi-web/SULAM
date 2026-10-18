@@ -9,6 +9,7 @@ type Avisos = Record<string, string[]>;
 const TEXTOS: Record<string, { uno: string; varios: (n: number) => string; ruta: string }> = {
   agenda: { uno: "Tenés una actividad agendada para las próximas horas", varios: (n) => `Tenés ${n} actividades agendadas para las próximas horas`, ruta: "/agenda" },
   participacion_cambios: { uno: "Se reprogramó o cambió de lugar un evento", varios: (n) => `Se reprogramaron o cambiaron de lugar ${n} eventos`, ruta: "/participacion" },
+  residencias_documentos: { uno: "Hay documentación de una residencia vencida o por vencer", varios: (n) => `Hay ${n} documentos de residencias vencidos o por vencer`, ruta: "/residencias" },
   casos_asignados: { uno: "Te asignaron un caso", varios: (n) => `Te asignaron ${n} casos`, ruta: "/casos" },
   casos_sin_asignar: { uno: "Hay un caso para asignar", varios: (n) => `Hay ${n} casos para asignar`, ruta: "/casos" },
   novedades: { uno: "Hay una novedad para confirmar", varios: (n) => `Hay ${n} novedades para confirmar`, ruta: "/novedades" },

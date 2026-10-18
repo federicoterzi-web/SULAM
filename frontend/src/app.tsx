@@ -20,6 +20,7 @@ import { PaginaExpedientes } from "./paginas/expedientes";
 import { PaginaFichas } from "./paginas/fichas";
 import { PaginaColaImpresion } from "./paginas/cola";
 import { PaginaRecurso, PaginaRecursos } from "./paginas/recursos";
+import { PaginaResidencias } from "./paginas/residencias";
 import { PaginaContactos } from "./paginas/contactos";
 import { PaginaInforme } from "./paginas/informes";
 import { PaginaPlantillas } from "./paginas/plantillas";
@@ -252,6 +253,7 @@ const GRUPOS: { texto: string; miembros: ItemMenu[] }[] = [
     texto: "Red de recursos",
     miembros: [
       { ruta: "/recursos", texto: "Recursos y mapa", permiso: ["recursos", "consultar"] },
+      { ruta: "/residencias", texto: "Residencias e internaciones", permiso: ["residencias", "consultar"] },
       { ruta: "/contactos", texto: "Contactos", permiso: ["recursos", "consultar"] },
     ],
   },
@@ -468,6 +470,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return <PaginaParticipacion />;
     case "buscar-documentos":
       return <PaginaBuscarDocumentos />;
+    case "residencias":
+      return <PaginaResidencias />;
     case "recursos":
       return p[1] ? <PaginaRecurso id={p[1]} key={p[1]} /> : <PaginaRecursos />;
     case "imprimir-caratulas":

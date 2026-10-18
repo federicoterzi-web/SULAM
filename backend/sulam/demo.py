@@ -20,6 +20,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import (
+    Internacion,
+    RecursoDocumento,
     Campania,
     EventoAgenda,
     EventoParticipacion,
@@ -122,6 +124,23 @@ def _habil(d: date) -> date:
     while d.weekday() >= 5:
         d -= timedelta(days=1)
     return d
+
+
+def _residencias(db: Session, U: dict[str, Usuario], recursos: list[Recurso], personas: list[Persona], hoy: date) -> None:
+    """Documentación de dos residencias (una con todo vencido o por vencer) y algunas personas internadas."""
+    san_roque, santa_rita = recursos[2], recursos[8]
+    docs = [
+        (san_roque, "habilitacion_siprosa", "HAB-1021/2024 (ficticio)", hoy - timedelta(days=400), hoy + timedelta(days=330)),
+        (san_roque, "fiscalizacion_sanitaria", "FIS-77/2026 (ficticio)", hoy - timedelta(days=60), hoy + timedelta(days=45)),
+        (san_roque, "bomberos", None, hoy - timedelta(days=300), hoy + timedelta(days=65)),
+        (santa_rita, "habilitacion_siprosa", "HAB-455/2023 (ficticio)", hoy - timedelta(days=900), hoy - timedelta(days=12)),
+    ]
+    for r, tipo, numero, emision, vence in docs:
+        db.add(RecursoDocumento(recurso_id=r.id, tipo=tipo, numero=numero, fecha_emision=emision, vence=vence, creado_por=U["direccion"].id, actualizado_por=U["direccion"].id))
+    for p, r, dias in zip(personas[6:9], (san_roque, san_roque, santa_rita), (420, 95, 30)):
+        db.add(Internacion(persona_id=p.id, recurso_id=r.id, modalidad="residencia", desde=hoy - timedelta(days=dias),
+                           observaciones="Ingreso por derivación de la Dirección (ficticio).", creado_por=U["direccion"].id, actualizado_por=U["direccion"].id))
+    db.flush()
 
 
 def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], casos: list[Caso], almacen, tecnicos_reales: dict[str, list[Usuario]] | None = None) -> None:
@@ -280,6 +299,7 @@ def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], c
         ("institucion", "seguridad", "Comisaría de Famaillá (ficticia)", "Famaillá", "24 horas"),
         ("institucion", "justicia", "Defensoría ficticia de Concepción", "Concepción", "Lunes a viernes de 8 a 13"),
         ("cuidador", None, "Cuidadora formada Ficticia, Graciela", "Lules", "Mañanas"),
+        ("residencia", None, "Hogar de Ancianos «Santa Rita» (ficticio)", "San Miguel de Tucumán", "Todos los días"),
     ]
     recursos = []
     for tipo, cat, nombre, loc, horario in recursos_def:
@@ -291,6 +311,7 @@ def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], c
         db.add(r)
         recursos.append(r)
     db.flush()
+    _residencias(db, U, recursos, nuevas, hoy)
     contactos = []
     for nombre, cargo, inst, cat, rec in (
         ("Lic. Ficticia Andrea", "Trabajadora social", "CAPS Barrio Norte (ficticio)", "salud", recursos[3]),

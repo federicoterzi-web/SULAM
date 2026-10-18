@@ -238,3 +238,14 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 |---|---|
 | Menú lateral agrupado en 11 entradas con solapas (D-036) | ✅ |
 | Tableros como widgets acomodables por perfil: arrastrar, estirar, ocultar, restablecer (Administración › Tableros, D-037) | ✅ |
+
+## Residencias e internaciones
+| Tarea | Estado |
+|---|---|
+| Documentación de cada residencia con vencimientos, archivo opcional y avisos (D-038) | ✅ |
+| Internaciones en el legajo (lugar, fechas, egreso con motivo, historial) y personas internadas en la ficha de la residencia | ✅ |
+| Panel «Residencias e internaciones» (documentación por residencia, internados) | ✅ |
+| Subsidios de internación, alimentarios y materiales: trámite, papeles presentados, meses y pagos | ⏳ etapa 2 |
+| Cuidadores pagos: desde cuándo, horas de cuidado, pagos | ⏳ etapa 3 |
+| Versión para celular de residencias e internaciones | ⏳ |
+| Residencias en estadísticas y en el tablero de la Dirección | ⏳ |

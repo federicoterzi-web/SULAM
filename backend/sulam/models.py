@@ -830,6 +830,57 @@ class Recurso(Base):
     actualizado_en: Mapped[datetime] = _ts()
 
 
+class RecursoDocumento(Base):
+    """Documentación de una institución (residencia, centro de día…): habilitación, fiscalización sanitaria, etc.
+    El archivo es opcional: primero puede registrarse el número y el vencimiento, y escanear el papel después."""
+
+    __tablename__ = "recursos_documentos"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    recurso_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recursos.id", ondelete="CASCADE"), index=True)
+    tipo: Mapped[str] = mapped_column(String(40))
+    numero: Mapped[str | None] = mapped_column(String(100))
+    fecha_emision: Mapped[date | None] = mapped_column(Date)
+    vence: Mapped[date | None] = mapped_column(Date)
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    nombre: Mapped[str | None] = mapped_column(String(300))
+    mime: Mapped[str | None] = mapped_column(String(100))
+    tamano: Mapped[int | None] = mapped_column(BigInteger)
+    sha256: Mapped[str | None] = mapped_column(String(64))
+    almacenamiento: Mapped[str | None] = mapped_column(String(30))
+    clave_almacenamiento: Mapped[str | None] = mapped_column(String(300))
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()
+
+
+class Internacion(Base):
+    """Estadía de una persona en una residencia de larga estadía u otro hogar. ``hasta`` vacío = sigue internada."""
+
+    __tablename__ = "internaciones"
+    __table_args__ = (
+        CheckConstraint("hasta IS NULL OR hasta >= desde", name="ck_internaciones_fechas"),
+        CheckConstraint("recurso_id IS NOT NULL OR lugar_texto IS NOT NULL", name="ck_internaciones_lugar"),
+        Index("uq_internaciones_vigente", "persona_id", unique=True, postgresql_where=text("hasta IS NULL")),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    persona_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("personas.id"), index=True)
+    caso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("casos.id"))
+    recurso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("recursos.id"), index=True)
+    lugar_texto: Mapped[str | None] = mapped_column(String(300))
+    modalidad: Mapped[str] = mapped_column(String(30), default="residencia", server_default="residencia")
+    desde: Mapped[date] = mapped_column(Date)
+    hasta: Mapped[date | None] = mapped_column(Date)
+    motivo_egreso: Mapped[str | None] = mapped_column(String(30))
+    observaciones: Mapped[str | None] = mapped_column(Text)
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+    actualizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    actualizado_en: Mapped[datetime] = _ts()
+
+    recurso: Mapped[Recurso | None] = relationship(lazy="joined")
+
+
 class Contacto(Base):
     """Personas de contacto: técnicos de gobiernos locales y de otras instituciones."""
 

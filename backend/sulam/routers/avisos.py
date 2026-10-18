@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..deps import contexto
-from ..models import Caso, CasoAsignacion, CambioAgenda, EventoAgenda, EventoParticipacion, Novedad, ParticipanteAgenda, SolicitudPersonal
+from ..models import RecursoDocumento, Caso, CasoAsignacion, CambioAgenda, EventoAgenda, EventoParticipacion, Novedad, ParticipanteAgenda, SolicitudPersonal
 from ..permissions import Contexto, filtro_casos
 from ..security import ahora
 from .archivo import _para_mi
@@ -138,5 +138,15 @@ def avisos(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
             if set(c.cambios) & {"inicio", "fin", "lugar", "todo_el_dia"}:
                 cambios[e.id] = f"{e.id}:{c.id}"  # queda el último cambio: si vuelve a cambiar, se avisa de nuevo
         salida["participacion_cambios"] = _ids(cambios.values())
+
+    # Residencias: documentación vencida o que vence en los próximos 30 días (el documento más reciente de cada tipo).
+    if ctx.tiene("residencias", "consultar"):
+        hoy = ahora().date()
+        ultimos: dict = {}
+        for d in db.execute(select(RecursoDocumento).where(RecursoDocumento.vence.is_not(None)).order_by(RecursoDocumento.vence)).scalars():
+            ultimos[(d.recurso_id, d.tipo)] = d
+        salida["residencias_documentos"] = _ids(
+            f"{d.id}:{'vencido' if d.vence < hoy else 'por_vencer'}" for d in ultimos.values() if d.vence <= hoy + timedelta(days=30)
+        )
 
     return {"avisos": salida}
