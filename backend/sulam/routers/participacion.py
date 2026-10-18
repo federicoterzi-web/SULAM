@@ -1,7 +1,7 @@
 """División Participación y Sensibilización Ciudadana: eventos, campañas, material, asistentes, fotos y brief.
 
 - Los eventos son actividades de la agenda (tipo «evento»): comparten día, hora, lugar, participantes, estado, repetición e
-  historial con el resto de la agenda. Acá se guarda lo propio: nombre del flyer, tipo (lo define el área), instituciones,
+  historial con el resto de la agenda. Acá se guarda lo propio: tipo (lo define el área), imagen del flyer, instituciones,
   resumen, campaña, quién organiza, si se sugiere la presencia de la Dirección y los asistentes.
 - Los tipos de evento los constituye el área.
 - Una campaña reúne material y eventos; cada evento puede estar a cargo de otra organización.
@@ -31,7 +31,10 @@ from ..models import (
     CampaniaMaterial,
     EventoAgenda,
     EventoParticipacion,
+    FlyerParticipacion,
     FotoParticipacion,
+    Recurso,
+    RecursoDeEvento,
     TipoParticipacion,
 )
 from ..permissions import Contexto
@@ -127,8 +130,28 @@ def _limpiar_instituciones(xs: list[str] | None) -> list[str]:
     return salida[:30]
 
 
-def _titulo(flyer: str | None, tipo: TipoParticipacion) -> str:
-    return (flyer or "").strip() or tipo.nombre
+def _titulo(tipo: TipoParticipacion) -> str:
+    """El evento se registra con el nombre de su tipo: el flyer es una imagen, no lleva título."""
+    return tipo.nombre
+
+
+def _recursos_validos(db: Session, ids: list[uuid.UUID] | None) -> list[uuid.UUID]:
+    """Identificadores únicos de lugares del mapa de recursos; todos deben existir y estar activos."""
+    unicos = list(dict.fromkeys(ids or []))[:30]
+    if not unicos:
+        return []
+    ok = set(db.execute(select(Recurso.id).where(Recurso.id.in_(unicos), Recurso.activo)).scalars())
+    if len(ok) != len(unicos):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Alguna de las instituciones elegidas ya no está en el mapa de recursos.")
+    return unicos
+
+
+def _vincular_recursos(db: Session, evento_id: uuid.UUID, ids: list[uuid.UUID]) -> None:
+    actuales = set(db.execute(select(RecursoDeEvento.recurso_id).where(RecursoDeEvento.evento_id == evento_id)).scalars())
+    for r in actuales - set(ids):
+        db.delete(db.get(RecursoDeEvento, (evento_id, r)))
+    for r in set(ids) - actuales:
+        db.add(RecursoDeEvento(evento_id=evento_id, recurso_id=r))
 
 
 def _foto_out(f: FotoParticipacion) -> dict:
@@ -140,8 +163,10 @@ def _evento_out(db: Session, ctx: Contexto, e: EventoAgenda, x: EventoParticipac
     fotos = db.execute(select(FotoParticipacion).where(FotoParticipacion.evento_id == e.id).order_by(FotoParticipacion.orden)).scalars().all()
     base["participacion"] = {
         "tipo": {"id": x.tipo.id, "nombre": x.tipo.nombre},
-        "nombre_flyer": x.nombre_flyer,
+        "tiene_flyer": db.get(FlyerParticipacion, e.id) is not None,
+        "recursos": [{"id": str(r.id), "nombre": r.nombre, "tipo": r.tipo} for r in x.recursos],
         "instituciones": x.instituciones or [],
+        "todas_las_instituciones": x.todas_las_instituciones,
         "resumen": x.resumen,
         "campania": {"id": str(x.campania.id), "nombre": x.campania.nombre} if x.campania else None,
         "organiza_otra": x.organiza_otra,
@@ -214,12 +239,12 @@ def modificar_tipo(tipo_id: int, datos: TipoPatch, ctx: Contexto = Depends(conte
 
 class EventoPartIn(Entrada):
     tipo_id: int
-    nombre_flyer: str | None = Field(default=None, max_length=200)
     inicio: datetime
     fin: datetime | None = None
     todo_el_dia: bool = False
     lugar: str | None = Field(default=None, max_length=300)
-    instituciones: list[str] = Field(default_factory=list)
+    recursos_ids: list[uuid.UUID] = Field(default_factory=list)  # lugares del mapa de recursos
+    instituciones: list[str] = Field(default_factory=list)  # otras, que no están en el mapa
     resumen: str | None = Field(default=None, max_length=3000)
     campania_id: uuid.UUID | None = None
     organiza_otra: str | None = Field(default=None, max_length=200)
@@ -236,11 +261,11 @@ class EventoPartIn(Entrada):
 
 class EventoPartPatch(Entrada):
     tipo_id: int | None = None
-    nombre_flyer: str | None = Field(default=None, max_length=200)
     inicio: datetime | None = None
     fin: datetime | None = None
     todo_el_dia: bool | None = None
     lugar: str | None = Field(default=None, max_length=300)
+    recursos_ids: list[uuid.UUID] | None = None
     instituciones: list[str] | None = None
     resumen: str | None = Field(default=None, max_length=3000)
     campania_id: uuid.UUID | None = None
@@ -258,19 +283,23 @@ def crear_evento(datos: EventoPartIn, ctx: Contexto = Depends(contexto), db: Ses
     if datos.campania_id is not None:
         _campania(db, ctx, datos.campania_id, "consultar")
     resumen = (datos.resumen or "").strip() or None
+    recursos = _recursos_validos(db, datos.recursos_ids)
     base = EventoIn(
-        tipo=TIPO_EVENTO, titulo=_titulo(datos.nombre_flyer, tipo), descripcion=resumen, inicio=datos.inicio, fin=datos.fin,
+        tipo=TIPO_EVENTO, titulo=_titulo(tipo), descripcion=resumen, inicio=datos.inicio, fin=datos.fin,
         todo_el_dia=datos.todo_el_dia, lugar=(datos.lugar or "").strip() or None, participantes=datos.participantes, repetir=datos.repetir,
     )
     creados = crear_actividades(db, ctx, base)
     for e in creados:
         db.add(
             EventoParticipacion(
-                evento_id=e.id, tipo_id=tipo.id, nombre_flyer=(datos.nombre_flyer or "").strip() or None,
+                evento_id=e.id, tipo_id=tipo.id,
                 instituciones=_limpiar_instituciones(datos.instituciones), resumen=resumen, campania_id=datos.campania_id,
                 organiza_otra=(datos.organiza_otra or "").strip() or None, sugerir_directora=datos.sugerir_directora,
             )
         )
+    db.flush()
+    for e in creados:
+        _vincular_recursos(db, e.id, recursos)
     db.flush()
     audit.registrar(db, ctx, "crear", "participacion_evento", creados[0].id, None, {"tipo": tipo.nombre, "campania": str(datos.campania_id) if datos.campania_id else None, "repeticiones": len(creados)})
     db.commit()
@@ -295,18 +324,18 @@ def modificar_evento(evento_id: uuid.UUID, datos: EventoPartPatch, ctx: Contexto
     tipo = _tipo_activo(db, cambios["tipo_id"]) if cambios.get("tipo_id") else x.tipo
     if cambios.get("campania_id") is not None:
         _campania(db, ctx, cambios["campania_id"], "consultar")
-    flyer = ((cambios["nombre_flyer"] or "").strip() or None) if "nombre_flyer" in cambios else x.nombre_flyer
+    recursos = _recursos_validos(db, cambios["recursos_ids"]) if cambios.get("recursos_ids") is not None else ([] if "recursos_ids" in cambios else None)
     resumen = ((cambios["resumen"] or "").strip() or None) if "resumen" in cambios else x.resumen
     patch = EventoPatch(
-        titulo=_titulo(flyer, tipo), descripcion=resumen, aplicar_a=datos.aplicar_a, motivo=datos.motivo,
+        titulo=_titulo(tipo), descripcion=resumen, aplicar_a=datos.aplicar_a, motivo=datos.motivo,
         **{k: cambios[k] for k in ("inicio", "fin", "todo_el_dia", "lugar", "participantes") if k in cambios},
     )
 
     def aplicar(d: EventoAgenda) -> None:
         ex = _ext(db, d.id)
         ex.tipo_id = tipo.id
-        if "nombre_flyer" in cambios:
-            ex.nombre_flyer = flyer
+        if recursos is not None:
+            _vincular_recursos(db, d.id, recursos)
         if "resumen" in cambios:
             ex.resumen = resumen
         if "instituciones" in cambios:
@@ -440,6 +469,61 @@ def quitar_foto(evento_id: uuid.UUID, foto_id: uuid.UUID, ctx: Contexto = Depend
     return Response(status_code=204)
 
 
+# ---------------------------------------------------------------- flyer (imagen, se sube antes del evento)
+
+@router.post("/participacion/eventos/{evento_id}/flyer", status_code=201)
+def subir_flyer(
+    evento_id: uuid.UUID,
+    aplicar_a: str = Query("esta", pattern="^(esta|siguientes)$"),
+    archivo: UploadFile = File(...),
+    ctx: Contexto = Depends(contexto),
+    db: Session = Depends(get_db),
+):
+    """Sube (o reemplaza) el flyer. En una serie, ``aplicar_a=siguientes`` lo pone también en las próximas fechas."""
+    e, _x = _evento_part(db, ctx, evento_id, "modificar")
+    if not _puede_modificar(db, ctx, e):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "El evento está fuera de su alcance para modificar.")
+    datos, mime = _leer_imagen(archivo, MAX_FOTO, {"image/jpeg": "JPG", "image/png": "PNG", "image/webp": "WEBP"})
+    nombre_almacen, g = _guardar(datos)
+    destinos = _destinos(db, e, aplicar_a)
+    for d in destinos:
+        f = db.get(FlyerParticipacion, d.id)
+        valores = dict(
+            nombre=(archivo.filename or "flyer")[:300], mime=mime, tamano=len(datos), sha256=g.sha256,
+            almacenamiento=nombre_almacen, clave_almacenamiento=g.clave, subido_por=ctx.id, subido_en=ahora(),
+        )
+        if f is None:
+            db.add(FlyerParticipacion(evento_id=d.id, **valores))
+        else:
+            for k, v in valores.items():
+                setattr(f, k, v)
+    audit.registrar(db, ctx, "flyer_cargado", "participacion_evento", e.id, None, {"sha256": g.sha256, "eventos": len(destinos)})
+    db.commit()
+    return {"ok": True, "eventos": len(destinos)}
+
+
+@router.get("/participacion/eventos/{evento_id}/flyer")
+def ver_flyer(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    _evento_part(db, ctx, evento_id)
+    f = db.get(FlyerParticipacion, evento_id)
+    if f is None:
+        raise no_encontrado("Flyer")
+    return _servir(f)
+
+
+@router.delete("/participacion/eventos/{evento_id}/flyer", status_code=204)
+def quitar_flyer(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    e, _x = _evento_part(db, ctx, evento_id, "modificar")
+    if not _puede_modificar(db, ctx, e):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "El evento está fuera de su alcance para modificar.")
+    f = db.get(FlyerParticipacion, evento_id)
+    if f is not None:
+        db.delete(f)
+        audit.registrar(db, ctx, "flyer_quitado", "participacion_evento", e.id, None, {"sha256": f.sha256})
+        db.commit()
+    return Response(status_code=204)
+
+
 # ---------------------------------------------------------------- semana (planificación y resumen para la Dirección)
 
 def _lunes(d: date) -> date:
@@ -469,7 +553,7 @@ def _resumen_corto(e: EventoAgenda, x: EventoParticipacion) -> dict:
         "hora": None if e.todo_el_dia else inicio.strftime("%H:%M"),
         "fin": None if (e.todo_el_dia or not e.fin) else _local(e.fin).strftime("%H:%M"),
         "lugar": e.lugar,
-        "instituciones": x.instituciones or [],
+        "instituciones": x.todas_las_instituciones,
         "resumen": x.resumen,
         "campania": x.campania.nombre if x.campania else None,
         "organiza_otra": x.organiza_otra,
@@ -740,7 +824,8 @@ def _brief_evento(evento_id: uuid.UUID, formato: str, ctx: Contexto, db: Session
     if e.estado != "realizado":
         raise HTTPException(status.HTTP_409_CONFLICT, "El brief se arma una vez realizado el evento.")
     fotos = db.execute(select(FotoParticipacion).where(FotoParticipacion.evento_id == e.id).order_by(FotoParticipacion.orden)).scalars().all()
-    contenido = _modulo_brief(formato).brief_de_evento(e, x, [(f.nombre, _bytes(f)) for f in fotos], ctx.usuario.nombre_completo)
+    flyer = db.get(FlyerParticipacion, e.id)
+    contenido = _modulo_brief(formato).brief_de_evento(e, x, [(f.nombre, _bytes(f)) for f in fotos], ctx.usuario.nombre_completo, flyer=(flyer.nombre, _bytes(flyer)) if flyer else None)
     audit.registrar(db, ctx, "brief_exportado", "participacion_evento", e.id, None, {"fotos": len(fotos), "formato": formato})
     db.commit()
     return _descarga(contenido, _nombre_archivo("brief", f"{_local(e.inicio).date().isoformat()} {e.titulo}", formato))

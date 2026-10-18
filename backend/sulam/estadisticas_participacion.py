@@ -77,7 +77,7 @@ def participacion(db: Session, q: E.Consulta) -> dict:
             "realizados": len([1 for e, _ in del_mes if e.estado == "realizado"]),
             "asistentes": sum(x.asistentes or 0 for e, x in del_mes if e.estado == "realizado"),
         })
-    instituciones = Counter(i for _, x in vigentes for i in (x.instituciones or []))
+    instituciones = Counter(i for _, x in vigentes for i in x.todas_las_instituciones)
     por_estado = Counter(e.estado for e, _ in filas)
     etiquetas_estado = {"programado": "Por realizar", "realizado": "Realizados", "no_realizado": "No realizados", "cancelado": "Cancelados"}
     return {

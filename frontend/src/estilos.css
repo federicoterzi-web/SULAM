@@ -4902,3 +4902,12 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 .participacion-movil .acciones { display: flex; flex-direction: column; gap: 8px; }
 
 .mapa-sin-imagenes { position: absolute; z-index: 1000; left: 50%; top: 8px; transform: translateX(-50%); max-width: 90%; background: #fff7e6; color: #7a4b00; border: 1px solid #f0c36d; border-radius: 6px; padding: 6px 10px; font-size: .85em; text-align: center; }
+
+.part-flyer { margin: 12px 0; }
+.part-flyer h3 { margin: 0 0 6px; font-size: 1em; }
+.part-flyer img { max-width: 260px; max-height: 340px; width: auto; height: auto; border-radius: 6px; border: 1px solid var(--borde, #d0d7de); display: block; margin-bottom: 8px; }
+.part-chip-recurso { background: color-mix(in srgb, #16a34a 16%, transparent); }
+.part-buscar-recurso { position: relative; margin-bottom: 6px; }
+.part-resultados { list-style: none; margin: 2px 0 0; padding: 0; border: 1px solid var(--borde, #d0d7de); border-radius: 6px; background: var(--fondo, #fff); max-height: 220px; overflow-y: auto; }
+.part-resultados button { width: 100%; text-align: left; border: 0; background: transparent; color: inherit; padding: 8px 10px; cursor: pointer; font: inherit; min-height: 40px; }
+.part-resultados button:hover, .part-resultados button:focus { background: color-mix(in srgb, #2563eb 10%, transparent); }

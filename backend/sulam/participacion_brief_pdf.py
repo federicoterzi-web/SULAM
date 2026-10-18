@@ -65,7 +65,7 @@ def _armar(cuerpo: list, quien: str) -> bytes:
     return salida.getvalue()
 
 
-def brief_de_evento(e, x, fotos: list[tuple[str, bytes]], quien: str) -> bytes:
+def brief_de_evento(e, x, fotos: list[tuple[str, bytes]], quien: str, flyer: tuple[str, bytes] | None = None) -> bytes:
     c = [_p(e.titulo, _TIT), _p(f"{x.tipo.nombre} · {_cuando(e)}")]
     c.append(Spacer(1, 8))
     c.append(_datos([
@@ -74,9 +74,11 @@ def brief_de_evento(e, x, fotos: list[tuple[str, bytes]], quien: str) -> bytes:
         ("Lugar", e.lugar),
         ("Organiza", _organiza(x)),
         ("Campaña", x.campania.nombre if x.campania else None),
-        ("Instituciones", ", ".join(x.instituciones or []) or None),
+        ("Instituciones", ", ".join(x.todas_las_instituciones) or None),
         ("Asistentes", str(x.asistentes) if x.asistentes is not None else None),
     ]))
+    if flyer:
+        c += [_p("Flyer", _SEC), *_fotos([flyer], 7)]
     if x.resumen:
         c += [_p("Resumen", _SEC), _p(x.resumen)]
     if e.resultado:
@@ -106,8 +108,8 @@ def brief_de_campania(camp, filas: list[tuple], quien: str) -> bytes:
         for e, x, fotos in realizados:
             c += [_p(e.titulo, _NEG), _p(f"{x.tipo.nombre} · {_cuando(e)}" + (f" · {e.lugar}" if e.lugar else ""))]
             det = [f"Organiza: {_organiza(x)}"]
-            if x.instituciones:
-                det.append("Instituciones: " + ", ".join(x.instituciones))
+            if x.todas_las_instituciones:
+                det.append("Instituciones: " + ", ".join(x.todas_las_instituciones))
             if x.asistentes is not None:
                 det.append(f"Asistentes: {x.asistentes}")
             c.append(_p(" · ".join(det)))

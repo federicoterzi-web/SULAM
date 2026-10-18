@@ -23,7 +23,9 @@ from .models import (
     Campania,
     EventoAgenda,
     EventoParticipacion,
+    FlyerParticipacion,
     FotoParticipacion,
+    RecursoDeEvento,
     ParticipanteAgenda,
     TipoParticipacion,
     Agente,
@@ -460,10 +462,13 @@ def _participacion(db: Session, U: dict[str, Usuario], areas: dict[str, Area], a
     db.add_all(camp.values())
     db.flush()
 
+    lugares = db.execute(select(Recurso).where(Recurso.tipo == "centro_jubilados", Recurso.activo).order_by(Recurso.nombre_norm).limit(6)).scalars().all()
+    lugares_usados: list = []
+
     def evento(dias, h, tipo, flyer=None, lugar=None, inst=(), resumen=None, campania=None, otra=None, sugerir=False, estado="programado", asistentes=None, fotos=0, dur=2, serie=None, repeticion=None, resultado=None):
         dia = _habil(hoy + timedelta(days=dias))
         e = EventoAgenda(
-            tipo="evento", titulo=flyer or tipo, descripcion=resumen, inicio=_dt(dia, h), fin=_dt(dia, h + dur), lugar=lugar, area_id=u.area_id, estado=estado,
+            tipo="evento", titulo=tipo, descripcion=resumen, inicio=_dt(dia, h), fin=_dt(dia, h + dur), lugar=lugar, area_id=u.area_id, estado=estado,
             resultado=resultado, creado_por=u.id, serie_id=serie, repeticion=repeticion,
         )
         if estado != "programado":
@@ -473,10 +478,17 @@ def _participacion(db: Session, U: dict[str, Usuario], areas: dict[str, Area], a
         db.flush()
         db.add(
             EventoParticipacion(
-                evento_id=e.id, tipo_id=tipos[tipo].id, nombre_flyer=flyer, instituciones=list(inst), resumen=resumen,
+                evento_id=e.id, tipo_id=tipos[tipo].id, instituciones=list(inst[1:] if lugares else inst), resumen=resumen,
                 campania_id=camp[campania].id if campania else None, organiza_otra=otra, sugerir_directora=sugerir, asistentes=asistentes,
             )
         )
+        if inst and lugares:  # la primera institución es un lugar del mapa de recursos (el resto, a mano)
+            db.add(RecursoDeEvento(evento_id=e.id, recurso_id=lugares[len(lugares_usados) % len(lugares)].id))
+            lugares_usados.append(e.id)
+        if flyer:  # el flyer es una imagen que se sube antes del evento
+            datos = _foto_demo(flyer, (90, 60, 140))
+            g = almacen.guardar(io.BytesIO(datos))
+            db.add(FlyerParticipacion(evento_id=e.id, nombre="flyer.jpg", mime="image/jpeg", tamano=len(datos), sha256=g.sha256, almacenamiento=almacen.nombre, clave_almacenamiento=g.clave, subido_por=u.id))
         for n in range(fotos):
             datos = _foto_demo(f"{flyer or tipo} · {n + 1}", [(30, 90, 150), (150, 70, 40)][n % 2])
             g = almacen.guardar(io.BytesIO(datos))

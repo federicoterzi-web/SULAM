@@ -220,7 +220,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 |---|---|
 | Rol «Participación y Sensibilización» (se suma al rol de jefatura o técnico): agenda y estadísticas del área, mapa de recursos, módulo «participacion» | ✅ |
 | Tipos de evento que define el área (alta, renombrar, baja) | ✅ |
-| Eventos sobre la agenda: flyer opcional (si no hay, el título es el tipo), lugar, horario, instituciones, resumen, campaña, quién organiza, presencia de la Directora sugerida; repetición e historial | ✅ |
+| Eventos sobre la agenda: se registran con el nombre de su tipo; flyer = imagen que se sube antes del evento (también a toda una serie); lugar, horario, instituciones vinculadas al mapa de recursos (o escritas a mano si no están), resumen, campaña, quién organiza, presencia de la Directora sugerida; repetición e historial | ✅ |
 | Planificación semanal (grilla por día + resumen en texto) | ✅ |
 | Resumen semanal en el tablero de la Directora y de la Dirección (navegable por semana) y tablero propio del área | ✅ |
 | Campañas: descripción, período, material (PDF, imágenes, Office, MP4), eventos asociados con organización a cargo | ✅ |

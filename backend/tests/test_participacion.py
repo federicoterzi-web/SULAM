@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from conftest import AREA_ADMISION, crear_usuario
@@ -37,6 +38,12 @@ def _evento(c, tipo_id, **kw):
     return r.json()
 
 
+def _recurso(c, nombre: str) -> str:
+    r = c.post("/api/recursos", json={"tipo": "centro_jubilados", "nombre": nombre, "departamento": "Capital"})
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
 def _realizar(c, evento_id):
     r = c.post(f"/api/agenda/{evento_id}/resultado", json={"estado": "realizado", "resultado": "Muy buena convocatoria."})
     assert r.status_code == 200, r.text
@@ -67,17 +74,22 @@ def test_evento_titulo_agenda_y_resumen_semanal(admin, cliente):
     p, d = cliente("part"), cliente("dir")
     charla = _tipo(p, "Charla")
     ev = _evento(p, charla)
-    assert ev["titulo"] == "Charla" and ev["tipo"] == "evento"  # sin flyer: el título es el tipo de evento
+    assert ev["titulo"] == "Charla" and ev["tipo"] == "evento"  # el título es siempre el tipo de evento
+    centro = _recurso(p, "Centro de Jubilados 9 de Julio")
     con_flyer = _evento(
-        p, charla, nombre_flyer="Cuidar sin cansarse", instituciones=["Centro de Jubilados 9 de Julio", "CAPS Sur", "caps sur"],
+        p, charla, recursos_ids=[centro, centro], instituciones=["CAPS Sur", "caps sur", "centro de jubilados 9 de julio"],
         resumen="Charla abierta sobre cuidados.", sugerir_directora=True, organiza_otra="Ministerio de Salud", inicio=_cuando(2),
     )
-    assert con_flyer["titulo"] == "Cuidar sin cansarse"
-    assert con_flyer["participacion"]["instituciones"] == ["Centro de Jubilados 9 de Julio", "CAPS Sur"]
+    assert con_flyer["titulo"] == "Charla"
+    pe = con_flyer["participacion"]
+    assert [r["nombre"] for r in pe["recursos"]] == ["Centro de Jubilados 9 de Julio"] and pe["instituciones"] == ["CAPS Sur", "centro de jubilados 9 de julio"]
+    assert pe["todas_las_instituciones"] == ["Centro de Jubilados 9 de Julio", "CAPS Sur"]
+    # Un lugar que no está en el mapa no se puede vincular.
+    assert p.post("/api/participacion/eventos", json={"tipo_id": charla, "inicio": _cuando(), "recursos_ids": [str(uuid.uuid4())]}).status_code == 400
     # Aparece en la agenda común, pero no se crea ni se edita por la vía general.
     desde, hasta = _cuando(-1), _cuando(10)
     en_agenda = p.get("/api/agenda", params={"desde": desde, "hasta": hasta}).json()["eventos"]
-    assert {e["titulo"] for e in en_agenda} == {"Charla", "Cuidar sin cansarse"}
+    assert {e["titulo"] for e in en_agenda} == {"Charla"}
     assert p.post("/api/agenda", json={"tipo": "evento", "titulo": "Xyz", "inicio": _cuando()}).status_code == 400
     assert p.patch(f"/api/agenda/{con_flyer['id']}", json={"titulo": "Otro"}).status_code == 400
     assert "evento" not in [t["clave"] for t in p.get("/api/agenda/tipos").json()]
@@ -85,7 +97,7 @@ def test_evento_titulo_agenda_y_resumen_semanal(admin, cliente):
     lunes = (datetime.now() + timedelta(days=1)).date()
     s = d.get("/api/participacion/semana", params={"lunes": lunes.isoformat()}).json()
     assert s["total"] == 2 and s["con_presencia_sugerida"] == 1
-    assert "Cuidar sin cansarse" in s["texto"] and "Se sugiere la presencia de la Dirección" in s["texto"] and "CAPS Sur" in s["texto"]
+    assert "Centro de Jubilados 9 de Julio" in s["texto"] and "Se sugiere la presencia de la Dirección" in s["texto"] and "CAPS Sur" in s["texto"]
     assert sum(len(x["eventos"]) for x in s["dias"]) == 2
     # El tablero de la Dirección lo trae y el del área también.
     assert d.get("/api/inicio").json()["datos"]["participacion"]["total"] >= 0
@@ -102,14 +114,15 @@ def test_edicion_en_serie_y_cambio_de_nombre(admin, cliente):
     desde, hasta = _cuando(-1), _cuando(40)
     filas = p.get("/api/agenda", params={"desde": desde, "hasta": hasta}).json()["eventos"]
     assert len(filas) == 3
-    m = p.patch(f"/api/participacion/eventos/{filas[1]['id']}", json={"nombre_flyer": "Memoria activa", "instituciones": ["Hogar San José"], "aplicar_a": "siguientes", "motivo": "Se definió el flyer"})
+    hogar = _recurso(p, "Hogar San José")
+    m = p.patch(f"/api/participacion/eventos/{filas[1]['id']}", json={"recursos_ids": [hogar], "instituciones": [], "lugar": "Hogar San José", "aplicar_a": "siguientes", "motivo": "Se confirmó el hogar"})
     assert m.status_code == 200, m.text
     filas = p.get("/api/agenda", params={"desde": desde, "hasta": hasta}).json()["eventos"]
-    assert [f["titulo"] for f in filas] == ["Taller", "Memoria activa", "Memoria activa"]
-    assert p.get(f"/api/participacion/eventos/{filas[2]['id']}").json()["participacion"]["instituciones"] == ["Hogar San José"]
-    assert p.get(f"/api/participacion/eventos/{filas[0]['id']}").json()["participacion"]["instituciones"] == ["CAPS Norte"]
+    assert [f["titulo"] for f in filas] == ["Taller"] * 3
+    assert p.get(f"/api/participacion/eventos/{filas[2]['id']}").json()["participacion"]["todas_las_instituciones"] == ["Hogar San José"]
+    assert p.get(f"/api/participacion/eventos/{filas[0]['id']}").json()["participacion"]["todas_las_instituciones"] == ["CAPS Norte"]
     h = p.get(f"/api/agenda/{filas[2]['id']}").json()["historial"]
-    assert h and h[0]["motivo"] == "Se definió el flyer"
+    assert h and h[0]["motivo"] == "Se confirmó el hogar"
 
 
 def test_realizado_asistentes_fotos_y_brief(admin, cliente):
@@ -118,7 +131,7 @@ def test_realizado_asistentes_fotos_y_brief(admin, cliente):
     crear_usuario("part", ROL, DIV)
     p = cliente("part")
     t = _tipo(p, "Feria")
-    ev = _evento(p, t, nombre_flyer="Feria de la Salud", resumen="Chequeos y charlas.", instituciones=["PAMI"])
+    ev = _evento(p, t, resumen="Chequeos y charlas.", instituciones=["PAMI"])
     # Antes de realizarse no hay asistentes, fotos ni brief.
     assert p.patch(f"/api/participacion/eventos/{ev['id']}/asistentes", json={"asistentes": 50}).status_code == 409
     assert p.post(f"/api/participacion/eventos/{ev['id']}/fotos", files={"archivo": ("a.jpg", _foto(), "image/jpeg")}).status_code == 409
@@ -141,7 +154,7 @@ def test_realizado_asistentes_fotos_y_brief(admin, cliente):
     assert b.status_code == 200 and b.headers["content-type"].endswith("wordprocessingml.document")
     doc = Document(io.BytesIO(b.content))
     texto = "\n".join(x.text for x in doc.paragraphs) + "\n".join(c.text for t_ in doc.tables for row in t_.rows for c in row.cells)
-    assert "Feria de la Salud" in texto and "85" in texto and "PAMI" in texto and "Chequeos y charlas." in texto and "Muy buena convocatoria." in texto
+    assert "Feria" in texto and "85" in texto and "PAMI" in texto and "Chequeos y charlas." in texto and "Muy buena convocatoria." in texto
     assert len(doc.inline_shapes) == 2
 
 
@@ -171,8 +184,8 @@ def test_campania_con_material_eventos_y_brief(admin, cliente):
     assert p.post(f"/api/participacion/campanias/{cid}/materiales", files={"archivo": ("falso.pdf", b"no es pdf", "application/pdf")}).status_code == 415
     assert p.get(f"/api/participacion/campanias/{cid}/materiales/{pdf.json()['id']}").content.startswith(b"%PDF")
     # Eventos de la campaña: uno propio y otro a cargo de otra organización con presencia sugerida.
-    e1 = _evento(p, tipo, nombre_flyer="Apertura", campania_id=cid, inicio=_cuando(-3))
-    e2 = _evento(p, tipo, nombre_flyer="Cierre", campania_id=cid, organiza_otra="Municipalidad de Yerba Buena", sugerir_directora=True, inicio=_cuando(20))
+    e1 = _evento(p, tipo, campania_id=cid, inicio=_cuando(-3))
+    e2 = _evento(p, tipo, campania_id=cid, organiza_otra="Municipalidad de Yerba Buena", sugerir_directora=True, inicio=_cuando(20))
     _realizar(p, e1["id"])
     p.patch(f"/api/participacion/eventos/{e1['id']}/asistentes", json={"asistentes": 120})
     det = p.get(f"/api/participacion/campanias/{cid}").json()
@@ -182,7 +195,7 @@ def test_campania_con_material_eventos_y_brief(admin, cliente):
     assert brief.status_code == 200
     doc = Document(io.BytesIO(brief.content))
     texto = "\n".join(x.text for x in doc.paragraphs)
-    assert "Buen trato" in texto and "Apertura" in texto and "Cierre" in texto and "Municipalidad de Yerba Buena" in texto
+    assert "Buen trato" in texto and "Municipalidad de Yerba Buena" in texto
     # Quien no es del área no ve la campaña ni su material.
     assert t.get(f"/api/participacion/campanias/{cid}").status_code == 403
     assert p.patch(f"/api/participacion/campanias/{cid}", json={"estado": "cerrada"}).json()["estado"] == "cerrada"
@@ -238,7 +251,7 @@ def test_roles_existentes_reciben_permisos_de_participacion(db):
 def test_brief_en_pdf_de_evento_y_campania(admin, cliente):
     crear_usuario("part", ROL, DIV)
     p = cliente("part")
-    ev = _evento(p, _tipo(p, "Feria"), nombre_flyer="Feria de la Salud", resumen="Chequeos.")
+    ev = _evento(p, _tipo(p, "Feria"), resumen="Chequeos.")
     camp = p.post("/api/participacion/campanias", json={"nombre": "Octubre Rosa"}).json()
     p.patch(f"/api/participacion/eventos/{ev['id']}", json={"campania_id": camp["id"]})
     assert p.get(f"/api/participacion/eventos/{ev['id']}/brief.pdf").status_code == 409  # todavía no se realizó
@@ -321,3 +334,33 @@ def test_teselas_con_acceso_bloqueado_usan_el_respaldo(admin, monkeypatch):
     monkeypatch.setattr("urllib.request.urlopen", falso)
     r = admin.get("/api/mapa/teselas/11/650/1250.png")
     assert r.status_code == 200 and r.content == b"\x89PNG-respaldo" and len(vistos) == 2
+
+
+def test_flyer_es_una_imagen_que_se_sube_antes_del_evento(admin, cliente):
+    from docx import Document
+
+    crear_usuario("part", ROL, DIV)
+    crear_usuario("tec", "Técnico", AREA_ADMISION)
+    p, t = cliente("part"), cliente("tec")
+    r = _evento(p, _tipo(p, "Charla"), repetir={"frecuencia": "semanal", "cantidad": 3})
+    filas = p.get("/api/agenda", params={"desde": _cuando(-1), "hasta": _cuando(40)}).json()["eventos"]
+    primero = filas[0]["id"]
+    assert r["participacion"]["tiene_flyer"] is False
+    assert p.get(f"/api/participacion/eventos/{primero}/flyer").status_code == 404
+    # Se sube antes de que el evento se realice; solo imágenes.
+    assert p.post(f"/api/participacion/eventos/{primero}/flyer", files={"archivo": ("f.txt", b"hola", "text/plain")}).status_code == 415
+    assert t.post(f"/api/participacion/eventos/{primero}/flyer", files={"archivo": ("f.jpg", _foto(), "image/jpeg")}).status_code == 403
+    assert p.post(f"/api/participacion/eventos/{primero}/flyer", files={"archivo": ("f.jpg", _foto(), "image/jpeg")}).status_code == 201
+    assert p.get(f"/api/participacion/eventos/{primero}/flyer").content == _foto()
+    assert p.get(f"/api/participacion/eventos/{primero}").json()["participacion"]["tiene_flyer"] is True
+    assert p.get(f"/api/participacion/eventos/{filas[1]['id']}/flyer").status_code == 404  # solo esa fecha
+    # Reemplazar y llevarlo a las fechas siguientes de la serie.
+    r = p.post(f"/api/participacion/eventos/{primero}/flyer", params={"aplicar_a": "siguientes"}, files={"archivo": ("g.png", _png(), "image/png")})
+    assert r.status_code == 201 and r.json()["eventos"] == 3
+    assert p.get(f"/api/participacion/eventos/{filas[2]['id']}/flyer").content == _png()
+    # El flyer sale en el brief una vez realizado.
+    _realizar(p, primero)
+    doc = Document(io.BytesIO(p.get(f"/api/participacion/eventos/{primero}/brief.docx").content))
+    assert len(doc.inline_shapes) == 1
+    assert p.delete(f"/api/participacion/eventos/{primero}/flyer").status_code == 204
+    assert p.get(f"/api/participacion/eventos/{primero}/flyer").status_code == 404

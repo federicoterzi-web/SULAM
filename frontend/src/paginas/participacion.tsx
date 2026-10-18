@@ -35,8 +35,10 @@ export interface SemanaDatos {
 
 interface DatosEvento {
   tipo: { id: number; nombre: string };
-  nombre_flyer: string | null;
+  tiene_flyer: boolean;
+  recursos: { id: string; nombre: string; tipo: string }[];
   instituciones: string[];
+  todas_las_instituciones: string[];
   resumen: string | null;
   campania: { id: string; nombre: string } | null;
   organiza_otra: string | null;
@@ -364,10 +366,21 @@ export function DetalleEvento({ id, alCerrar, alCambiar }: { id: string; alCerra
                 <dd>{x.campania.nombre}</dd>
               </>
             )}
-            {x.instituciones.length > 0 && (
+            {x.todas_las_instituciones.length > 0 && (
               <>
                 <dt>Instituciones</dt>
-                <dd>{x.instituciones.join(", ")}</dd>
+                <dd>
+                  {x.recursos.map((r, i) => (
+                    <span key={r.id}>
+                      {i > 0 && ", "}
+                      <a href="#/recursos" title="Está en el mapa de recursos">
+                        📍 {r.nombre}
+                      </a>
+                    </span>
+                  ))}
+                  {x.recursos.length > 0 && x.instituciones.length > 0 && ", "}
+                  {x.instituciones.join(", ")}
+                </dd>
               </>
             )}
             {x.sugerir_directora && (
@@ -402,6 +415,7 @@ export function DetalleEvento({ id, alCerrar, alCambiar }: { id: string; alCerra
               </>
             )}
           </dl>
+          {modo === "ver" && <Flyer evento={e} siguientes={siguientes} alCambiar={() => datos.recargar()} />}
           {e.estado === "programado" && e.puedo_modificar && modo === "ver" && (
             <div className="fila-botones fila-izquierda">
               <button className="boton boton-primario" onClick={() => setModo("resultado")}>
@@ -432,6 +446,74 @@ export function DetalleEvento({ id, alCerrar, alCambiar }: { id: string; alCerra
         </>
       )}
     </Modal>
+  );
+}
+
+/** Flyer del evento: una imagen que se puede subir antes de que se realice. */
+function Flyer({ evento: e, siguientes, alCambiar }: { evento: EventoCompleto; siguientes: number; alCambiar: () => void }) {
+  const { puede } = useSesion();
+  const puedeCambiar = puede("participacion", "modificar") && e.puedo_modificar;
+  const [subiendo, setSubiendo] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [version, setVersion] = useState(0);
+  const [aTodas, setATodas] = useState(false);
+  const entrada = useRef<HTMLInputElement>(null);
+  const tiene = e.participacion.tiene_flyer;
+  if (!tiene && !puedeCambiar) return null;
+  const subir = async (archivo: File | undefined) => {
+    if (!archivo) return;
+    setSubiendo(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("archivo", archivo);
+      await subirConProgreso(`/participacion/eventos/${e.id}/flyer?aplicar_a=${aTodas ? "siguientes" : "esta"}`, fd, () => {});
+      setVersion((v) => v + 1);
+      alCambiar();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setSubiendo(false);
+      if (entrada.current) entrada.current.value = "";
+    }
+  };
+  const quitar = async () => {
+    try {
+      await api.delete(`/participacion/eventos/${e.id}/flyer`);
+      alCambiar();
+    } catch (err) {
+      setError(err);
+    }
+  };
+  return (
+    <section className="part-flyer">
+      <h3>Flyer</h3>
+      {tiene && (
+        <a href={`/api/participacion/eventos/${e.id}/flyer?v=${version}`} target="_blank" rel="noreferrer">
+          <img src={`/api/participacion/eventos/${e.id}/flyer?v=${version}`} alt="Flyer del evento" />
+        </a>
+      )}
+      {!tiene && <p className="tenue">Todavía no se cargó el flyer. Puede subir la imagen antes del evento.</p>}
+      {puedeCambiar && (
+        <div className="fila-botones fila-izquierda">
+          <label className="boton boton-chico">
+            <input ref={entrada} type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={subiendo} onChange={(ev) => subir(ev.target.files?.[0])} />
+            {subiendo ? "Subiendo…" : tiene ? "Cambiar el flyer" : "＋ Subir el flyer"}
+          </label>
+          {tiene && (
+            <button type="button" className="boton boton-chico" onClick={quitar}>
+              Quitar
+            </button>
+          )}
+        </div>
+      )}
+      {puedeCambiar && siguientes > 0 && (
+        <label className="campo campo-casilla">
+          <input type="checkbox" checked={aTodas} onChange={(ev) => setATodas(ev.target.checked)} /> Ponerlo también en las {siguientes} fechas siguientes de la serie
+        </label>
+      )}
+      <Aviso error={error} />
+    </section>
   );
 }
 
@@ -526,30 +608,100 @@ function Cierre({ evento: e, alCambiar }: { evento: EventoCompleto; alCambiar: (
 
 // ---------------------------------------------------------------- alta y edición de un evento
 
-function Instituciones({ valor, alCambiar }: { valor: string[]; alCambiar: (v: string[]) => void }) {
+interface LugarRecurso {
+  id: string;
+  nombre: string;
+  tipo: string;
+  localidad?: string | null;
+}
+
+/** Instituciones del evento: se eligen del mapa de recursos (vinculadas) o, si no están cargadas, se escriben. */
+function Instituciones({
+  recursos,
+  otras,
+  alCambiarRecursos,
+  alCambiarOtras,
+}: {
+  recursos: { id: string; nombre: string }[];
+  otras: string[];
+  alCambiarRecursos: (v: { id: string; nombre: string }[]) => void;
+  alCambiarOtras: (v: string[]) => void;
+}) {
+  const { puede } = useSesion();
+  const [buscar, setBuscar] = useState("");
+  const [resultados, setResultados] = useState<LugarRecurso[]>([]);
   const [texto, setTexto] = useState("");
+  const puedeBuscar = puede("recursos", "consultar");
+  useEffect(() => {
+    if (!puedeBuscar || buscar.trim().length < 2) {
+      setResultados([]);
+      return;
+    }
+    let vigente = true;
+    const t = setTimeout(() => {
+      api
+        .get<LugarRecurso[]>("/recursos", { q: buscar.trim(), tipo: "centro_jubilados,centro_dia,residencia,institucion" })
+        .then((r) => vigente && setResultados(r.slice(0, 8)))
+        .catch(() => vigente && setResultados([]));
+    }, 250);
+    return () => {
+      vigente = false;
+      clearTimeout(t);
+    };
+  }, [buscar, puedeBuscar]);
+  const elegir = (r: LugarRecurso) => {
+    if (!recursos.some((x) => x.id === r.id)) alCambiarRecursos([...recursos, { id: r.id, nombre: r.nombre }]);
+    setBuscar("");
+    setResultados([]);
+  };
   const agregar = () => {
     const t = texto.trim();
-    if (t && !valor.some((v) => v.toLowerCase() === t.toLowerCase())) alCambiar([...valor, t]);
+    if (t && !otras.some((v) => v.toLowerCase() === t.toLowerCase())) alCambiarOtras([...otras, t]);
     setTexto("");
   };
   return (
     <div className="part-instituciones">
       <div className="part-chips">
-        {valor.map((v) => (
+        {recursos.map((r) => (
+          <span key={r.id} className="part-chip part-chip-recurso" title="Vinculada al mapa de recursos">
+            📍 {r.nombre}
+            <button type="button" aria-label={`Quitar ${r.nombre}`} onClick={() => alCambiarRecursos(recursos.filter((x) => x.id !== r.id))}>
+              ×
+            </button>
+          </span>
+        ))}
+        {otras.map((v) => (
           <span key={v} className="part-chip">
             {v}
-            <button type="button" aria-label={`Quitar ${v}`} onClick={() => alCambiar(valor.filter((x) => x !== v))}>
+            <button type="button" aria-label={`Quitar ${v}`} onClick={() => alCambiarOtras(otras.filter((x) => x !== v))}>
               ×
             </button>
           </span>
         ))}
       </div>
+      {puedeBuscar && (
+        <div className="part-buscar-recurso">
+          <input value={buscar} placeholder="Buscar en el mapa de recursos (centro de jubilados, institución…)" onChange={(e) => setBuscar(e.target.value)} />
+          {resultados.length > 0 && (
+            <ul className="part-resultados">
+              {resultados.map((r) => (
+                <li key={r.id}>
+                  <button type="button" onClick={() => elegir(r)}>
+                    📍 {r.nombre}
+                    {r.localidad && <small className="tenue"> · {r.localidad}</small>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {buscar.trim().length >= 2 && resultados.length === 0 && <small className="tenue">No hay coincidencias en el mapa. Puede escribirla abajo.</small>}
+        </div>
+      )}
       <div className="fila-botones">
         <input
           value={texto}
           maxLength={200}
-          placeholder="Escriba una institución y toque Agregar"
+          placeholder="Si no está en el mapa, escríbala y toque Agregar"
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -597,12 +749,13 @@ export function FormEvento({
   const gente = useDatos(() => api.get<{ id: string; nombre: string }[]>("/agenda/participantes"), []);
   const [tipoId, setTipoId] = useState<string>(x ? String(x.tipo.id) : "");
   const [tipoNuevo, setTipoNuevo] = useState("");
-  const [flyer, setFlyer] = useState(x?.nombre_flyer ?? "");
+  const [flyer, setFlyer] = useState<File | null>(null);
   const [dia, setDia] = useState(ini ? iso(ini) : diaInicial ?? iso(new Date()));
   const [desde, setDesde] = useState(ini && !evento?.todo_el_dia ? `${dos(ini.getHours())}:${dos(ini.getMinutes())}` : "10:00");
   const [hasta, setHasta] = useState(fin && !evento?.todo_el_dia ? `${dos(fin.getHours())}:${dos(fin.getMinutes())}` : "");
   const [todo, setTodo] = useState(evento?.todo_el_dia ?? false);
   const [lugar, setLugar] = useState(evento?.lugar ?? "");
+  const [recursos, setRecursos] = useState<{ id: string; nombre: string }[]>(x?.recursos ?? []);
   const [instituciones, setInstituciones] = useState<string[]>(x?.instituciones ?? []);
   const [resumen, setResumen] = useState(x?.resumen ?? "");
   const [campania, setCampania] = useState(x?.campania?.id ?? campaniaId ?? "");
@@ -632,11 +785,11 @@ export function FormEvento({
       const finDate = !todo && hasta ? new Date(`${dia}T${hasta}:00`) : null;
       const cuerpo = {
         tipo_id: Number(tid),
-        nombre_flyer: flyer.trim() || null,
         inicio: inicio.toISOString(),
         fin: finDate ? finDate.toISOString() : null,
         todo_el_dia: todo,
         lugar: lugar.trim() || null,
+        recursos_ids: recursos.map((r) => r.id),
         instituciones,
         resumen: resumen.trim() || null,
         campania_id: campania || null,
@@ -644,12 +797,18 @@ export function FormEvento({
         sugerir_directora: sugerir,
         participantes: quienes,
       };
-      return evento
-        ? api.patch(`/participacion/eventos/${evento.id}`, { ...cuerpo, aplicar_a: aplicar, motivo: motivo || null })
-        : api.post("/participacion/eventos", {
-            ...cuerpo,
-            ...(frecuencia ? { repetir: { frecuencia, ...(terminaEn === "cantidad" ? { cantidad } : { hasta: hastaDia }) } } : {}),
-          });
+      if (evento) return api.patch(`/participacion/eventos/${evento.id}`, { ...cuerpo, aplicar_a: aplicar, motivo: motivo || null });
+      const creado = await api.post<{ id: string }>("/participacion/eventos", {
+        ...cuerpo,
+        ...(frecuencia ? { repetir: { frecuencia, ...(terminaEn === "cantidad" ? { cantidad } : { hasta: hastaDia }) } } : {}),
+      });
+      if (flyer) {
+        // El flyer es una imagen: se sube una vez creado el evento (y se copia a toda la serie si se repite).
+        const fd = new FormData();
+        fd.append("archivo", flyer);
+        await subirConProgreso(`/participacion/eventos/${creado.id}/flyer?aplicar_a=${frecuencia ? "siguientes" : "esta"}`, fd, () => {});
+      }
+      return creado;
     });
     if (r) alGuardar();
   };
@@ -658,7 +817,7 @@ export function FormEvento({
   return (
     <form className="formulario" onSubmit={guardar}>
       <div className="grilla">
-        <Campo etiqueta="Tipo de evento *" ayuda="Si no hay flyer, el evento se registra con el nombre del tipo.">
+        <Campo etiqueta="Tipo de evento *" ayuda="El evento se registra con el nombre de su tipo.">
           <select value={tipoId} onChange={(e) => setTipoId(e.target.value)} required={!tipoNuevo.trim()}>
             <option value="">{activos.length ? "Elegir…" : "Todavía no hay tipos: cree uno abajo"}</option>
             {activos.map((t) => (
@@ -673,9 +832,11 @@ export function FormEvento({
             <input value={tipoNuevo} maxLength={120} onChange={(e) => setTipoNuevo(e.target.value)} placeholder="Ej.: Charla, Taller, Feria" />
           </Campo>
         )}
-        <Campo etiqueta="Nombre del flyer (si corresponde)">
-          <input value={flyer} maxLength={200} onChange={(e) => setFlyer(e.target.value)} />
-        </Campo>
+        {!evento && (
+          <Campo etiqueta="Flyer (imagen, si ya lo tiene)" ayuda="También se puede subir después, desde el evento.">
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setFlyer(e.target.files?.[0] ?? null)} />
+          </Campo>
+        )}
         <Campo etiqueta="Día *">
           <input type="date" value={dia} required onChange={(e) => setDia(e.target.value)} />
         </Campo>
@@ -697,9 +858,11 @@ export function FormEvento({
         </Campo>
       </div>
 
-      <Campo etiqueta="Instituciones con las que se coordina o a las que se dirige">
-        <Instituciones valor={instituciones} alCambiar={setInstituciones} />
-      </Campo>
+      {/* No va dentro de un <label>: al elegir un resultado el botón desaparece y el navegador activaría otro botón del label. */}
+      <div className="campo">
+        <span className="campo-etiqueta">Instituciones con las que se coordina o a las que se dirige</span>
+        <Instituciones recursos={recursos} otras={instituciones} alCambiarRecursos={setRecursos} alCambiarOtras={setInstituciones} />
+      </div>
       <Campo etiqueta="Breve resumen" ayuda="Es lo que se lee en el resumen semanal de la Dirección.">
         <textarea rows={3} value={resumen} maxLength={3000} onChange={(e) => setResumen(e.target.value)} />
       </Campo>
@@ -1097,7 +1260,7 @@ function Tipos() {
   };
   return (
     <>
-      <p className="tenue">Los tipos de evento los define el área (charla, taller, feria…). Si un evento no tiene flyer, se registra con el nombre de su tipo.</p>
+      <p className="tenue">Los tipos de evento los define el área (charla, taller, feria…). Cada evento se registra con el nombre de su tipo; el flyer es una imagen que se sube al evento.</p>
       {administra && (
         <form className="formulario formulario-linea" onSubmit={crear}>
           <Campo etiqueta="Nuevo tipo de evento">

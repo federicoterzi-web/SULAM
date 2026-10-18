@@ -691,8 +691,7 @@ class EventoParticipacion(Base):
     __tablename__ = "agenda_participacion"
     evento_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agenda_eventos.id", ondelete="CASCADE"), primary_key=True)
     tipo_id: Mapped[int] = mapped_column(ForeignKey("participacion_tipos.id"))
-    nombre_flyer: Mapped[str | None] = mapped_column(String(200))
-    instituciones: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    instituciones: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))  # las que no están en el mapa de recursos
     resumen: Mapped[str | None] = mapped_column(Text)
     campania_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("campanias.id"), index=True)
     organiza_otra: Mapped[str | None] = mapped_column(String(200))  # otra organización a cargo; vacío = la propia área
@@ -701,6 +700,37 @@ class EventoParticipacion(Base):
 
     tipo: Mapped[TipoParticipacion] = relationship(lazy="joined")
     campania: Mapped[Campania | None] = relationship(lazy="joined")
+    recursos: Mapped[list["Recurso"]] = relationship(
+        secondary="participacion_recursos", lazy="selectin", order_by="Recurso.nombre_norm", viewonly=True,
+        primaryjoin="EventoParticipacion.evento_id == foreign(RecursoDeEvento.evento_id)",
+        secondaryjoin="foreign(RecursoDeEvento.recurso_id) == Recurso.id",
+    )
+
+    @property
+    def todas_las_instituciones(self) -> list[str]:
+        """Los lugares del mapa de recursos vinculados y, después, las instituciones escritas a mano."""
+        salida: list[str] = [r.nombre for r in self.recursos]
+        vistos = {n.lower() for n in salida}
+        for n in self.instituciones or []:
+            if n.lower() not in vistos:
+                salida.append(n)
+                vistos.add(n.lower())
+        return salida
+
+
+class RecursoDeEvento(Base):
+    """Institución del mapa de recursos con la que se coordina un evento de Participación."""
+
+    __tablename__ = "participacion_recursos"
+    evento_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agenda_eventos.id", ondelete="CASCADE"), primary_key=True)
+    recurso_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("recursos.id"), primary_key=True)
+
+
+class FlyerParticipacion(_ArchivoMixin, Base):
+    """Imagen del flyer de un evento (se puede subir antes de que se realice)."""
+
+    __tablename__ = "participacion_flyers"
+    evento_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agenda_eventos.id", ondelete="CASCADE"), primary_key=True)
 
 
 class FotoParticipacion(_ArchivoMixin, Base):

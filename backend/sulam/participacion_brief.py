@@ -118,7 +118,7 @@ def _a_bytes(d: Document) -> bytes:
     return salida.getvalue()
 
 
-def brief_de_evento(e, x, fotos: list[tuple[str, bytes]], quien: str) -> bytes:
+def brief_de_evento(e, x, fotos: list[tuple[str, bytes]], quien: str, flyer: tuple[str, bytes] | None = None) -> bytes:
     d = _documento()
     _titulo(d, e.titulo, f"{x.tipo.nombre} · {_cuando(e)}")
     _datos(
@@ -129,10 +129,13 @@ def brief_de_evento(e, x, fotos: list[tuple[str, bytes]], quien: str) -> bytes:
             ("Lugar", e.lugar),
             ("Organiza", _organiza(x)),
             ("Campaña", x.campania.nombre if x.campania else None),
-            ("Instituciones", ", ".join(x.instituciones or []) or None),
+            ("Instituciones", ", ".join(x.todas_las_instituciones) or None),
             ("Asistentes", str(x.asistentes) if x.asistentes is not None else None),
         ],
     )
+    if flyer:
+        _seccion(d, "Flyer")
+        _fotos(d, [flyer], 7)
     if x.resumen:
         _seccion(d, "Resumen")
         d.add_paragraph(x.resumen)
@@ -175,8 +178,8 @@ def brief_de_campania(c, filas: list[tuple], quien: str) -> bytes:
             r.bold = True
             d.add_paragraph(f"{x.tipo.nombre} · {_cuando(e)}" + (f" · {e.lugar}" if e.lugar else ""))
             detalles = [f"Organiza: {_organiza(x)}"]
-            if x.instituciones:
-                detalles.append("Instituciones: " + ", ".join(x.instituciones))
+            if x.todas_las_instituciones:
+                detalles.append("Instituciones: " + ", ".join(x.todas_las_instituciones))
             if x.asistentes is not None:
                 detalles.append(f"Asistentes: {x.asistentes}")
             d.add_paragraph(" · ".join(detalles))
