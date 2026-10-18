@@ -451,6 +451,8 @@ class UsuarioPatch(Entrada):
     # Al dar de baja a quien tiene casos a cargo: a quién pasarlos, o dejarlos para asignar.
     reasignar_a: uuid.UUID | None = None
     dejar_sin_asignar: bool = False
+    # Reparto caso por caso: {caso_id: usuario_id o null (queda para asignar)}. Tiene que incluir todos los casos abiertos.
+    reparto: dict[uuid.UUID, uuid.UUID | None] | None = None
 
 
 class ResetPasswordIn(Entrada):

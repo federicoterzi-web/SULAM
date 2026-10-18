@@ -174,12 +174,12 @@ function FormUsuario({ usuario, roles, alGuardar }: { usuario?: UsuarioAdmin; ro
   const cambia = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value });
   // Al dar de baja a alguien con casos a cargo hay que decidir qué pasa con ellos.
   const dandoDeBaja = !!usuario?.activo && !d.activo;
-  const [casos, setCasos] = useState(0);
-  const [destino, setDestino] = useState("");
+  const [casos, setCasos] = useState<{ id: string; persona: string; fecha_caratula: string }[]>([]);
+  const [destinos, setDestinos] = useState<Record<string, string>>({});
   const [candidatos, setCandidatos] = useState<UsuarioAdmin[]>([]);
   useEffect(() => {
     if (!dandoDeBaja || !usuario) return;
-    api.get<{ cantidad: number }>(`/admin/usuarios/${usuario.id}/casos-a-cargo`).then((r) => setCasos(r.cantidad)).catch(() => setCasos(0));
+    api.get<{ casos: { id: string; persona: string; fecha_caratula: string }[] }>(`/admin/usuarios/${usuario.id}/casos-a-cargo`).then((r) => setCasos(r.casos)).catch(() => setCasos([]));
     api.get<UsuarioAdmin[]>("/admin/usuarios").then((l) => setCandidatos(l.filter((x) => x.activo && x.id !== usuario.id))).catch(() => setCandidatos([]));
   }, [dandoDeBaja, usuario]);
 
@@ -193,7 +193,7 @@ function FormUsuario({ usuario, roles, alGuardar }: { usuario?: UsuarioAdmin; ro
     };
     const r = await ejecutar(() =>
       usuario
-        ? api.patch(`/admin/usuarios/${usuario.id}`, { ...comun, activo: d.activo, ...(dandoDeBaja && casos > 0 ? (destino ? { reasignar_a: destino } : { dejar_sin_asignar: true }) : {}) })
+        ? api.patch(`/admin/usuarios/${usuario.id}`, { ...comun, activo: d.activo, ...(dandoDeBaja && casos.length > 0 ? { reparto: Object.fromEntries(casos.map((c) => [c.id, destinos[c.id] || null])) } : {}) })
         : api.post("/admin/usuarios", { ...comun, usuario: d.usuario, password_inicial: d.password_inicial }),
     );
     if (r) alGuardar();
@@ -250,17 +250,54 @@ function FormUsuario({ usuario, roles, alGuardar }: { usuario?: UsuarioAdmin; ro
           <input type="text" value={d.password_inicial} onChange={cambia("password_inicial")} required minLength={10} autoComplete="off" />
         </Campo>
       )}
-      {dandoDeBaja && casos > 0 && (
-        <Campo etiqueta={`Tiene ${casos} ${casos === 1 ? "caso" : "casos"} a cargo`} ayuda="Los casos cerrados no se tocan. Queda el historial de la asignación.">
-          <select value={destino} onChange={(e) => setDestino(e.target.value)} aria-label="Qué hacer con sus casos">
-            <option value="">Dejarlos para asignar (le aparecen a la jefatura)</option>
-            {candidatos.map((c) => (
-              <option key={c.id} value={c.id}>
-                Pasarlos a {c.nombre_completo}
-              </option>
-            ))}
-          </select>
-        </Campo>
+      {dandoDeBaja && casos.length > 0 && (
+        <fieldset className="grupo-casillas" style={{ minWidth: 0, maxWidth: "100%", boxSizing: "border-box" }}>
+          <legend>
+            Tiene {casos.length} {casos.length === 1 ? "caso abierto" : "casos abiertos"} a cargo: ¿a quién pasarlos?
+          </legend>
+          <p className="tenue">Los casos cerrados no se tocan y queda el historial. «Para asignar» los deja a disposición de la jefatura.</p>
+          <Campo etiqueta="Pasar todos a">
+            <select
+              value=""
+              onChange={(e) => setDestinos(Object.fromEntries(casos.map((c) => [c.id, e.target.value])))}
+              aria-label="Pasar todos los casos a"
+            >
+              <option value="">Elegir para repartir igual…</option>
+              {candidatos.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre_completo}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <table className="tabla" style={{ width: "100%", tableLayout: "fixed" }}>
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Carátula</th>
+                <th>Pasa a</th>
+              </tr>
+            </thead>
+            <tbody>
+              {casos.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.persona}</td>
+                  <td>{c.fecha_caratula.split("-").reverse().join("/")}</td>
+                  <td>
+                    <select style={{ width: "100%" }} value={destinos[c.id] ?? ""} onChange={(e) => setDestinos({ ...destinos, [c.id]: e.target.value })} aria-label={`Quién recibe el caso de ${c.persona}`}>
+                      <option value="">Para asignar</option>
+                      {candidatos.map((x) => (
+                        <option key={x.id} value={x.id}>
+                          {x.nombre_completo}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </fieldset>
       )}
       <Aviso error={error} />
       <div className="fila-botones">

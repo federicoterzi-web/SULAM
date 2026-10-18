@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
-from ..models import Area, Caso, CasoAsignacion, Rol, RolPermiso, TipoDocumental, TipoVinculo, Usuario
+from ..models import Area, Caso, CasoAsignacion, Persona, Rol, RolPermiso, TipoDocumental, TipoVinculo, Usuario
 from ..permissions import ALCANCES, CATALOGO, DESCRIPCION_ACCIONES, Contexto, permiso_valido, permisos_efectivos
 from ..numbering import fijar_proximo, proximo
 from ..schemas import CatalogoIn, NumeracionIn, ResetPasswordIn, RolIn, UsuarioIn, UsuarioPatch
@@ -215,27 +215,34 @@ def _casos_a_cargo(db: Session, usuario_id: uuid.UUID) -> list[CasoAsignacion]:
 def casos_a_cargo(usuario_id: uuid.UUID, ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
     if db.get(Usuario, usuario_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario inexistente.")
-    return {"cantidad": len(_casos_a_cargo(db, usuario_id))}
+    filas = []
+    for a in _casos_a_cargo(db, usuario_id):
+        c = db.get(Caso, a.caso_id)
+        p = db.get(Persona, c.persona_id)
+        filas.append({"id": str(c.id), "persona": f"{p.apellidos}, {p.nombres}", "fecha_caratula": (c.fecha_ingreso or c.abierto_en.date()).isoformat(), "estado": c.estado})
+    filas.sort(key=lambda x: x["persona"])
+    return {"cantidad": len(filas), "casos": filas}
 
 
-def _liberar_casos(db: Session, ctx: Contexto, u: Usuario, destino: Usuario | None) -> int:
-    """Cierra las asignaciones del usuario dado de baja y, si se pidió, las pasa a otra persona."""
+def _liberar_casos(db: Session, ctx: Contexto, u: Usuario, destino: Usuario | None, reparto: dict[uuid.UUID, Usuario | None] | None = None) -> int:
+    """Cierra las asignaciones del usuario dado de baja y las pasa a otra persona (una sola, o una por caso)."""
     asignaciones = _casos_a_cargo(db, u.id)
     for a in asignaciones:
         a.hasta = ahora()
         a.finalizado_por = ctx.id
         caso = db.get(Caso, a.caso_id)
-        if destino is not None:
+        destino_caso = reparto[a.caso_id] if reparto is not None else destino
+        if destino_caso is not None:
             ya = db.execute(
                 select(CasoAsignacion.id).where(
-                    CasoAsignacion.caso_id == a.caso_id, CasoAsignacion.usuario_id == destino.id, CasoAsignacion.hasta.is_(None)
+                    CasoAsignacion.caso_id == a.caso_id, CasoAsignacion.usuario_id == destino_caso.id, CasoAsignacion.hasta.is_(None)
                 )
             ).first()
             if ya is None:
-                db.add(CasoAsignacion(caso_id=a.caso_id, usuario_id=destino.id, asignado_por=ctx.id, motivo=f"Baja de {u.nombre_completo}"))
+                db.add(CasoAsignacion(caso_id=a.caso_id, usuario_id=destino_caso.id, asignado_por=ctx.id, motivo=f"Baja de {u.nombre_completo}"))
         audit.registrar(
             db, ctx, "finalizar_asignacion", "caso", a.caso_id, caso.persona_id if caso else None,
-            {"usuario": u.usuario, "motivo": "Baja del usuario", "pasa_a": destino.usuario if destino else None},
+            {"usuario": u.usuario, "motivo": "Baja del usuario", "pasa_a": destino_caso.usuario if destino_caso else None},
         )
     return len(asignaciones)
 
@@ -251,11 +258,23 @@ def modificar_usuario(
     roles_nuevos = cambios_pedidos.pop("roles", None)
     reasignar_a = cambios_pedidos.pop("reasignar_a", None)
     dejar_sin_asignar = cambios_pedidos.pop("dejar_sin_asignar", False)
+    reparto_pedido = cambios_pedidos.pop("reparto", None)
     baja = cambios_pedidos.get("activo") is False and u.activo
     destino = None
+    reparto = None
     if baja:
-        pendientes = len(_casos_a_cargo(db, u.id))
-        if pendientes and reasignar_a is None and not dejar_sin_asignar:
+        a_cargo = {a.caso_id for a in _casos_a_cargo(db, u.id)}
+        pendientes = len(a_cargo)
+        if pendientes and reparto_pedido is not None:
+            if set(reparto_pedido) != a_cargo:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "El reparto tiene que incluir exactamente los casos abiertos de esta persona.")
+            reparto = {}
+            for caso_id, uid in reparto_pedido.items():
+                d = db.get(Usuario, uid) if uid is not None else None
+                if uid is not None and (d is None or not d.activo or d.id == u.id):
+                    raise HTTPException(status.HTTP_400_BAD_REQUEST, "Una de las personas elegidas para recibir casos no existe o está inactiva.")
+                reparto[caso_id] = d
+        elif pendientes and reasignar_a is None and not dejar_sin_asignar:
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
                 {"mensaje": f"Tiene {pendientes} casos a cargo. Indique a quién pasarlos o déjelos para asignar.", "casos": pendientes},
@@ -282,7 +301,7 @@ def modificar_usuario(
         if cambios_pedidos.get("activo") is False:
             revocar_sesiones_usuario(db, u.id)
             if baja:
-                diff["casos_liberados"] = _liberar_casos(db, ctx, u, destino)
+                diff["casos_liberados"] = _liberar_casos(db, ctx, u, destino, reparto)
         audit.registrar(db, ctx, "modificar", "usuario", u.id, detalle={"cambios": diff})
         db.commit()
         db.refresh(u)

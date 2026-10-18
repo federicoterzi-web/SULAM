@@ -46,3 +46,21 @@ def test_baja_no_puede_pasar_casos_a_alguien_inactivo(admin):
     assert r.status_code == 400
     # Un usuario sin casos se da de baja sin preguntar.
     assert admin.patch(f"/api/admin/usuarios/{ids['Tec2']}", json={"activo": True}).status_code == 200
+
+
+def test_baja_repartiendo_caso_por_caso(admin):
+    crear_usuario("tec1", "Técnico", AREA_ADMISION)
+    crear_usuario("tec2", "Técnico", AREA_ADMISION)
+    crear_usuario("tec3", "Técnico", AREA_ADMISION)
+    ids = _ids(admin)
+    c1 = nuevo_caso(admin, nueva_persona(admin)["id"], responsable_id=ids["Tec1"])
+    c2 = nuevo_caso(admin, nueva_persona(admin, apellidos="LOPEZ", nombres="Ana", numero_documento="2000003")["id"], responsable_id=ids["Tec1"])
+    c3 = nuevo_caso(admin, nueva_persona(admin, apellidos="SOSA", nombres="Luis", numero_documento="2000004")["id"], responsable_id=ids["Tec1"])
+    lista = admin.get(f"/api/admin/usuarios/{ids['Tec1']}/casos-a-cargo").json()
+    assert lista["cantidad"] == 3 and {x["id"] for x in lista["casos"]} == {c1["id"], c2["id"], c3["id"]} and "fecha_caratula" in lista["casos"][0]
+    # El reparto tiene que incluir todos los casos.
+    assert admin.patch(f"/api/admin/usuarios/{ids['Tec1']}", json={"activo": False, "reparto": {c1["id"]: ids["Tec2"]}}).status_code == 400
+    r = admin.patch(f"/api/admin/usuarios/{ids['Tec1']}", json={"activo": False, "reparto": {c1["id"]: ids["Tec2"], c2["id"]: ids["Tec3"], c3["id"]: None}})
+    assert r.status_code == 200, r.text
+    resp = lambda c: [x["usuario"] for x in admin.get(f"/api/casos/{c['id']}").json()["responsables"]]
+    assert resp(c1) == ["tec2"] and resp(c2) == ["tec3"] and resp(c3) == []
