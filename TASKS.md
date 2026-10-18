@@ -141,6 +141,8 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Tipos documentales nuevos con plantilla (vencimiento, número, campos propios) | ✅ |
 | Vencimiento visible en el legajo | ✅ |
 | Editar la plantilla de un tipo existente (desde la clasificación de hojas; no se quitan datos ya definidos) | ✅ |
+| Lectura automática (OCR local, Tesseract español): sugiere legajo por DNI/CUIL, tipo por palabras del nombre, emisión, vencimiento y número; la persona confirma | ✅ |
+| Reconocimiento: aprender palabras de documentos ya confirmados; agrupar solas las hojas de la bandeja (el servidor ya detecta «Página X de Y»); calibrar con documentos reales | ⏳ |
 | Sugerir el tipo leyendo la foto (OCR local) | ⏳ |
 | Limpieza de fotos descartadas | ⏳ |
 

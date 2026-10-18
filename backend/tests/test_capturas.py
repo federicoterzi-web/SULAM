@@ -142,3 +142,46 @@ def test_editar_plantilla_de_un_tipo(admin):
     sin = admin.patch(f"/api/tipos-documentales/{t['id']}", json={"tiene_vencimiento": False}).json()
     assert sin["vigencia_dias"] is None
     assert admin.patch("/api/tipos-documentales/99999", json={"nombre": "x1"}).status_code == 404
+
+
+def test_unidades_del_reconocimiento():
+    from sulam import reconocimiento as r
+
+    t = "Certificado de Discapacidad\nPágina 2 de 3\nNro: AB-1234/5 DNI 20.123.456 CUIL 20-20123456-3\nFecha de emisión: 01/02/2024 Válido hasta: 01/02/2029"
+    assert "20123456" in r.documentos_en(t) and "20201234563" in r.documentos_en(t)
+    assert r.fechas_en(t) == {"vence": "2029-02-01", "fecha_emision": "2024-02-01"}
+    assert r.numero_en(t) == "AB-1234/5"
+    assert r.pagina_de(t) == (2, 3)
+    assert r.agrupar([(1, 3), (2, 3), None, (1, 2), (2, 2), (2, 2)]) == [[0, 1], [2], [3, 4], [5]]
+    assert r.tipos_probables(t, [(1, "Certificado de discapacidad", None), (2, "Libreta sanitaria", None)]) == [(1, 1.0)]
+
+
+def test_leer_fotos_sugiere_legajo_y_tipo(admin):
+    import pytest
+    from PIL import ImageDraw, ImageFont
+
+    from sulam import reconocimiento
+
+    if not reconocimiento.disponible():
+        pytest.skip("Tesseract no está instalado")
+    p = nueva_persona(admin, numero_documento="20123456")
+    tipo = _tipo(admin, nombre="Disability certificate").json()
+    img = Image.new("RGB", (1400, 900), "white")
+    d = ImageDraw.Draw(img)
+    try:
+        f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 56)
+    except OSError:
+        f = ImageFont.load_default(56)
+    d.text((60, 60), "Disability certificate", fill="black", font=f)
+    d.text((60, 200), "DNI 20.123.456", fill="black", font=f)
+    d.text((60, 340), "Valid until 01/02/2029", fill="black", font=f)
+    b = io.BytesIO()
+    img.save(b, "JPEG")
+    pid = admin.post("/api/capturas", files={"foto": ("a.jpg", b.getvalue(), "image/jpeg")}).json()["id"]
+    r = admin.post("/api/capturas/leer", json={"paginas": [pid]})
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j["tipo_documental_id"] == tipo["id"]
+    assert j["persona"] and j["persona"]["id"] == p["id"]
+    assert j["grupos"] == [[pid]]
+    assert admin.post("/api/capturas/leer", json={"paginas": [pid, pid]}).status_code == 400

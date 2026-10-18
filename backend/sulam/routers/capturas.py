@@ -18,11 +18,11 @@ from pydantic import Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, reconocimiento
 from ..config import get_settings
 from ..db import get_db
 from ..deps import contexto
-from ..models import Documento, PaginaCaptura
+from ..models import Persona, PaginaCaptura, TipoDocumental
 from ..permissions import Contexto
 from ..schemas import Entrada
 from ..storage import almacenamiento_actual, almacenamiento_por_nombre, detectar_mime
@@ -175,3 +175,53 @@ def clasificar(datos: ClasificarIn, ctx: Contexto = Depends(contexto), db: Sessi
     audit.registrar(db, ctx, "clasificar_captura", "documento", uuid.UUID(doc["id"]), datos.persona_id, {"hojas": len(paginas)})
     db.commit()
     return doc
+
+
+MAX_LEER = 20
+
+
+class LeerIn(Entrada):
+    paginas: list[uuid.UUID] = Field(min_length=1, max_length=MAX_LEER)  # en el orden de las hojas
+
+
+@router.post("/capturas/leer")
+def leer(datos: LeerIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """Lee las hojas con OCR local y SUGIERE legajo, tipo, fechas, número y agrupación. No guarda nada."""
+    ctx.requerir("documentos", "crear")
+    if len(set(datos.paginas)) != len(datos.paginas):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Una hoja está repetida.")
+    paginas = [_pagina_propia(db, ctx, i) for i in datos.paginas]
+    if not reconocimiento.disponible():
+        return {"disponible": False, "grupos": [[str(p.id)] for p in paginas]}
+    textos = []
+    for p in paginas:
+        with almacenamiento_por_nombre(p.almacenamiento).abrir(p.clave_almacenamiento) as f:
+            textos.append(reconocimiento.leer_texto(f.read()))
+    todo = "\n".join(textos)
+
+    numeros = reconocimiento.documentos_en(todo)
+    persona = None
+    if numeros:
+        candidatas = db.execute(
+            select(Persona).where(
+                Persona.unificada_en_id.is_(None),
+                (Persona.numero_documento.in_(numeros)) | (Persona.cuil.in_(numeros)),
+            ).limit(5)
+        ).scalars().all()
+        if len(candidatas) == 1:
+            c = candidatas[0]
+            persona = {"id": str(c.id), "nombre": f"{c.apellidos}, {c.nombres}", "documento": c.numero_documento}
+    tipos = db.execute(select(TipoDocumental).where(TipoDocumental.activo.is_(True))).scalars().all()
+    probables = reconocimiento.tipos_probables(todo, [(t.id, t.nombre, t.descripcion) for t in tipos])
+    fechas = reconocimiento.fechas_en(todo)
+    marcas = [reconocimiento.pagina_de(t) for t in textos]
+    return {
+        "disponible": True,
+        "persona": persona,
+        "tipo_documental_id": probables[0][0] if probables else None,
+        "tipos_probables": [t for t, _ in probables[:3]],
+        "fecha_emision": fechas["fecha_emision"],
+        "vence": fechas["vence"],
+        "numero": reconocimiento.numero_en(todo),
+        "grupos": [[str(paginas[i].id) for i in g] for g in reconocimiento.agrupar(marcas)],
+    }

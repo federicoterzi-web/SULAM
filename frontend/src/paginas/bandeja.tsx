@@ -162,6 +162,15 @@ export function PaginaBandeja({ movil = false }: { movil?: boolean }) {
 
 // ---------------------------------------------------------------- armar un documento
 
+interface Lectura {
+  disponible: boolean;
+  persona?: { id: string; nombre: string } | null;
+  tipo_documental_id?: number | null;
+  fecha_emision?: string | null;
+  vence?: string | null;
+  numero?: string | null;
+}
+
 function ClasificarHojas({
   hojas,
   alMover,
@@ -189,6 +198,49 @@ function ClasificarHojas({
   const [descripcion, setDescripcion] = useState("");
   const { enviando, error, ejecutar } = useEnvio();
   const tipo = catalogos.tipos_documentales.find((t) => String(t.id) === tipoId);
+  const [leyendo, setLeyendo] = useState(true);
+  const [sugerido, setSugerido] = useState<string[]>([]);
+
+  // Lectura automática (OCR en el servidor propio): solo propone, y solo donde todavía no se cargó nada.
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await api.post<Lectura>("/capturas/leer", { paginas: hojas.slice(0, 20) });
+        if (!vivo || !r.disponible) return;
+        const puestos: string[] = [];
+        if (r.persona) puestos.push("el legajo");
+        if (r.tipo_documental_id) puestos.push("el tipo");
+        if (r.fecha_emision) puestos.push("la emisión");
+        if (r.vence) puestos.push("el vencimiento");
+        if (r.numero) puestos.push("el número");
+        if (r.persona) {
+          try {
+            const p = await api.get<PersonaResumen>(`/personas/${r.persona.id}`);
+            if (vivo) setPersona((x) => (x ? x : p));
+          } catch {
+            /* sin sugerencia de legajo */
+          }
+        }
+        if (r.tipo_documental_id) setTipoId((x) => (x ? x : String(r.tipo_documental_id)));
+        if (r.fecha_emision) setEmision((x) => (x ? x : r.fecha_emision!));
+        if (r.vence) {
+          setVence((x) => (x ? x : r.vence!));
+          setVenceEditado(true);
+        }
+        if (r.numero) setNumero((x) => (x ? x : r.numero!));
+        if (vivo) setSugerido(puestos);
+      } catch {
+        /* la lectura es opcional */
+      } finally {
+        if (vivo) setLeyendo(false);
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const casos = useDatos(() => (persona ? api.get<Caso[]>("/casos", { persona_id: persona.id, limite: 50 }) : Promise.resolve([] as Caso[])), [persona?.id]);
 
@@ -237,6 +289,12 @@ function ClasificarHojas({
           </button>
         </header>
         <form className="modal-cuerpo formulario" onSubmit={guardar}>
+          {leyendo && <p className="tenue">Leyendo las hojas para sugerir el legajo y el tipo…</p>}
+          {!leyendo && sugerido.length > 0 && (
+            <p className="aviso aviso-info" role="status">
+              La lectura automática sugirió: {sugerido.join(", ")}. Revíselo antes de guardar.
+            </p>
+          )}
           <div className="band-orden-hojas" aria-label="Orden de las hojas">
             {hojas.map((id, i) => (
               <figure key={id}>

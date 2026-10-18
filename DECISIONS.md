@@ -127,3 +127,6 @@ Se reemplaza el diseño anterior de captura por QR (rama `captura-celular`, sin 
 | P-010 | Procedimiento de recuperación ante incidentes | Informática |
 | P-011 | Umbral de "sin actividad" del tablero (hoy 30 días) | Equipo técnico |
 
+
+## D-029 — Lectura automática de documentos fotografiados
+OCR local con Tesseract (idioma español, instalado en la imagen Docker); ninguna imagen sale del servidor. El resultado son sugerencias que rellenan solo campos vacíos del formulario de clasificación; nunca se guarda ni clasifica sin confirmación. Se lee al abrir «Armar documento» (hasta 20 hojas). Si Tesseract no está, la función se omite sin error.
