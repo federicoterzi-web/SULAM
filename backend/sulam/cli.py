@@ -94,6 +94,11 @@ def _pdf_ficticio(titulo: str) -> bytes:
 
 
 def cmd_datos_demo(_args) -> None:
+    """Carga legajos, casos y movimientos FICTICIOS.
+
+    Con ``--con-personal-real`` los casos, asignaciones, documentos y asistencia ficticios se reparten entre las cuentas del
+    personal ya importado (``importar-personal``); las cuentas de jefaturas y de Dirección de demostración se crean igual.
+    """
     from datetime import date
 
     from . import audit
@@ -136,7 +141,28 @@ def cmd_datos_demo(_args) -> None:
 
         usuarios = {}
         hash_demo = hash_password(PASSWORD_DEMO)
+        # Personal real ya cargado (con ficha), agrupado por rol y área: ocupa los lugares de técnicos y mesa de entrada.
+        reales: dict[tuple[str, str], list] = {}
+        if getattr(_args, "con_personal_real", False):
+            from .models import Agente
+
+            nombres_demo = {u for u, *_ in USUARIOS_DEMO}
+            con_ficha = {uid for (uid,) in db.execute(select(Agente.usuario_id).where(Agente.usuario_id.is_not(None)))}
+            por_id_area = {a.id: a.nombre for a in areas.values()}
+            for u in db.execute(select(Usuario).where(Usuario.activo.is_(True)).order_by(Usuario.usuario)).scalars():
+                if u.usuario in nombres_demo or u.id not in con_ficha:
+                    continue
+                for r in u.roles:
+                    reales.setdefault((r.nombre, por_id_area.get(u.area_id, "")), []).append(u)
+            if not reales:
+                sys.exit("No hay personal real con ficha: ejecute primero importar-personal.")
+        usados: set = set()
         for usuario, nombre, rol, area in USUARIOS_DEMO:
+            candidatos = [c for c in reales.get((rol, area), []) if c.id not in usados] if rol in ("Técnico", "Mesa de Entrada") else []
+            if candidatos:
+                usados.add(candidatos[0].id)
+                usuarios[usuario] = candidatos[0]
+                continue
             u = db.execute(select(Usuario).where(Usuario.usuario == usuario)).scalar_one_or_none()
             if u is None:
                 u = Usuario(
@@ -244,11 +270,16 @@ def cmd_datos_demo(_args) -> None:
         db.flush()
         from .demo import cargar as cargar_ampliado
 
-        cargar_ampliado(db, usuarios, personas, casos, almacen)
+        cargar_ampliado(
+            db, usuarios, personas, casos, almacen,
+            tecnicos_reales={a: reales[("Técnico", a)] for a in {k[1] for k in reales if k[0] == "Técnico"}} or None,
+        )
         audit.registrar(db, None, "datos_demo", "sistema", detalle={"personas": len(personas)})
         db.commit()
         print("Datos de demostración cargados (todos FICTICIOS).")
         print(f"Usuarios: {', '.join(u for u, *_ in USUARIOS_DEMO)} — contraseña: {PASSWORD_DEMO}")
+        if reales:
+            print(f"Personal real con datos ficticios: {len(usados)} cuentas ocuparon lugares de la demostración (siguen con su contraseña).")
     finally:
         db.close()
 
@@ -391,7 +422,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--admin-nombre", default="Administrador del sistema")
     p.set_defaults(func=cmd_inicializar)
 
-    sub.add_parser("datos-demo").set_defaults(func=cmd_datos_demo)
+    p = sub.add_parser("datos-demo")
+    p.add_argument("--con-personal-real", action="store_true", help="Reparte los casos ficticios entre las cuentas del personal ya importado")
+    p.set_defaults(func=cmd_datos_demo)
 
     p = sub.add_parser("fichas")
     p.add_argument("--destino", default="fichas")

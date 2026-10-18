@@ -116,7 +116,7 @@ def _habil(d: date) -> date:
     return d
 
 
-def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], casos: list[Caso], almacen) -> None:
+def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], casos: list[Caso], almacen, tecnicos_reales: dict[str, list[Usuario]] | None = None) -> None:
     """Agrega los datos ampliados. ``personas`` y ``casos`` son los de la carga base."""
     rnd = random.Random(2026)
     hoy = date.today()
@@ -157,6 +157,9 @@ def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], c
         PROMOCION: [U["tecnico2"]],
         CUIDADOS: [U["tecnico4"]],
     }
+    for area_nombre, lista in (tecnicos_reales or {}).items():
+        if area_nombre in tecnicos_area and lista:
+            tecnicos_area[area_nombre] = lista
     nuevas: list[Persona] = []
     nuevos: list[Caso] = []
     usados_doc = {p.numero_documento for p in personas}

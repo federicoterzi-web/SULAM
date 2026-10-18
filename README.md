@@ -126,6 +126,14 @@ docker compose exec app python -m sulam.cli importar-personal /tmp/personal.json
 
 Crea la ficha (período, id de reloj, boleta, horario sin confirmar) y una cuenta por persona, con usuario `apellido.nombre`, el rol y el área que indique el archivo, y la obligación de cambiar la contraseña al primer ingreso. Sin `--password-comun` genera una contraseña distinta por persona y la guarda en un CSV (`--credenciales /datos/credenciales.csv`, que se retira con `docker compose cp app:/datos/credenciales.csv .`). Se puede repetir sin duplicar: omite a quien ya tiene ficha (mismo id de reloj) o cuenta.
 
+**Datos ficticios a nombre del personal real.** Para probar con el equipo verdadero sin cargar casos reales: con la base **sin legajos** (`SULAM_DATOS_DEMO=0` en `.env`, y `docker compose down -v` si ya se había cargado la demostración), se importa el personal como arriba y después:
+
+```
+docker compose exec app python -m sulam.cli datos-demo --con-personal-real
+```
+
+Los técnicos y la mesa de entrada reales ocupan los lugares de la demostración: los casos, asignaciones, documentos y asistencia ficticios quedan a su nombre. Las cuentas de dirección y jefaturas de demostración se crean igual (contraseña `demo-sulam-2026`). **Solo para una instalación de prueba**: la asistencia inventada se mezcla con las fichas reales.
+
 ## Usuarios de demostración
 
 Creados por `datos-demo`. Contraseña de todos: `demo-sulam-2026`.
