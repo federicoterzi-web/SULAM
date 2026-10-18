@@ -44,6 +44,19 @@ def estadisticas_interno(
     return E.interno(db, _q(ctx, desde, hasta, area_id, None, "interno"))
 
 
+@router.get("/estadisticas/participacion")
+def estadisticas_participacion(
+    desde: date | None = None,
+    hasta: date | None = None,
+    area_id: int | None = None,
+    ctx: Contexto = Depends(contexto),
+    db: Session = Depends(get_db),
+):
+    from .. import estadisticas_participacion as EP
+
+    return EP.participacion(db, EP.preparar(ctx, desde, hasta, area_id))
+
+
 def _descarga(contenido: bytes, nombre: str, mime: str) -> Response:
     return Response(
         contenido, media_type=mime,
@@ -64,11 +77,11 @@ def excel(
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
-    from ..estadisticas_salida import excel_casos, excel_interno, nombre_archivo
+    from ..estadisticas_salida import excel_casos, excel_interno, excel_participacion, nombre_archivo
 
     seccion = _seccion(seccion)
-    q = _q(ctx, desde, hasta, area_id, f if seccion == "casos" else None, seccion)
-    contenido = excel_casos(db, q) if seccion == "casos" else excel_interno(db, q)
+    q = _consulta(ctx, desde, hasta, area_id, f, seccion)
+    contenido = excel_casos(db, q) if seccion == "casos" else excel_participacion(db, q) if seccion == "participacion" else excel_interno(db, q)
     audit.registrar(db, ctx, "exportar_estadisticas", "estadisticas", detalle={"seccion": seccion, "formato": "xlsx", "desde": q.desde, "hasta": q.hasta})
     db.commit()
     return _descarga(contenido, nombre_archivo(seccion, q, "xlsx"), XLSX)
@@ -87,16 +100,24 @@ def pdf(
     from ..estadisticas_salida import nombre_archivo, pdf_estadisticas
 
     seccion = _seccion(seccion)
-    q = _q(ctx, desde, hasta, area_id, f if seccion == "casos" else None, seccion)
+    q = _consulta(ctx, desde, hasta, area_id, f, seccion)
     contenido = pdf_estadisticas(db, q, seccion)
     audit.registrar(db, ctx, "exportar_estadisticas", "estadisticas", detalle={"seccion": seccion, "formato": "pdf", "desde": q.desde, "hasta": q.hasta})
     db.commit()
     return _descarga(contenido, nombre_archivo(seccion, q, "pdf"), "application/pdf")
 
 
+def _consulta(ctx, desde, hasta, area_id, f, seccion):
+    if seccion == "participacion":
+        from .. import estadisticas_participacion as EP
+
+        return EP.preparar(ctx, desde, hasta, area_id)
+    return _q(ctx, desde, hasta, area_id, f if seccion == "casos" else None, seccion)
+
+
 def _seccion(s: str) -> str:
     from fastapi import HTTPException, status
 
-    if s not in ("casos", "interno"):
+    if s not in ("casos", "interno", "participacion"):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Sección inexistente.")
     return s

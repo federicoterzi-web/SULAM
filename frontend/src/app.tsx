@@ -4,6 +4,7 @@ import { PaginaPersonal } from "./paginas/personal";
 import { PaginaEstadisticas } from "./paginas/estadisticas";
 import { PaginaBandeja } from "./paginas/bandeja";
 import { PaginaAgenda } from "./paginas/agenda";
+import { PaginaParticipacion } from "./paginas/participacion";
 import { PaginaBuscarDocumentos } from "./paginas/textos";
 import { BotonAvisos, useNotificaciones } from "./notificaciones";
 import { PaginaMiAsistencia, usePendientesPersonal } from "./paginas/miasistencia";
@@ -213,6 +214,7 @@ const MENU: { ruta: string; texto: string; permiso?: [string, string] }[] = [
   { ruta: "/personal", texto: "Personal", permiso: ["personal", "consultar"] },
   { ruta: "/legajos", texto: "Legajos", permiso: ["personas", "consultar"] },
   { ruta: "/agenda", texto: "Agenda", permiso: ["agenda", "consultar"] },
+  { ruta: "/participacion", texto: "Participación y Sensibilización", permiso: ["participacion", "consultar"] },
   { ruta: "/casos", texto: "Casos", permiso: ["casos", "consultar"] },
   { ruta: "/imprimir-caratulas", texto: "Imprimir carátulas", permiso: ["casos", "consultar"] },
   { ruta: "/visitas", texto: "Mapa de casos y salidas", permiso: ["casos", "consultar"] },
@@ -397,6 +399,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return <PaginaBandeja />;
     case "agenda":
       return <PaginaAgenda />;
+    case "participacion":
+      return <PaginaParticipacion />;
     case "buscar-documentos":
       return <PaginaBuscarDocumentos />;
     case "recursos":

@@ -37,7 +37,9 @@ TIPOS = {
     "tramite": "Trámite",
     "recordatorio": "Recordatorio",
     "otro": "Otro",
+    "evento": "Evento de Participación",  # solo se crea desde Participación y Sensibilización
 }
+TIPO_EVENTO = "evento"
 ESTADOS_FINALES = {"realizado": "realizada", "no_realizado": "no realizada", "cancelado": "cancelada"}
 MAX_RANGO = 500
 FRECUENCIAS = {"diaria": "Todos los días hábiles", "semanal": "Todas las semanas", "quincenal": "Cada 15 días", "mensual": "Todos los meses"}
@@ -286,7 +288,7 @@ def listar(
 @router.get("/agenda/tipos")
 def tipos(ctx: Contexto = Depends(contexto)):
     ctx.requerir("agenda", "consultar")
-    return [{"clave": k, "texto": v} for k, v in TIPOS.items()]
+    return [{"clave": k, "texto": v} for k, v in TIPOS.items() if k != TIPO_EVENTO]
 
 
 @router.get("/agenda/participantes")
@@ -328,8 +330,8 @@ def _fechas_de_la_serie(inicio: datetime, r: Repeticion) -> list[datetime]:
     return salida
 
 
-@router.post("/agenda", status_code=201)
-def crear(datos: EventoIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+def crear_actividades(db: Session, ctx: Contexto, datos: EventoIn) -> list[EventoAgenda]:
+    """Crea la actividad (y sus repeticiones). No confirma la transacción: quien llama completa y confirma."""
     ctx.requerir("agenda", "crear")
     persona, caso = _validar_vinculo(db, ctx, datos.persona_id, datos.caso_id)
     participantes = _validar_participantes(db, ctx, datos.participantes)
@@ -359,6 +361,14 @@ def crear(datos: EventoIn, ctx: Contexto = Depends(contexto), db: Session = Depe
         db, ctx, "crear", "agenda", creados[0].id, creados[0].persona_id,
         {"tipo": datos.tipo, "inicio": creados[0].inicio.isoformat(), "participantes": len(participantes), "repeticiones": len(creados) if serie else None},
     )
+    return creados
+
+
+@router.post("/agenda", status_code=201)
+def crear(datos: EventoIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    if datos.tipo == TIPO_EVENTO:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Los eventos de Participación se cargan desde esa sección.")
+    creados = crear_actividades(db, ctx, datos)
     db.commit()
     db.refresh(creados[0])
     salida = _salida(db, ctx, creados[0], detalle=True)
@@ -475,6 +485,17 @@ def _destinos(db: Session, e: EventoAgenda, aplicar_a: str) -> list[EventoAgenda
 @router.patch("/agenda/{evento_id}")
 def modificar(evento_id: uuid.UUID, datos: EventoPatch, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
     e = _evento(db, ctx, evento_id, "modificar")
+    if e.tipo == TIPO_EVENTO or datos.tipo == TIPO_EVENTO:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Los eventos de Participación se modifican desde esa sección.")
+    modificar_actividad(db, ctx, e, datos)
+    db.commit()
+    db.refresh(e)
+    return _salida(db, ctx, e, detalle=True)
+
+
+def modificar_actividad(db: Session, ctx: Contexto, e: EventoAgenda, datos: EventoPatch, al_aplicar=None) -> list[EventoAgenda]:
+    """Aplica los cambios a la actividad (y a las siguientes de su serie, si se pidió). ``al_aplicar(d)`` se llama
+    para cada actividad modificada. No confirma la transacción."""
     if e.estado != "programado":
         raise HTTPException(status.HTTP_409_CONFLICT, "La actividad ya tiene resultado: no se puede modificar.")
     cambios = datos.model_dump(exclude_unset=True, exclude={"aplicar_a", "motivo"})
@@ -545,10 +566,10 @@ def modificar(evento_id: uuid.UUID, datos: EventoPatch, ctx: Contexto = Depends(
             diff["legajo"] = ["otro", "otro"] if vinculo_antes[0] and vinculo[0] else ["sin legajo" if not vinculo_antes[0] else "con legajo", "sin legajo" if not vinculo[0] else "con legajo"]
         if diff:
             db.add(CambioAgenda(evento_id=d.id, usuario_id=ctx.id, cambios=diff, motivo=(datos.motivo or "").strip() or None))
+        if al_aplicar is not None:
+            al_aplicar(d)
         audit.registrar(db, ctx, "modificar", "agenda", d.id, d.persona_id, {"antes": {k: antes[k] for k in diff if k in antes}, "despues": {k: despues[k] for k in diff if k in despues}})
-    db.commit()
-    db.refresh(e)
-    return _salida(db, ctx, e, detalle=True)
+    return destinos
 
 
 @router.post("/agenda/{evento_id}/resultado")

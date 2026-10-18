@@ -9,6 +9,7 @@ import { api, type Caso, type Documento, type Expediente, type Ingreso, type Per
 import { Aviso, Cargando, ESTADOS, Enlace, Estado, Modal, Seccion, Vacio, fecha, fechaHora, nombre, useDatos, useSesion } from "../comun";
 import { TablaCasos } from "./legajo";
 import { textoDe } from "./formularios";
+import { ResumenSemanal, type Campania, type EventoResumen, type SemanaDatos } from "./participacion";
 
 interface Respuesta<T = any> {
   perfil: string | null;
@@ -92,6 +93,8 @@ export function PaginaTablero() {
         <InicioCarga d={d} />
       ) : datos.perfil === "personal" ? (
         <InicioPersonal d={d} />
+      ) : datos.perfil === "participacion" ? (
+        <InicioParticipacion d={d} />
       ) : datos.perfil === "administrativo_area" ? (
         <InicioAdministrativo d={d} />
       ) : (
@@ -386,6 +389,61 @@ function InicioJefatura({ d: inicial }: { d: Jefatura }) {
   );
 }
 
+// ---------------------------------------------------------------- participación y sensibilización
+
+interface InicioPart {
+  semana: SemanaDatos;
+  sin_asistentes: EventoResumen[];
+  sin_fotos: number;
+  campanias: Campania[];
+}
+
+function InicioParticipacion({ d }: { d: InicioPart }) {
+  return (
+    <>
+      <div className="indicadores">
+        <Indicador valor={d.semana.total} texto="eventos esta semana" a="/participacion" />
+        <Indicador valor={d.semana.con_presencia_sugerida} texto="con presencia de la Directora sugerida" />
+        <Indicador valor={d.sin_asistentes.length} texto="eventos sin asistentes cargados" a="/participacion" alerta={d.sin_asistentes.length > 0} />
+        <Indicador valor={d.campanias.length} texto="campañas activas" a="/participacion" />
+      </div>
+      <div className="inicio-columnas">
+        <Seccion titulo="Resumen de la semana" acciones={<Enlace a="/participacion">Planificación semanal</Enlace>}>
+          <ResumenSemanal inicial={d.semana} />
+        </Seccion>
+        <Seccion titulo="Para completar">
+          {d.sin_asistentes.length === 0 && d.sin_fotos === 0 ? (
+            <p className="tenue">No hay nada pendiente.</p>
+          ) : (
+            <ul className="lista-simple">
+              {d.sin_asistentes.map((e) => (
+                <li key={e.id}>
+                  <Enlace a="/participacion">
+                    {e.titulo} ({fecha(e.fecha)})
+                  </Enlace>{" "}
+                  · falta la cantidad de asistentes
+                </li>
+              ))}
+              {d.sin_fotos > 0 && <li>{d.sin_fotos} {d.sin_fotos === 1 ? "evento realizado no tiene" : "eventos realizados no tienen"} fotos.</li>}
+            </ul>
+          )}
+        </Seccion>
+      </div>
+      {d.campanias.length > 0 && (
+        <Seccion titulo="Campañas activas">
+          <ul className="lista-simple">
+            {d.campanias.map((c) => (
+              <li key={c.id}>
+                <Enlace a="/participacion">{c.nombre}</Enlace> · {c.eventos} {c.eventos === 1 ? "evento" : "eventos"}, {c.realizados} {c.realizados === 1 ? "realizado" : "realizados"}, {c.asistentes} asistentes
+              </li>
+            ))}
+          </ul>
+        </Seccion>
+      )}
+    </>
+  );
+}
+
 // ---------------------------------------------------------------- dirección
 
 interface Direccion {
@@ -399,6 +457,7 @@ interface Direccion {
   informes_mes: number;
   recientes: Caso[];
   dias_sin_actividad: number;
+  participacion: SemanaDatos | null;
 }
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -416,6 +475,17 @@ function InicioDireccion({ d }: { d: Direccion }) {
         <Indicador valor={d.totales.activos} texto="casos activos hoy" a="/casos" />
         <Indicador valor={d.totales.cerrados} texto="casos cerrados" a="/casos?estado=cerrado" />
       </div>
+
+      {d.participacion && (
+        <Seccion titulo="Participación y Sensibilización · resumen semanal" acciones={<Enlace a="/participacion">Ver la planificación</Enlace>}>
+          {d.participacion.con_presencia_sugerida > 0 && (
+            <p className="part-presencia-aviso">
+              ★ Se sugiere su presencia en {d.participacion.con_presencia_sugerida} {d.participacion.con_presencia_sugerida === 1 ? "evento" : "eventos"} esta semana.
+            </p>
+          )}
+          <ResumenSemanal inicial={d.participacion} />
+        </Seccion>
+      )}
 
       <div className="inicio-columnas">
         <Seccion titulo="Por departamento">

@@ -33,6 +33,20 @@ def test_datos_demo_completos():
     ag = t.get("/api/agenda", params={"desde": (ahora - timedelta(days=30)).isoformat(), "hasta": (ahora + timedelta(days=30)).isoformat()}).json()["eventos"]
     assert {e["estado"] for e in ag} >= {"realizado", "no_realizado", "programado"}
     assert t.get("/api/agenda", params={"desde": (ahora - timedelta(days=60)).isoformat(), "hasta": ahora.isoformat(), "estado": "programado"}).json()["eventos"], "hay una actividad sin resultado"
+    # Participación y Sensibilización: eventos, campañas, asistentes, fotos y estadísticas.
+    pa = Cliente("participacion", PASSWORD_DEMO)
+    assert pa.get("/api/inicio").json()["perfil"] == "participacion"
+    campanias = pa.get("/api/participacion/campanias", params={"estado": "activa"}).json()
+    assert len(campanias) == 2 and all(c["eventos"] >= 2 for c in campanias)
+    assert len(pa.get("/api/participacion/tipos").json()) >= 4
+    est = pa.get("/api/estadisticas/participacion", params={"desde": f"{date.today().year - 1}-01-01", "hasta": (date.today() + timedelta(days=90)).isoformat()}).json()
+    assert {x["clave"]: x["valor"] for x in est["resumen"]}["asistentes"] > 300
+    cerrada = Cliente("participacion", PASSWORD_DEMO).get("/api/participacion/campanias", params={"estado": "cerrada"}).json()
+    assert len(cerrada) == 1
+    hecho = next(e for e in pa.get("/api/agenda", params={"desde": (ahora - timedelta(days=45)).isoformat(), "hasta": ahora.isoformat()}).json()["eventos"] if e["estado"] == "realizado")
+    assert len(pa.get(f"/api/participacion/eventos/{hecho['id']}").json()["participacion"]["fotos"]) == 2
+    assert pa.get(f"/api/participacion/eventos/{hecho['id']}/brief.docx").status_code == 200
+    assert d.get("/api/inicio").json()["datos"]["participacion"] is not None
 
 
 def test_datos_demo_con_personal_real(tmp_path):

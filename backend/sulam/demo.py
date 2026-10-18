@@ -20,8 +20,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import (
+    Campania,
     EventoAgenda,
+    EventoParticipacion,
+    FotoParticipacion,
     ParticipanteAgenda,
+    TipoParticipacion,
     Agente,
     Area,
     Articulacion,
@@ -389,6 +393,9 @@ def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], c
     # ------------------------------------------------------------ agenda: salidas, visitas y reuniones
     _agenda(db, U, tecnicos_area, casos + nuevos, areas, rnd, hoy)
 
+    # ------------------------------------------------------------ Participación y Sensibilización
+    _participacion(db, U, areas, almacen, hoy)
+
     # ------------------------------------------------------------ personal: reloj, pedidos y quién no está hoy
     _personal(db, U, areas, almacen, rnd, hoy)
 
@@ -424,6 +431,73 @@ def _agenda(db: Session, U: dict[str, Usuario], tecnicos_area: dict[str, list[Us
             for semana in range(4):  # reunión semanal (actividad repetida)
                 evento(2 + k % 3 + 7 * semana, 10, "reunion", "Reunión de equipo", otros=[colega] if colega else (), lugar="Sala de reuniones", serie=serie, repeticion="semanal")
             evento(6 + k % 4, 14, "audiencia", "Audiencia en juzgado", c2, lugar="Tribunales")
+
+
+def _foto_demo(texto: str, color: tuple[int, int, int]) -> bytes:
+    from PIL import Image, ImageDraw
+
+    img = Image.new("RGB", (960, 640), color)
+    d = ImageDraw.Draw(img)
+    d.rectangle((40, 40, 920, 600), outline=(255, 255, 255), width=6)
+    d.text((70, 70), f"FOTO FICTICIA DE DEMOSTRACIÓN\n{texto}", fill=(255, 255, 255))
+    salida = io.BytesIO()
+    img.save(salida, "JPEG", quality=85)
+    return salida.getvalue()
+
+
+def _participacion(db: Session, U: dict[str, Usuario], areas: dict[str, Area], almacen, hoy: date) -> None:
+    """Tipos de evento, campañas y eventos FICTICIOS de la División Participación y Sensibilización Ciudadana."""
+    u = U.get("participacion")
+    if u is None:
+        return
+    tipos = {n: TipoParticipacion(nombre=n, creado_por=u.id) for n in ("Charla", "Taller", "Feria", "Jornada", "Capacitación")}
+    db.add_all(tipos.values())
+    camp = {
+        "buen_trato": Campania(nombre="Buen trato hacia las personas mayores", descripcion="Campaña de sensibilización en centros de jubilados, escuelas y espacios públicos. (Ficticia)", desde=hoy - timedelta(days=45), hasta=hoy + timedelta(days=40), area_id=u.area_id, creado_por=u.id),
+        "estafas": Campania(nombre="Prevención de estafas a jubilados", descripcion="Charlas y material gráfico sobre estafas telefónicas y bancarias. (Ficticia)", desde=hoy - timedelta(days=20), hasta=hoy + timedelta(days=60), area_id=u.area_id, creado_por=u.id),
+        "abuelazgo": Campania(nombre="Semana del abuelazgo 2026", descripcion="Actividades intergeneracionales. (Ficticia)", desde=hoy - timedelta(days=120), hasta=hoy - timedelta(days=100), estado="cerrada", area_id=u.area_id, creado_por=u.id),
+    }
+    db.add_all(camp.values())
+    db.flush()
+
+    def evento(dias, h, tipo, flyer=None, lugar=None, inst=(), resumen=None, campania=None, otra=None, sugerir=False, estado="programado", asistentes=None, fotos=0, dur=2, serie=None, repeticion=None, resultado=None):
+        dia = _habil(hoy + timedelta(days=dias))
+        e = EventoAgenda(
+            tipo="evento", titulo=flyer or tipo, descripcion=resumen, inicio=_dt(dia, h), fin=_dt(dia, h + dur), lugar=lugar, area_id=u.area_id, estado=estado,
+            resultado=resultado, creado_por=u.id, serie_id=serie, repeticion=repeticion,
+        )
+        if estado != "programado":
+            e.resuelto_por, e.resuelto_en = u.id, _dt(dia, h + dur + 1)
+        e.participantes = [ParticipanteAgenda(usuario_id=u.id)]
+        db.add(e)
+        db.flush()
+        db.add(
+            EventoParticipacion(
+                evento_id=e.id, tipo_id=tipos[tipo].id, nombre_flyer=flyer, instituciones=list(inst), resumen=resumen,
+                campania_id=camp[campania].id if campania else None, organiza_otra=otra, sugerir_directora=sugerir, asistentes=asistentes,
+            )
+        )
+        for n in range(fotos):
+            datos = _foto_demo(f"{flyer or tipo} · {n + 1}", [(30, 90, 150), (150, 70, 40)][n % 2])
+            g = almacen.guardar(io.BytesIO(datos))
+            db.add(FotoParticipacion(evento_id=e.id, orden=n + 1, nombre=f"foto-{n + 1}.jpg", mime="image/jpeg", tamano=len(datos), sha256=g.sha256, almacenamiento=almacen.nombre, clave_almacenamiento=g.clave, subido_por=u.id))
+
+    # Ya realizados (con asistentes y fotos, salvo uno al que falta cargarlos).
+    evento(-38, 10, "Charla", "Cuidar sin cansarse", "Centro de Jubilados 9 de Julio", ("Centro de Jubilados 9 de Julio", "CAPS Sur"), "Charla abierta sobre cuidados y autocuidado de quienes cuidan.", "buen_trato", None, False, "realizado", 64, 2, resultado="Buena convocatoria; se entregó material.")
+    evento(-30, 15, "Taller", "Memoria activa", "Biblioteca Popular", ("Biblioteca Popular", "Hogar San José"), "Taller de estimulación de la memoria.", "buen_trato", None, False, "realizado", 28, 2, resultado="Participaron personas de dos hogares.")
+    evento(-21, 9, "Feria", "Feria de la salud", "Plaza Independencia", ("PAMI", "SIPROSA", "Hospital Centro de Salud"), "Chequeos, vacunación y stands informativos.", None, "Ministerio de Salud", True, "realizado", 210, 2, resultado="Participó la Directora.")
+    evento(-14, 11, "Charla", "No te dejes estafar", "Centro Vecinal Barrio Norte", ("Centro Vecinal Barrio Norte", "Defensa del Consumidor"), "Prevención de estafas telefónicas.", "estafas", None, False, "realizado", 45, 2, resultado="Se repartieron 60 folletos.")
+    evento(-9, 16, "Jornada", None, "Club de abuelos", ("Club de abuelos",), "Jornada recreativa.", None, None, False, "realizado", None, 0, resultado="Falta cargar los asistentes.")
+    evento(-60, 10, "Charla", "Abuelos y nietos", "Escuela Nº 12", ("Escuela Nº 12",), "Encuentro intergeneracional.", "abuelazgo", None, False, "realizado", 80, 2, resultado="Muy buena participación.")
+    # Esta semana y las próximas.
+    evento(0, 10, "Taller", "Taller de memoria", "Biblioteca Popular", ("Biblioteca Popular",), "Segundo encuentro del ciclo.", "buen_trato", None, False)
+    evento(1, 15, "Charla", "Prevención de estafas", "Centro de Jubilados Villa Luján", ("Centro de Jubilados Villa Luján", "Defensa del Consumidor"), "Charla con simulacros de llamadas.", "estafas", None, True)
+    evento(2, 9, "Capacitación", None, "Sala de reuniones", ("Municipalidad de Yerba Buena",), "Capacitación a equipos municipales.", None, "Municipalidad de Yerba Buena", False)
+    evento(8, 10, "Feria", "Feria de abuelos emprendedores", "Parque 9 de Julio", ("Dirección de Economía Social", "Centros de jubilados"), "Feria de productos elaborados por personas mayores.", "buen_trato", None, True, dur=4)
+    evento(10, 11, "Charla", "Derechos de las personas mayores", "Colegio de Abogados", ("Colegio de Abogados",), "Charla sobre derechos y acceso a la justicia.", None, "Colegio de Abogados", True)
+    serie = uuid.uuid4()
+    for semana in range(1, 4):  # taller semanal (actividad repetida)
+        evento(2 + 7 * semana, 14, "Taller", "Taller de memoria", "Biblioteca Popular", ("Biblioteca Popular",), "Ciclo semanal de estimulación de la memoria.", "buen_trato", serie=serie, repeticion="semanal")
 
 
 def _con_grupos(codigos: list[str]) -> list[str]:

@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { api, type Caso, type PersonaResumen } from "../api";
 import { Aviso, Campo, Cargando, Modal, Vacio, useDatos, useEnvio, useSesion } from "../comun";
 import { BuscarLegajo } from "./bandeja";
+import { DetalleEvento } from "./participacion";
 
 export interface Actividad {
   id: string;
@@ -31,7 +32,7 @@ export interface Actividad {
   en_la_serie?: { total: number; siguientes: number };
 }
 
-interface Cambio {
+export interface Cambio {
   en: string;
   por: string;
   motivo: string | null;
@@ -43,13 +44,13 @@ interface Superpuestos {
   ausencias: { desde: string; hasta: string; agente: string; usuario_id: string | null; tipo_texto: string; lugar: string | null; horas: string | null }[];
 }
 
-const ESTADO: Record<string, string> = { programado: "Programada", realizado: "Realizada", no_realizado: "No realizada", cancelado: "Cancelada" };
-const ICONO: Record<string, string> = { programado: "🕒", realizado: "✔", no_realizado: "✖", cancelado: "⊘" };
+export const ESTADO: Record<string, string> = { programado: "Programada", realizado: "Realizada", no_realizado: "No realizada", cancelado: "Cancelada" };
+export const ICONO: Record<string, string> = { programado: "🕒", realizado: "✔", no_realizado: "✖", cancelado: "⊘" };
 const DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
 
-const dosDig = (n: number) => String(n).padStart(2, "0");
-const claveDia = (d: Date) => `${d.getFullYear()}-${dosDig(d.getMonth() + 1)}-${dosDig(d.getDate())}`;
-const hora = (a: Actividad) => (a.todo_el_dia ? "Todo el día" : new Date(a.inicio).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }));
+export const dosDig = (n: number) => String(n).padStart(2, "0");
+export const claveDia = (d: Date) => `${d.getFullYear()}-${dosDig(d.getMonth() + 1)}-${dosDig(d.getDate())}`;
+export const hora = (a: Actividad) => (a.todo_el_dia ? "Todo el día" : new Date(a.inicio).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }));
 const diaLargo = (d: Date) => d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
 const lunesDe = (d: Date) => {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -68,7 +69,7 @@ const FRECUENCIAS: [string, string][] = [
 ];
 
 const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-AR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-const valorDe = (campo: string, v: string | boolean | null) =>
+export const valorDe = (campo: string, v: string | boolean | null) =>
   v === null || v === "" ? "—" : typeof v === "boolean" ? (v ? "sí" : "no") : campo === "inicio" || campo === "fin" ? fechaHora(v) : String(v);
 type Vista = "mes" | "lista";
 
@@ -421,19 +422,15 @@ function ProximosDias({ eventos, alAbrir, extra }: { eventos: Actividad[]; alAbr
 // ---------------------------------------------------------------- detalle y resultado
 
 function DetalleActividad({ actividad: base, alCerrar, alCambiar }: { actividad: Actividad; alCerrar: () => void; alCambiar: () => void }) {
+  if (base.tipo === "evento") return <DetalleEvento id={base.id} alCerrar={alCerrar} alCambiar={alCambiar} />;
+  return <DetalleComun actividad={base} alCerrar={alCerrar} alCambiar={alCambiar} />;
+}
+
+function DetalleComun({ actividad: base, alCerrar, alCambiar }: { actividad: Actividad; alCerrar: () => void; alCambiar: () => void }) {
   const completa = useDatos(() => api.get<Actividad>(`/agenda/${base.id}`), [base.id]);
   const a = completa.datos ?? base;
-  const [aplicar, setAplicar] = useState<"esta" | "siguientes">("esta");
   const siguientes = a.en_la_serie?.siguientes ?? 0;
   const [modo, setModo] = useState<"ver" | "editar" | "resultado">("ver");
-  const [estado, setEstado] = useState<"realizado" | "no_realizado" | "cancelado">("realizado");
-  const [texto, setTexto] = useState("");
-  const { enviando, error, ejecutar } = useEnvio();
-  const guardarResultado = async (e: FormEvent) => {
-    e.preventDefault();
-    const r = await ejecutar(() => api.post(`/agenda/${a.id}/resultado`, { estado, resultado: texto || null, aplicar_a: estado === "cancelado" ? aplicar : "esta" }));
-    if (r) alCambiar();
-  };
   return (
     <Modal titulo={a.titulo} alCerrar={alCerrar} ancho>
       {modo === "editar" ? (
@@ -505,63 +502,94 @@ function DetalleActividad({ actividad: base, alCerrar, alCambiar }: { actividad:
               </button>
             </div>
           )}
-          {modo === "ver" && (a.historial?.length ?? 0) > 0 && (
-            <details className="agenda-historial">
-              <summary>Historial de cambios ({a.historial!.length})</summary>
-              <ul>
-                {a.historial!.map((h, i) => (
-                  <li key={i}>
-                    <strong>{new Date(h.en).toLocaleString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</strong> · {h.por}
-                    {h.motivo && <em> — {h.motivo}</em>}
-                    <ul>
-                      {h.cambios.map((c) => (
-                        <li key={c.campo}>
-                          {c.texto}: {valorDe(c.campo, c.antes)} → {valorDe(c.campo, c.despues)}
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
-          {modo === "resultado" && (
-            <form className="formulario" onSubmit={guardarResultado}>
-              <div className="segmentado" role="group" aria-label="Resultado">
-                {(
-                  [
-                    ["realizado", "Se realizó"],
-                    ["no_realizado", "No se pudo realizar"],
-                    ["cancelado", "Se canceló"],
-                  ] as const
-                ).map(([k, t]) => (
-                  <button type="button" key={k} className={estado === k ? "activo" : ""} aria-pressed={estado === k} onClick={() => setEstado(k)}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <Campo etiqueta={estado === "no_realizado" ? "Motivo *" : "Cómo fue (queda en la evolución del caso)"}>
-                <textarea rows={4} value={texto} maxLength={5000} required={estado === "no_realizado"} onChange={(e) => setTexto(e.target.value)} />
-              </Campo>
-              {estado === "cancelado" && siguientes > 0 && <AplicarA valor={aplicar} alCambiar={setAplicar} siguientes={siguientes} />}
-              <Aviso error={error} />
-              <div className="fila-botones">
-                <button className="boton boton-primario" disabled={enviando}>
-                  Guardar
-                </button>
-                <button type="button" className="boton" onClick={() => setModo("ver")}>
-                  Volver
-                </button>
-              </div>
-            </form>
-          )}
+          {modo === "ver" && <HistorialCambios historial={a.historial} />}
+          {modo === "resultado" && <FormResultado actividadId={a.id} siguientes={siguientes} alGuardar={alCambiar} alVolver={() => setModo("ver")} />}
         </>
       )}
     </Modal>
   );
 }
 
-function AplicarA({ valor, alCambiar, siguientes }: { valor: "esta" | "siguientes"; alCambiar: (v: "esta" | "siguientes") => void; siguientes: number }) {
+/** Registrar cómo terminó una actividad (realizada, no realizada o cancelada). */
+export function FormResultado({
+  actividadId,
+  siguientes,
+  alGuardar,
+  alVolver,
+  etiqueta = "Cómo fue (queda en la evolución del caso)",
+}: {
+  actividadId: string;
+  siguientes: number;
+  alGuardar: () => void;
+  alVolver: () => void;
+  etiqueta?: string;
+}) {
+  const [estado, setEstado] = useState<"realizado" | "no_realizado" | "cancelado">("realizado");
+  const [texto, setTexto] = useState("");
+  const [aplicar, setAplicar] = useState<"esta" | "siguientes">("esta");
+  const { enviando, error, ejecutar } = useEnvio();
+  const guardar = async (e: FormEvent) => {
+    e.preventDefault();
+    const r = await ejecutar(() => api.post(`/agenda/${actividadId}/resultado`, { estado, resultado: texto || null, aplicar_a: estado === "cancelado" ? aplicar : "esta" }));
+    if (r) alGuardar();
+  };
+  return (
+    <form className="formulario" onSubmit={guardar}>
+      <div className="segmentado" role="group" aria-label="Resultado">
+        {(
+          [
+            ["realizado", "Se realizó"],
+            ["no_realizado", "No se pudo realizar"],
+            ["cancelado", "Se canceló"],
+          ] as const
+        ).map(([k, t]) => (
+          <button type="button" key={k} className={estado === k ? "activo" : ""} aria-pressed={estado === k} onClick={() => setEstado(k)}>
+            {t}
+          </button>
+        ))}
+      </div>
+      <Campo etiqueta={estado === "no_realizado" ? "Motivo *" : etiqueta}>
+        <textarea rows={4} value={texto} maxLength={5000} required={estado === "no_realizado"} onChange={(e) => setTexto(e.target.value)} />
+      </Campo>
+      {estado === "cancelado" && siguientes > 0 && <AplicarA valor={aplicar} alCambiar={setAplicar} siguientes={siguientes} />}
+      <Aviso error={error} />
+      <div className="fila-botones">
+        <button className="boton boton-primario" disabled={enviando}>
+          Guardar
+        </button>
+        <button type="button" className="boton" onClick={alVolver}>
+          Volver
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function HistorialCambios({ historial }: { historial?: Cambio[] }) {
+  if (!historial || historial.length === 0) return null;
+  return (
+    <details className="agenda-historial">
+      <summary>Historial de cambios ({historial.length})</summary>
+      <ul>
+        {historial.map((h, i) => (
+          <li key={i}>
+            <strong>{new Date(h.en).toLocaleString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</strong> · {h.por}
+            {h.motivo && <em> — {h.motivo}</em>}
+            <ul>
+              {h.cambios.map((c) => (
+                <li key={c.campo}>
+                  {c.texto}: {valorDe(c.campo, c.antes)} → {valorDe(c.campo, c.despues)}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+export function AplicarA({ valor, alCambiar, siguientes }: { valor: "esta" | "siguientes"; alCambiar: (v: "esta" | "siguientes") => void; siguientes: number }) {
   return (
     <fieldset className="agenda-quienes">
       <legend>Esta actividad se repite</legend>

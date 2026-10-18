@@ -31,6 +31,7 @@ from ..models import (
 )
 from ..permissions import Contexto, filtro_casos
 from ..security import ahora
+from .participacion import datos_de_la_semana, listar_campanias, pendientes
 from ..serializers import caso_out, documento_out, expediente_out, ingreso_out, persona_resumen
 
 router = APIRouter(tags=["inicio"])
@@ -44,6 +45,7 @@ PERFILES = {
     "mesa": "Mesa de Entrada",
     "administrativo_area": "Administrativo de área",
     "personal": "Personal",
+    "participacion": "Participación y Sensibilización",
 }
 DIAS_SIN_ACTIVIDAD = 30
 
@@ -318,6 +320,20 @@ def _direccion(db: Session, ctx: Contexto) -> dict:
         "informes_mes": firmados_mes,
         "recientes": _casos(db, ctx, _base(ctx).order_by(Caso.ultima_actividad.desc()).limit(8)),
         "dias_sin_actividad": DIAS_SIN_ACTIVIDAD,
+        # Resumen semanal de Participación y Sensibilización (se navega de semana en semana desde el tablero).
+        "participacion": datos_de_la_semana(db, ctx) if ctx.tiene("participacion", "consultar") else None,
+    }
+
+
+def _participacion(db: Session, ctx: Contexto) -> dict:
+    """Tablero de la División Participación y Sensibilización: la semana, lo que falta cargar y las campañas activas."""
+    pend = pendientes(ctx, db)
+    campanias = listar_campanias("activa", ctx, db)
+    return {
+        "semana": datos_de_la_semana(db, ctx),
+        "sin_asistentes": pend["sin_asistentes"][:8],
+        "sin_fotos": pend["sin_fotos"],
+        "campanias": campanias[:6],
     }
 
 
@@ -457,6 +473,7 @@ ARMADORES = {
     "mesa": _mesa,
     "administrativo_area": _administrativo_area,
     "personal": _personal,
+    "participacion": _participacion,
 }
 
 
@@ -474,10 +491,12 @@ def inicio(
     if perfil not in propios:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Ese inicio no corresponde a sus roles.")
     # Un rol sin permiso para consultar casos no ve bloques de casos.
-    if perfil not in ("mesa", "personal") and not ctx.tiene("casos", "consultar"):
+    if perfil not in ("mesa", "personal", "participacion") and not ctx.tiene("casos", "consultar"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Su rol no permite consultar casos.")
     if perfil == "mesa":
         ctx.requerir("mesa_entrada", "consultar")
+    if perfil == "participacion":
+        ctx.requerir("participacion", "consultar")
     datos = ARMADORES[perfil](db, ctx)
     return {
         "perfil": perfil,

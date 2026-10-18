@@ -44,6 +44,8 @@ COLUMNAS = {
     "confirmaron": "Confirmaron",
     "area": "Área",
     "ingresados": "Ingresados",
+    "realizados": "Realizados",
+    "asistentes": "Asistentes",
 }
 # Tablas en las que cada caso/registro cuenta una sola vez: llevan fila de total.
 SUMABLES = {
@@ -51,6 +53,7 @@ SUMABLES = {
     "informes_area", "documentos_tipo", "licencias", "justificativos", "estado_jornadas", "asistencia_areas", "areas",
     "estado", "area", "tipo_ingreso", "derivado_por", "edad", "genero", "departamento", "cud", "tipo_vivienda",
     "estado_funcional", "tiene_autonomia", "estado_civil", "tiene_hijos", "sin_confirmar_area",
+    "mensual", "estados", "por_tipo", "por_campania", "organiza",
 }
 
 
@@ -266,6 +269,21 @@ def excel_interno(db: Session, q: E.Consulta) -> bytes:
     return _guardar(wb)
 
 
+def excel_participacion(db: Session, q: E.Consulta) -> bytes:
+    from .estadisticas_participacion import participacion
+
+    d = participacion(db, q)
+    wb = _libro()
+    h = _Hoja(wb.create_sheet("Participación"))
+    h.titulo("Participación y Sensibilización Ciudadana — Dirección de Adultos Mayores")
+    h.datos(_encabezado(db, q, "participacion"))
+    h.resumen(d["resumen"])
+    for t in d["tablas"]:
+        h.tabla(t)
+    h.cerrar()
+    return _guardar(wb)
+
+
 # ---------------------------------------------------------------- Excel de incidencias (asistencia)
 
 ENCABEZADO_INCIDENCIAS = [
@@ -431,7 +449,7 @@ def pdf_estadisticas(db: Session, q: E.Consulta, seccion: str) -> bytes:
         return partes
 
     cuerpo: list = []
-    titulo = "Estadísticas de casos" if seccion == "casos" else "Estadísticas de funcionamiento interno"
+    titulo = {"casos": "Estadísticas de casos", "participacion": "Estadísticas de Participación y Sensibilización"}.get(seccion, "Estadísticas de funcionamiento interno")
     cuerpo.append(Paragraph(titulo, st_titulo))
     for k, v in _encabezado(db, q, seccion):
         cuerpo.append(Paragraph(f"<b>{esc(k)}:</b> {esc(v)}", st_sub))
@@ -452,6 +470,13 @@ def pdf_estadisticas(db: Session, q: E.Consulta, seccion: str) -> bytes:
             cuerpo.append(Paragraph(esc(s["titulo"]), st_sec))
             for t in s["tablas"]:
                 cuerpo += tabla_pdf(t)
+    elif seccion == "participacion":
+        from .estadisticas_participacion import participacion
+
+        d = participacion(db, q)
+        cuerpo.append(kpis(d["resumen"]))
+        for t in d["tablas"]:
+            cuerpo += tabla_pdf(t)
     else:
         d = E.interno(db, q)
         for clave, titulo_b in BLOQUES_INTERNO:

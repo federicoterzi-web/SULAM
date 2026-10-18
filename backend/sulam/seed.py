@@ -63,6 +63,8 @@ ROLES: dict[str, dict] = {
         "descripcion": "Gestión de permisos, plantillas, configuraciones y operaciones institucionales autorizadas.",
         "permisos": [
             ("agenda", "consultar", T), ("agenda", "crear", T), ("agenda", "modificar", T),
+            ("participacion", "consultar", T), ("participacion", "crear", T), ("participacion", "modificar", T),
+            ("participacion", "descargar", T), ("participacion", "administrar", T),
             ("personal", "consultar", T), ("personal", "administrar", T), ("personal", "aprobar", T), ("estadisticas", "consultar", T),
             ("novedades", "publicar", T),
             ("plantillas", "modificar", T),
@@ -83,6 +85,7 @@ ROLES: dict[str, dict] = {
         "descripcion": "Conducción de la Dirección: ve todos los casos y la auditoría, y puede derivar y asignar. No administra usuarios ni permisos.",
         "permisos": [
             ("agenda", "consultar", T), ("agenda", "crear", T), ("agenda", "modificar", T),
+            ("participacion", "consultar", T), ("participacion", "descargar", T),
             ("personal", "consultar", T), ("personal", "aprobar", T), ("estadisticas", "consultar", T),
             ("novedades", "publicar", T),
             ("plantillas", "modificar", T),
@@ -128,6 +131,17 @@ ROLES: dict[str, dict] = {
             ("mesa_entrada", "consultar", T),
             ("documentos", "consultar", T), ("documentos", "crear", AR), ("documentos", "descargar", AR),
             ("documentos", "modificar", AR),
+        ],
+    },
+    "Participación y Sensibilización": {
+        "inicio": "participacion",
+        "descripcion": "Integrantes de la División Participación y Sensibilización Ciudadana: planifican la semana en la agenda, arman campañas con su material, registran asistentes y fotos de los eventos, exportan el brief para Comunicación, definen los tipos de evento y construyen el mapa de recursos. Se suma a otro rol (por ejemplo, el de jefatura o el de técnico).",
+        "permisos": [
+            ("agenda", "consultar", AR), ("agenda", "crear", AR), ("agenda", "modificar", AR),
+            ("participacion", "consultar", AR), ("participacion", "crear", AR), ("participacion", "modificar", AR),
+            ("participacion", "descargar", AR), ("participacion", "administrar", AR),
+            ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
+            ("estadisticas", "consultar", AR),
         ],
     },
     "Carga de Datos": {
@@ -226,7 +240,7 @@ def inicializar_catalogos(db: Session) -> None:
 
 # Módulos agregados después de la primera instalación: sus permisos se suman UNA vez a los roles ya existentes
 # (si después alguien los quita desde Administración, no se vuelven a poner).
-MODULOS_NUEVOS = ("agenda",)
+MODULOS_NUEVOS = ("agenda", "participacion")
 
 
 def _permisos_de_modulos_nuevos(db: Session, roles_previos: set[str]) -> None:
@@ -286,6 +300,7 @@ USUARIOS_DEMO = [
     ("registro", "Oficina de Registro (demo)", "Administrativo de Área", "Oficina de Registro"),
     ("tecnica3", "Técnica Tres (demo)", "Técnico", "Departamento Admisión de Casos y Recepción de Denuncias"),
     ("tecnico4", "Técnico Cuatro (demo)", "Técnico", "División Cuidados y Promoción de Autonomía"),
+    ("participacion", "Participación y Sensibilización (demo)", "Participación y Sensibilización", "División Participación y Sensibilización Ciudadana"),
 ]
 
 PERSONAS_DEMO = [

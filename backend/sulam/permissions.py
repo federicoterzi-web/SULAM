@@ -68,6 +68,10 @@ CATALOGO: dict[str, dict] = {
         "nombre": "Agenda: salidas, visitas y actividades (consultar y modificar con «propios»: las suyas; con «área»: las del área propia)",
         "acciones": ["consultar", "crear", "modificar"],
     },
+    "participacion": {
+        "nombre": "Participación y Sensibilización: eventos, campañas y brief (con «área»: los del área propia; descargar: brief para Comunicación; administrar: tipos de evento)",
+        "acciones": ["consultar", "crear", "modificar", "descargar", "administrar"],
+    },
     "estadisticas": {
         "nombre": "Estadísticas de casos y de funcionamiento interno (con «área»: solo el área propia)",
         "acciones": ["consultar"],

@@ -4858,3 +4858,37 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 .agenda-extras li { padding: 2px 0; }
 .agenda-historial { margin-top: 12px; }
 .agenda-historial ul { margin: 4px 0; padding-left: 18px; }
+
+/* Participación y Sensibilización */
+.part-semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin: 8px 0 16px; }
+.part-dia { border: 1px solid var(--borde, #d0d7de); border-radius: 6px; padding: 6px; min-height: 120px; background: var(--fondo-tarjeta, transparent); }
+.part-dia.hoy { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb inset; }
+.part-dia h3 { margin: 0 0 6px; font-size: .85em; }
+.part-dia h3::first-letter { text-transform: uppercase; }
+.part-evento { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; border: 1px solid var(--borde, #d0d7de); border-left: 4px solid #2563eb; border-radius: 4px; background: transparent; color: inherit; padding: 6px; margin-bottom: 6px; cursor: pointer; font: inherit; }
+.part-evento.estado-realizado { border-left-color: #16a34a; }
+.part-evento.estado-cancelado, .part-evento.estado-no_realizado { border-left-color: #9ca3af; opacity: .75; }
+.part-hora { font-size: .8em; color: #6b7280; }
+.part-insignias { display: flex; flex-wrap: wrap; gap: 4px; }
+.part-insignia { font-size: .72em; border-radius: 10px; padding: 1px 7px; background: color-mix(in srgb, #6b7280 16%, transparent); }
+.part-presencia { background: color-mix(in srgb, #f59e0b 25%, transparent); font-weight: 600; }
+.part-otra { background: color-mix(in srgb, #8b5cf6 20%, transparent); }
+.part-insig-campania { background: color-mix(in srgb, #2563eb 16%, transparent); }
+.part-resumen { margin: 12px 0; padding: 10px 14px; border-left: 3px solid #2563eb; background: color-mix(in srgb, #2563eb 7%, transparent); border-radius: 4px; }
+.part-texto { white-space: pre-line; margin: 4px 0; }
+.part-presencia-aviso { font-weight: 600; margin: 0 0 6px; }
+.part-cierre { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--borde, #d0d7de); }
+.part-fotos { display: flex; flex-wrap: wrap; gap: 12px; margin: 10px 0; }
+.part-fotos figure { margin: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.part-fotos img { width: 220px; max-width: 100%; height: 150px; object-fit: cover; border-radius: 6px; border: 1px solid var(--borde, #d0d7de); }
+.part-subir { display: inline-flex; align-items: center; justify-content: center; min-width: 220px; min-height: 150px; border: 2px dashed #9ca3af; border-radius: 6px; cursor: pointer; padding: 10px; text-align: center; }
+.part-subir input { position: absolute; opacity: 0; width: 0; height: 0; }
+.part-subir:focus-within { outline: 2px solid #2563eb; }
+.part-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.part-chip { display: inline-flex; align-items: center; gap: 4px; background: color-mix(in srgb, #2563eb 14%, transparent); border-radius: 12px; padding: 2px 4px 2px 10px; }
+.part-chip button { border: 0; background: transparent; cursor: pointer; font-size: 1.1em; line-height: 1; color: inherit; }
+.part-campanias { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.part-campania { display: flex; flex-direction: column; gap: 3px; text-align: left; border: 1px solid var(--borde, #d0d7de); border-radius: 6px; padding: 10px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.part-materiales { list-style: none; padding: 0; margin: 4px 0 8px; }
+.part-materiales li { padding: 3px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+@media (max-width: 1000px) { .part-semana { grid-template-columns: 1fr; } .part-dia { min-height: 0; } }

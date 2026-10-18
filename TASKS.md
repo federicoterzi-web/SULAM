@@ -213,3 +213,21 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Actividades repetidas (días hábiles, semanal, quincenal, mensual; hasta 52); editar o cancelar «solo esta» o «esta y las siguientes» | ✅ |
 | Mostrar en la agenda los vencimientos de documentos y las ausencias del personal (solo lectura, según permisos) | ✅ |
 | Agenda del área con filtro por persona | ✅ |
+
+## División Participación y Sensibilización Ciudadana
+
+| Tarea | Estado |
+|---|---|
+| Rol «Participación y Sensibilización» (se suma al rol de jefatura o técnico): agenda y estadísticas del área, mapa de recursos, módulo «participacion» | ✅ |
+| Tipos de evento que define el área (alta, renombrar, baja) | ✅ |
+| Eventos sobre la agenda: flyer opcional (si no hay, el título es el tipo), lugar, horario, instituciones, resumen, campaña, quién organiza, presencia de la Directora sugerida; repetición e historial | ✅ |
+| Planificación semanal (grilla por día + resumen en texto) | ✅ |
+| Resumen semanal en el tablero de la Directora y de la Dirección (navegable por semana) y tablero propio del área | ✅ |
+| Campañas: descripción, período, material (PDF, imágenes, Office, MP4), eventos asociados con organización a cargo | ✅ |
+| Después del evento: cantidad de asistentes y hasta 2 fotos (sin casilla de autorización, a pedido) | ✅ |
+| Brief para Comunicación del Ministerio en Word, por evento y por campaña | ✅ |
+| Pestaña «Participación y Sensibilización» en Estadísticas (pantalla, Excel y PDF) | ✅ |
+| Datos de demostración (usuario `participacion`) | ✅ |
+| Versión para celular de Participación | ⏳ |
+| Avisos por reprogramación de eventos | ⏳ |
+| Brief en PDF (hoy solo Word, a pedido) | ⏳ |

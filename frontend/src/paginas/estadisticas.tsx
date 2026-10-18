@@ -80,6 +80,8 @@ const COLUMNAS: Record<string, string> = {
   confirmaron: "Confirmaron",
   pct: "% confirmado",
   area: "Área",
+  realizados: "Realizados",
+  asistentes: "Asistentes",
 };
 
 const num = (v: unknown) =>
@@ -126,7 +128,12 @@ export function PaginaEstadisticas() {
   const { yo, catalogos } = useSesion();
   const alcance = yo.permisos["estadisticas.consultar"];
   const soloAsistencia = !alcance;
-  const [pestana, setPestana] = useState<"casos" | "interno">(() => (soloAsistencia ? "interno" : leerPreferencia("sulam.est.pestana", "casos")));
+  const conParticipacion = Boolean(yo.permisos["participacion.consultar"]);
+  const [pestana, setPestana] = useState<"casos" | "interno" | "participacion">(() => {
+    const guardada = leerPreferencia<string>("sulam.est.pestana", "casos");
+    if (soloAsistencia) return "interno";
+    return guardada === "participacion" && !conParticipacion ? "casos" : (guardada as "casos" | "interno" | "participacion");
+  });
   const [periodo, setPeriodo] = useState(() => leerPreferencia("sulam.est.periodo", { desde: `${new Date().getFullYear()}-01-01`, hasta: iso(new Date()) }));
   const [area, setArea] = useState<string>(() => leerPreferencia("sulam.est.area", ""));
   const [filtros, setFiltros] = useFiltrosUrl();
@@ -156,14 +163,21 @@ export function PaginaEstadisticas() {
           </a>
         </div>
       </div>
-      {!soloAsistencia && (
+      {(!soloAsistencia || conParticipacion) && (
         <div className="segmentado pestanas-est" role="tablist">
-          <button role="tab" aria-selected={pestana === "casos"} className={pestana === "casos" ? "activo" : ""} onClick={() => setPestana("casos")}>
-            Casos
-          </button>
+          {!soloAsistencia && (
+            <button role="tab" aria-selected={pestana === "casos"} className={pestana === "casos" ? "activo" : ""} onClick={() => setPestana("casos")}>
+              Casos
+            </button>
+          )}
           <button role="tab" aria-selected={pestana === "interno"} className={pestana === "interno" ? "activo" : ""} onClick={() => setPestana("interno")}>
             Funcionamiento interno
           </button>
+          {conParticipacion && (
+            <button role="tab" aria-selected={pestana === "participacion"} className={pestana === "participacion" ? "activo" : ""} onClick={() => setPestana("participacion")}>
+              Participación y Sensibilización
+            </button>
+          )}
         </div>
       )}
       <div className="filtros filtros-est">
@@ -203,6 +217,8 @@ export function PaginaEstadisticas() {
           <BarraFiltros lista="casos" filtros={filtros} alCambiar={setFiltros} />
           <EstadCasos params={params} />
         </>
+      ) : pestana === "participacion" ? (
+        <EstadParticipacion params={params} />
       ) : (
         <EstadInterno params={params} areaFiltro={areaFiltro} />
       )}
@@ -301,6 +317,25 @@ function EstadInterno({ params, areaFiltro }: { params: Record<string, string | 
           </section>
         );
       })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- participación y sensibilización
+
+function EstadParticipacion({ params }: { params: Record<string, string | undefined> }) {
+  const { datos: d, error, cargando } = useEstadisticas<Bloque>("/estadisticas/participacion", params);
+  if (error) return <Aviso error={error} />;
+  if (!d) return <Cargando />;
+  return (
+    <div className={`estadisticas ${cargando ? "estadisticas-cargando" : ""}`} aria-busy={cargando}>
+      <p className="tenue">Eventos de Participación y Sensibilización con fecha entre el {fecha(d.periodo?.desde)} y el {fecha(d.periodo?.hasta)}. Los cancelados no se cuentan.</p>
+      <Tiles datos={d.resumen} enlace={() => null} />
+      <div className="est-grilla">
+        {d.tablas.map((t) => (
+          <TablaGrafico key={t.clave} t={t} enlace={() => null} />
+        ))}
+      </div>
     </div>
   );
 }

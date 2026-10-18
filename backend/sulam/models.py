@@ -25,6 +25,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    SmallInteger,
     String,
     Text,
     UniqueConstraint,
@@ -637,6 +638,77 @@ class CambioAgenda(Base):
     motivo: Mapped[str | None] = mapped_column(Text)
 
     usuario: Mapped[Usuario] = relationship(lazy="joined")
+
+
+class TipoParticipacion(Base):
+    """Tipo de evento de Participación y Sensibilización: lo define el área (charla, taller, feria…)."""
+
+    __tablename__ = "participacion_tipos"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(120))
+    activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+
+
+class Campania(Base):
+    __tablename__ = "campanias"
+    __table_args__ = (CheckConstraint("estado IN ('activa','cerrada')", name="ck_campania_estado"),)
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    nombre: Mapped[str] = mapped_column(String(200))
+    descripcion: Mapped[str | None] = mapped_column(Text)
+    desde: Mapped[date | None] = mapped_column(Date)
+    hasta: Mapped[date | None] = mapped_column(Date)
+    estado: Mapped[str] = mapped_column(String(10), default="activa", server_default="activa")
+    area_id: Mapped[int | None] = mapped_column(ForeignKey("areas.id"))
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+
+    materiales: Mapped[list["CampaniaMaterial"]] = relationship(cascade="all, delete-orphan", lazy="selectin", order_by="CampaniaMaterial.subido_en")
+
+
+class _ArchivoMixin:
+    nombre: Mapped[str] = mapped_column(String(300))
+    mime: Mapped[str] = mapped_column(String(100))
+    tamano: Mapped[int] = mapped_column(BigInteger)
+    sha256: Mapped[str] = mapped_column(String(64))
+    almacenamiento: Mapped[str] = mapped_column(String(30))
+    clave_almacenamiento: Mapped[str] = mapped_column(String(300))
+    subido_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    subido_en: Mapped[datetime] = _ts()
+
+
+class CampaniaMaterial(_ArchivoMixin, Base):
+    __tablename__ = "campanias_materiales"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    campania_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("campanias.id", ondelete="CASCADE"), index=True)
+
+
+class EventoParticipacion(Base):
+    """Datos propios de un evento de Participación y Sensibilización; el día, la hora, el lugar, el estado y el
+    historial son los de la actividad de la agenda (``agenda_eventos``)."""
+
+    __tablename__ = "agenda_participacion"
+    evento_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agenda_eventos.id", ondelete="CASCADE"), primary_key=True)
+    tipo_id: Mapped[int] = mapped_column(ForeignKey("participacion_tipos.id"))
+    nombre_flyer: Mapped[str | None] = mapped_column(String(200))
+    instituciones: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    resumen: Mapped[str | None] = mapped_column(Text)
+    campania_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("campanias.id"), index=True)
+    organiza_otra: Mapped[str | None] = mapped_column(String(200))  # otra organización a cargo; vacío = la propia área
+    sugerir_directora: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    asistentes: Mapped[int | None] = mapped_column(Integer)
+
+    tipo: Mapped[TipoParticipacion] = relationship(lazy="joined")
+    campania: Mapped[Campania | None] = relationship(lazy="joined")
+
+
+class FotoParticipacion(_ArchivoMixin, Base):
+    __tablename__ = "participacion_fotos"
+    __table_args__ = (UniqueConstraint("evento_id", "orden", name="uq_participacion_foto_orden"),)
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    evento_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agenda_eventos.id", ondelete="CASCADE"), index=True)
+    orden: Mapped[int] = mapped_column(SmallInteger)
 
 
 class Ajuste(Base):
