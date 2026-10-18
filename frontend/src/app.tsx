@@ -2,6 +2,7 @@ import { PaginaPases, usePasesPendientes } from "./paginas/archivo";
 import { PaginaNovedades, usePendientes } from "./paginas/novedades";
 import { PaginaPersonal } from "./paginas/personal";
 import { PaginaEstadisticas } from "./paginas/estadisticas";
+import { BotonAvisos, useNotificaciones } from "./notificaciones";
 import { PaginaMiAsistencia, usePendientesPersonal } from "./paginas/miasistencia";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ApiError, api, configurarSesion, type Catalogos, type Formularios, type Yo } from "./api";
@@ -230,6 +231,7 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
   const [busqueda, setBusqueda] = useState("");
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [cambiarPw, setCambiarPw] = useState(false);
+  const avisos = useNotificaciones(yo);
 
   const recargarCatalogos = useCallback(() => {
     api.get<Catalogos>("/catalogos").then(setCatalogos).catch(setError);
@@ -287,7 +289,7 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
         <Impresion ruta={ruta} />
       ) : ruta === "/m" || ruta.startsWith("/m/") ? (
         <>
-          <Movil ruta={ruta} alSalir={salir} alCambiarPassword={() => setCambiarPw(true)} />
+          <Movil avisos={avisos} ruta={ruta} alSalir={salir} alCambiarPassword={() => setCambiarPw(true)} />
           {cambioPw}
         </>
       ) : (
@@ -316,6 +318,7 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
             {yo.nombre_completo}
             <small>{yo.roles.join(" · ") || "Sin rol"}</small>
           </span>
+          <BotonAvisos avisos={avisos} />
           <button className="boton boton-chico" onClick={() => setCambiarPw(true)}>
             Contraseña
           </button>

@@ -21,3 +21,20 @@ self.addEventListener("fetch", (e) => {
     ),
   );
 });
+
+// Aviso tocado (notificaciones del navegador): se trae SULAM al frente y se abre la sección.
+// El texto de los avisos es genérico; no incluye datos de personas.
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const ruta = (e.notification.data && e.notification.data.ruta) || "/";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((ventanas) => {
+      const v = ventanas[0];
+      if (v) {
+        v.postMessage({ tipo: "sulam:ir", ruta });
+        return v.focus();
+      }
+      return self.clients.openWindow("/#" + ruta);
+    }),
+  );
+});

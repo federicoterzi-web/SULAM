@@ -276,6 +276,17 @@ Menú **Estadísticas**, con dos pestañas, un período (con atajos) y, para la 
 - **Descargas**: Excel (resumen, una hoja por bloque con fórmulas de totales y porcentajes, y el detalle caso por caso con autofiltro) e informe PDF con membrete. Quedan en la auditoría.
 - En Personal › Resumen, **Excel de incidencias** con las 16 columnas de la app «Asistencia DAM».
 
+## 5 undevicies. Avisos del navegador
+
+Botón **Activar avisos** en la barra superior (y en el menú de la versión para celular). Cada persona lo activa en su navegador y recibe una notificación del sistema cuando, con SULAM abierto pero en otra pestaña o en segundo plano, aparece algo nuevo:
+
+- casos asignados a la persona y, para quien deriva, casos activos sin asignar;
+- novedades que piden confirmar lectura;
+- carpetas para entregar o recibir;
+- pedidos de personal para aprobar o registrar y respuestas a los pedidos propios.
+
+El texto es siempre genérico (por ejemplo «Hay 2 carpetas para entregar»): nunca lleva nombres ni datos de personas, y los vencimientos del legajo no se avisan. Se consulta `GET /api/avisos` (solo identificadores) cada minuto y al volver a la pestaña; lo ya avisado se recuerda en el navegador, y al activar no se avisa lo que ya estaba pendiente. Con SULAM a la vista alcanzan los contadores del menú. El título de la pestaña muestra la cantidad pendiente. Requiere `localhost` o HTTPS. Las notificaciones con SULAM cerrado (push) quedan para cuando exista el servidor con HTTPS.
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.

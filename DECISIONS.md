@@ -104,6 +104,9 @@ Las reglas de cálculo se portan tal cual (segundos ignorados, ventana de 30 min
 Los campos filtrables se declaran una vez (`sulam/filtros.py`) y los usan las seis listas y las estadísticas. Así, cada número de una estadística trae el filtro que lo reproduce y «tocar el número» abre exactamente esos casos (lo verifica una prueba). Los filtros viajan en la dirección de la página (`?f=`), no se guardan en el navegador. Las estadísticas se calculan en el momento, sobre la base, con el alcance de quien consulta (Dirección: todo; jefaturas: su área; Personal: solo asistencia). Las descargas quedan en la auditoría. La edad se calcula a hoy, igual que en el filtro.
 ---
 
+### D-027 · Avisos del navegador con texto genérico — *Vigente*
+Las notificaciones usan la API del navegador y no llevan nombres ni datos de personas (solo cantidades por tipo). Lo avisado se recuerda en el propio navegador. Las notificaciones push con SULAM cerrado pasan por servicios de Google, Apple o Mozilla: se harán solo con el mismo criterio de texto genérico y cuando exista el servidor con HTTPS (D-012).
+
 ## Pendientes (no se inventan)
 
 | Id | Tema | Depende de |

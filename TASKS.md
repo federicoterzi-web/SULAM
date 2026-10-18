@@ -129,6 +129,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | «Quién está hoy» en equipo de casos, carpetas e inicio | ✅ |
 | Significado de CT, CE, CS, VAO, DF, C3, SESOP y reglas por tipo de licencia | ⏳ a confirmar con Personal |
 | Excel de incidencias | ✅ |
+| Avisos del navegador (casos, novedades, carpetas, pedidos) | ✅ |
 | Informe mensual en PDF por persona | ⏳ etapa 2 |
 | Importar los datos de la app de Google (en el servidor de la Dirección) | ⏳ etapa 2 |
 

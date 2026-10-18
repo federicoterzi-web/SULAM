@@ -85,6 +85,10 @@ Para iniciarlo otro día: `cd backend`, `.venv\Scripts\activate`, `python -m sul
 
 Para los respaldos sin Docker, `pg_dump` y `pg_restore` deben estar en el PATH (vienen con PostgreSQL, en `C:\Program Files\PostgreSQL\16\bin`).
 
+## Avisos del navegador
+
+Botón **Activar avisos** (barra superior; en el celular, menú ⋮). Con SULAM abierto en otra pestaña, el navegador avisa de casos asignados, novedades para confirmar, carpetas y pedidos de personal, con texto genérico y sin datos de personas. Funciona en `localhost` y con HTTPS; por IP sin HTTPS el navegador no lo permite.
+
 ## Uso desde el celular
 
 SULAM tiene una versión para celular en la misma dirección: al ingresar desde un teléfono se abre sola (también se puede elegir con *Versión para celular* en el menú). Permite buscar por DNI o apellido, ver legajos y casos, llamar a la persona o a sus referentes, agregar evolución, registrar reiteraciones, crear legajo y carátula paso a paso y sacar fotos de fichas y documentos (varias hojas se guardan como un solo PDF).

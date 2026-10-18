@@ -1,6 +1,7 @@
 // Versión para celular: las mismas funciones de SULAM pensadas para el pulgar.
 // Pantallas cortas, botones grandes, teclado numérico para DNI y fechas, y la
 // cámara integrada. Nada se guarda en el teléfono: todo va directo al servidor.
+import { BotonAvisos, type Notificaciones } from "../notificaciones";
 import { CarpetaFisica, PaginaPases, PasesPendientes } from "../paginas/archivo";
 import { PaginaMiAsistencia, PedidosParaAprobar } from "../paginas/miasistencia";
 import { NovedadesPendientes, PaginaNovedades } from "../paginas/novedades";
@@ -51,7 +52,7 @@ function AvisoFlotante() {
 
 // ---------------------------------------------------------------- estructura
 
-export function Movil({ ruta, alSalir, alCambiarPassword }: { ruta: string; alSalir: () => void; alCambiarPassword: () => void }) {
+export function Movil({ avisos, ruta, alSalir, alCambiarPassword }: { avisos: Notificaciones; ruta: string; alSalir: () => void; alCambiarPassword: () => void }) {
   const p = ruta.split("?")[0].split("/").filter(Boolean).slice(1); // sin la "m"
   const [menu, setMenu] = useState(false);
   useEffect(() => setMenu(false), [ruta]);
@@ -92,6 +93,7 @@ export function Movil({ ruta, alSalir, alCambiarPassword }: { ruta: string; alSa
             <a href="#/m/pases">Pases de carpetas</a>
             <a href="#/m/mi-asistencia">Mi asistencia</a>
             <a href={"#" + equivalenteCompleto(p)}>Ver en la versión completa</a>
+            <BotonAvisos avisos={avisos} className="" />
             <button onClick={alCambiarPassword}>Cambiar contraseña</button>
             <button onClick={salir}>Cerrar sesión</button>
           </nav>
