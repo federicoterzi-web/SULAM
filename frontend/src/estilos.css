@@ -4772,3 +4772,33 @@ button.indicador {
     padding: 4px;
   }
 }
+
+/* ---------- Digitalización de documentos (bandeja de fotos) ---------- */
+.band { max-width: 1100px; }
+.band-captura { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.band-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 84px; }
+.band-hoja { margin: 0; text-align: center; font-size: 0.8rem; }
+.band-hoja button { position: relative; display: block; width: 100%; padding: 0; border: 3px solid transparent; border-radius: 8px; background: #fff; cursor: pointer; overflow: hidden; }
+.band-hoja.elegida button { border-color: var(--primario); }
+.band-hoja img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; }
+.band-orden { position: absolute; top: 6px; right: 6px; min-width: 28px; height: 28px; line-height: 28px; border-radius: 14px; background: var(--primario); color: #fff; font-weight: 700; }
+.band-barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; padding: 10px 16px; background: #fff; border-top: 1px solid #c9ced6; box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12); }
+.band-movil .band-barra { bottom: 56px; }
+.band-orden-hojas { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+.band-orden-hojas figure { margin: 0; flex: 0 0 auto; text-align: center; }
+.band-orden-hojas img { display: block; height: 110px; border-radius: 6px; border: 1px solid #c9ced6; }
+.band-orden-hojas figcaption { display: flex; justify-content: center; gap: 8px; align-items: center; margin-top: 4px; }
+.band-orden-hojas figcaption button { min-width: 32px; min-height: 32px; }
+.band-campos .fila-campo { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.band-campos .fila-campo input { flex: 1 1 160px; }
+label.campo.campo-casilla { flex-direction: row !important; text-align: left; align-items: center; gap: 8px; }
+label.campo.campo-casilla input { width: auto; flex: 0 0 auto; }
+.doc-datos { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 0.85rem; color: #4a5568; }
+.doc-vigente { color: #1d6b3a; font-weight: 600; }
+.doc-vencido { color: #a12626; font-weight: 700; }
+.band-resultados { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.band-resultados button { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 10px 12px; border: 1px solid var(--borde-fuerte); border-radius: 8px; background: var(--superficie); text-align: left; cursor: pointer; min-height: 44px; }
+.band-resultados button:hover { background: var(--primario-claro); }
+.band-resultados small { color: var(--texto-tenue); }
+.band-buscar .buscador { display: flex; gap: 8px; margin-top: 6px; }
+.band-buscar .buscador input { flex: 1; }

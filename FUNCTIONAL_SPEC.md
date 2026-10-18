@@ -287,6 +287,16 @@ Botón **Activar avisos** en la barra superior (y en el menú de la versión par
 
 El texto es siempre genérico (por ejemplo «Hay 2 carpetas para entregar»): nunca lleva nombres ni datos de personas, y los vencimientos del legajo no se avisan. Se consulta `GET /api/avisos` (solo identificadores) cada minuto y al volver a la pestaña; lo ya avisado se recuerda en el navegador, y al activar no se avisa lo que ya estaba pendiente. Con SULAM a la vista alcanzan los contadores del menú. El título de la pestaña muestra la cantidad pendiente. Requiere `localhost` o HTTPS. Las notificaciones con SULAM cerrado (push) quedan para cuando exista el servidor con HTTPS.
 
+## 5 vicies. Digitalización de documentos con el celular
+
+Menú **Digitalización de documentos** (y «Capturar documentos» en el celular), para quien puede cargar documentos:
+
+1. **Fotos seguidas.** Se sacan o se suben todas las fotos que hagan falta (en el celular se achican antes de enviarlas y se les quitan los metadatos). Quedan en la **bandeja personal** de quien las sacó, que nadie más ve.
+2. **Armar documentos.** Se tocan, en orden, las hojas de un mismo documento y se pulsa *Armar documento*: se indica el legajo (y el caso, si corresponde), el tipo y los datos que pide su plantilla. Las hojas se unen en un solo PDF y se guardan en el legajo. Las demás fotos siguen esperando para el siguiente documento. Se puede reordenar las hojas y descartar fotos (no se guardan).
+3. **Tipo nuevo con plantilla.** Si el tipo no existe, se crea en el mismo paso: nombre, para qué sirve, si **caduca** (con vigencia habitual en meses, que sugiere el vencimiento desde la emisión), si lleva **número o código** y **otros datos propios** (texto, fecha o número). Cualquier usuario que carga documentos puede crearlo; queda auditado. La plantilla se aplica después a toda carga de ese tipo, también desde *Cargar documento* en el legajo; la Dirección puede desactivar tipos desde Administración › Catálogos.
+
+Los datos de cada documento (emisión, vencimiento, número, datos propios) se ven **solo dentro del legajo**: «Vence dd/mm/aaaa» en verde, o «Vencido el…» en rojo. No hay avisos de vencimiento en las pantallas de inicio. Las fotos clasificadas quedan vinculadas al documento creado; el nombre del archivo y el resultado pasan por los mismos controles que cualquier documento (permisos por legajo, archivos idénticos, auditoría).
+
 ## 6. Expedientes
 
 1. Actuación administrativa o judicial vinculada a la persona y, si corresponde, a uno de sus casos.

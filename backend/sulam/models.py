@@ -65,6 +65,14 @@ class TipoDocumental(Base):
     nombre: Mapped[str] = mapped_column(String(200), unique=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"))
     orden: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    # Plantilla: qué datos se piden al cargar un documento de este tipo.
+    descripcion: Mapped[str | None] = mapped_column(Text)
+    tiene_vencimiento: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    vigencia_dias: Mapped[int | None] = mapped_column(Integer)  # sugiere la fecha de vencimiento desde la emisión
+    usa_numero: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # [{"clave": "emisor", "etiqueta": "Emisor", "tipo": "texto"|"fecha"|"numero"}]
+    campos: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
 
 
 class TipoVinculo(Base):
@@ -545,8 +553,30 @@ class Documento(Base):
     eliminado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     eliminado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
     motivo_eliminacion: Mapped[str | None] = mapped_column(Text)
+    # Datos según la plantilla del tipo (solo se muestran dentro del legajo).
+    fecha_emision: Mapped[date | None] = mapped_column(Date)
+    vence: Mapped[date | None] = mapped_column(Date)
+    numero: Mapped[str | None] = mapped_column(String(100))
+    datos: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
 
     tipo_documental: Mapped[TipoDocumental] = relationship(lazy="joined")
+
+
+class PaginaCaptura(Base):
+    """Foto sacada con el celular que todavía no se asignó a un documento (bandeja de cada persona)."""
+
+    __tablename__ = "capturas_paginas"
+    __table_args__ = (CheckConstraint("estado IN ('pendiente','clasificada','descartada')", name="ck_captura_pagina_estado"),)
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"), index=True)
+    mime: Mapped[str] = mapped_column(String(50))
+    tamano: Mapped[int] = mapped_column(BigInteger)
+    sha256: Mapped[str] = mapped_column(String(64))
+    almacenamiento: Mapped[str] = mapped_column(String(30))
+    clave_almacenamiento: Mapped[str] = mapped_column(String(300))
+    estado: Mapped[str] = mapped_column(String(20), default="pendiente", server_default="pendiente")
+    documento_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documentos.id"))
+    creada_en: Mapped[datetime] = _ts()
 
 
 # ---------------------------------------------------------------------------

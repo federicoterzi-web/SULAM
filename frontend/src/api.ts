@@ -272,6 +272,16 @@ export interface Vinculado {
   observaciones?: string | null;
 }
 
+export interface TipoDocumental {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  tiene_vencimiento: boolean;
+  vigencia_dias: number | null;
+  usa_numero: boolean;
+  campos: { clave: string; etiqueta: string; tipo: "texto" | "fecha" | "numero" }[];
+}
+
 export interface Documento {
   id: string;
   persona_id: string | null;
@@ -279,7 +289,11 @@ export interface Documento {
   expediente_id: string | null;
   ingreso_id: string | null;
   registro_demanda_id?: string | null;
-  tipo_documental: { id: number; nombre: string };
+  tipo_documental: TipoDocumental;
+  fecha_emision?: string | null;
+  vence?: string | null;
+  numero?: string | null;
+  datos?: Record<string, string>;
   cargado_en: string;
   titulo?: string;
   descripcion?: string | null;
@@ -329,7 +343,7 @@ export interface Legajo extends PersonaDetalle {
 
 export interface Catalogos {
   areas: { id: number; nombre: string }[];
-  tipos_documentales: { id: number; nombre: string }[];
+  tipos_documentales: TipoDocumental[];
   tipos_vinculo: { id: number; nombre: string }[];
   usuarios_asignables: { id: string; nombre_completo: string; area: string | null }[];
 }

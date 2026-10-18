@@ -1,0 +1,111 @@
+"""Captura con el celular: bandeja de fotos, clasificación en documentos y tipos con plantilla."""
+
+from __future__ import annotations
+
+import io
+from datetime import date, timedelta
+
+from conftest import AREA_ADMISION, crear_usuario, nueva_persona
+from PIL import Image
+
+
+def _foto(color=(200, 30, 30), lado=300) -> bytes:
+    b = io.BytesIO()
+    Image.new("RGB", (lado, int(lado * 1.4)), color).save(b, "JPEG")
+    return b.getvalue()
+
+
+def _subir(c, n=1):
+    ids = []
+    for i in range(n):
+        r = c.post("/api/capturas", files={"foto": (f"f{i}.jpg", _foto((20 * i, 50, 90)), "image/jpeg")})
+        assert r.status_code == 201, r.text
+        ids.append(r.json()["id"])
+    return ids
+
+
+def _tipo(c, **kw):
+    datos = {"nombre": "Certificado de prueba", "tiene_vencimiento": True, "vigencia_dias": 180, "usa_numero": True,
+             "campos": [{"etiqueta": "Emisor", "tipo": "texto"}, {"etiqueta": "Fecha del estudio", "tipo": "fecha"}]}
+    datos.update(kw)
+    return c.post("/api/tipos-documentales", json=datos)
+
+
+def test_bandeja_privada_y_descartar(admin, cliente):
+    crear_usuario("tec", "Técnico", AREA_ADMISION)
+    ids = _subir(admin, 3)
+    b = admin.get("/api/capturas").json()
+    assert b["cantidad"] == 3
+    assert admin.get(f"/api/capturas/{ids[0]}/imagen").headers["content-type"] == "image/jpeg"
+    mini = admin.get(f"/api/capturas/{ids[0]}/imagen", params={"miniatura": True}).content
+    assert Image.open(io.BytesIO(mini)).size[0] <= 360
+    otro = cliente("tec")
+    assert otro.get("/api/capturas").json()["cantidad"] == 0
+    assert otro.get(f"/api/capturas/{ids[0]}/imagen").status_code == 404
+    assert otro.post(f"/api/capturas/{ids[0]}/descartar").status_code == 404
+    admin.post(f"/api/capturas/{ids[0]}/descartar")
+    assert admin.get("/api/capturas").json()["cantidad"] == 2
+    assert admin.post("/api/capturas", files={"foto": ("x.txt", b"hola", "text/plain")}).status_code == 415
+
+
+def test_tipo_nuevo_con_plantilla(admin):
+    r = _tipo(admin)
+    assert r.status_code == 201, r.text
+    t = r.json()
+    assert t["tiene_vencimiento"] and t["vigencia_dias"] == 180 and t["usa_numero"]
+    assert [c["clave"] for c in t["campos"]] == ["emisor", "fecha_del_estudio"]
+    assert _tipo(admin, nombre="certificado DE prueba").status_code == 409  # mismo nombre, sin distinguir mayúsculas
+    en_catalogo = {x["id"]: x for x in admin.get("/api/catalogos").json()["tipos_documentales"]}
+    assert en_catalogo[t["id"]]["campos"][0]["etiqueta"] == "Emisor"
+    sin_vence = _tipo(admin, nombre="Constancia simple", tiene_vencimiento=False, vigencia_dias=90, usa_numero=False, campos=[]).json()
+    assert sin_vence["vigencia_dias"] is None  # sin vencimiento no guarda vigencia
+
+
+def test_clasificar_hojas_en_un_documento(admin):
+    p = nueva_persona(admin)
+    tipo = _tipo(admin).json()
+    ids = _subir(admin, 4)
+    hoy = date.today()
+    r = admin.post("/api/capturas/clasificar", json={
+        "paginas": [ids[1], ids[0]], "tipo_documental_id": tipo["id"], "titulo": "Certificado de la clínica",
+        "persona_id": p["id"], "fecha_emision": hoy.isoformat(), "numero": "A-123",
+        "datos": {"emisor": "Clínica Norte", "fecha_del_estudio": hoy.isoformat(), "inventado": "no se guarda"},
+    })
+    assert r.status_code == 201, r.text
+    d = r.json()
+    assert d["mime"] == "application/pdf" and d["numero"] == "A-123"
+    assert d["vence"] == (hoy + timedelta(days=180)).isoformat()  # sugerido por la vigencia del tipo
+    assert d["datos"] == {"emisor": "Clínica Norte", "fecha_del_estudio": hoy.isoformat()}
+    pdf = admin.get(f"/api/documentos/{d['id']}/archivo").content
+    assert pdf.startswith(b"%PDF") and pdf.count(b"/Type /Page\n") + pdf.count(b"/Type /Page ") + pdf.count(b"/Type/Page") >= 2
+    assert admin.get("/api/capturas").json()["cantidad"] == 2  # las otras dos siguen esperando
+    # Una hoja ya usada no se puede reutilizar.
+    de_nuevo = admin.post("/api/capturas/clasificar", json={"paginas": [ids[0]], "tipo_documental_id": tipo["id"], "titulo": "x", "persona_id": p["id"]})
+    assert de_nuevo.status_code == 409
+    # El documento muestra sus datos dentro del legajo.
+    lista = admin.get(f"/api/personas/{p['id']}").json()["documentos"]
+    assert lista[0]["vence"] == d["vence"] and lista[0]["tipo_documental"]["nombre"] == "Certificado de prueba"
+
+
+def test_validaciones_de_plantilla(admin):
+    p = nueva_persona(admin)
+    simple = _tipo(admin, nombre="Nota simple", tiene_vencimiento=False, vigencia_dias=None, usa_numero=False, campos=[]).json()
+    ids = _subir(admin, 2)
+
+    def clasificar(pagina, **kw):
+        return admin.post("/api/capturas/clasificar", json={"paginas": [pagina], "tipo_documental_id": simple["id"], "titulo": "t", "persona_id": p["id"], **kw})
+
+    assert clasificar(ids[0], vence="2030-01-01").status_code == 400  # el tipo no vence
+    assert clasificar(ids[0], numero="1").status_code == 400  # el tipo no lleva número
+    ok = clasificar(ids[0])
+    assert ok.status_code == 201 and ok.json()["vence"] is None
+    # El vencimiento no puede ser anterior a la emisión.
+    con = _tipo(admin, nombre="Otro con vencimiento").json()
+    mal = admin.post("/api/capturas/clasificar", json={"paginas": [ids[1]], "tipo_documental_id": con["id"], "titulo": "t", "persona_id": p["id"],
+                                                      "fecha_emision": "2026-05-01", "vence": "2026-04-01"})
+    assert mal.status_code == 400
+    # Se pueden corregir los datos después.
+    r = admin.patch(f"/api/documentos/{ok.json()['id']}", json={"tipo_documental_id": con["id"], "vence": "2027-01-31"})
+    assert r.status_code == 200 and r.json()["vence"] == "2027-01-31"
+
+

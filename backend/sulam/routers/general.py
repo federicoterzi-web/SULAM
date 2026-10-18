@@ -24,7 +24,7 @@ from ..models import (
     Usuario,
 )
 from ..permissions import Contexto, filtro_casos, filtro_personas
-from ..serializers import caso_out, expediente_out, ingreso_out, persona_resumen
+from ..serializers import caso_out, expediente_out, ingreso_out, persona_resumen, tipo_documental_out
 from ..textutil import escapar_like, normalizar, normalizar_documento
 
 router = APIRouter(tags=["general"])
@@ -118,7 +118,7 @@ def catalogos(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
             for a in db.execute(select(Area).where(Area.activo).order_by(Area.nombre)).scalars()
         ],
         "tipos_documentales": [
-            {"id": t.id, "nombre": t.nombre}
+            tipo_documental_out(t)
             for t in db.execute(
                 select(TipoDocumental).where(TipoDocumental.activo).order_by(TipoDocumental.orden, TipoDocumental.nombre)
             ).scalars()

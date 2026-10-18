@@ -15,7 +15,7 @@ interface Hoja {
 }
 
 /** Reduce la foto y la vuelve a codificar (quita metadatos como la ubicación). */
-async function achicar(archivo: File): Promise<Blob> {
+export async function achicar(archivo: File): Promise<Blob> {
   const url = URL.createObjectURL(archivo);
   try {
     const img = new Image();

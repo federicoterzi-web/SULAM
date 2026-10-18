@@ -382,6 +382,24 @@ class DocumentoPatch(Entrada):
     tipo_documental_id: int | None = None
     caso_id: uuid.UUID | None = None
     expediente_id: uuid.UUID | None = None
+    fecha_emision: date | None = None
+    vence: date | None = None
+    numero: str | None = Field(default=None, max_length=100)
+    datos: dict[str, str] | None = None
+
+
+class CampoDocumentoIn(Entrada):
+    etiqueta: str = Field(min_length=1, max_length=80)
+    tipo: Literal["texto", "fecha", "numero"] = "texto"
+
+
+class TipoDocumentalIn(Entrada):
+    nombre: str = Field(min_length=2, max_length=200)
+    descripcion: str | None = Field(default=None, max_length=1000)
+    tiene_vencimiento: bool = False
+    vigencia_dias: int | None = Field(default=None, ge=1, le=36500)
+    usa_numero: bool = False
+    campos: list[CampoDocumentoIn] = Field(default_factory=list, max_length=12)
 
 
 class EliminarDocumentoIn(Entrada):

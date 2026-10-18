@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 import uuid
+from datetime import date, timedelta
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .. import audit
@@ -14,9 +16,9 @@ from ..db import get_db
 from ..deps import contexto
 from ..models import Documento, Ingreso, Persona, RegistroDemanda, TipoDocumental, Usuario
 from ..permissions import Contexto, requerir_persona
-from ..schemas import DocumentoPatch, EliminarDocumentoIn
+from ..schemas import DocumentoPatch, EliminarDocumentoIn, TipoDocumentalIn
 from ..security import ahora
-from ..serializers import documento_out
+from ..serializers import documento_out, tipo_documental_out
 from ..storage import almacenamiento_actual, almacenamiento_por_nombre, copiar_a_temporal, detectar_mime
 from ._comun import no_encontrado, obtener_persona, registrar_actividad_caso, validar_pertenencia
 
@@ -46,6 +48,53 @@ def _verificar_acceso(db: Session, ctx: Contexto, d: Documento, accion: str) -> 
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Documento fuera de su alcance.")
 
 
+def _fecha(valor: str | None, campo: str) -> date | None:
+    if valor is None or valor.strip() == "":
+        return None
+    try:
+        return date.fromisoformat(valor.strip())
+    except ValueError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Fecha inválida en {campo}.")
+
+
+def datos_segun_tipo(
+    tipo: TipoDocumental, fecha_emision: str | None, vence: str | None, numero: str | None, datos: str | None
+) -> dict:
+    """Valida y normaliza lo que se pide según la plantilla del tipo documental."""
+    emision = _fecha(fecha_emision, "la fecha de emisión")
+    caduca = _fecha(vence, "el vencimiento")
+    if caduca is None and emision is not None and tipo.tiene_vencimiento and tipo.vigencia_dias:
+        caduca = emision + timedelta(days=tipo.vigencia_dias)
+    if caduca is not None and not tipo.tiene_vencimiento:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Los documentos «{tipo.nombre}» no tienen vencimiento.")
+    if emision is not None and caduca is not None and caduca < emision:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El vencimiento no puede ser anterior a la emisión.")
+    num = (numero or "").strip() or None
+    if num is not None and not tipo.usa_numero:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Los documentos «{tipo.nombre}» no llevan número.")
+    try:
+        crudos = json.loads(datos) if datos and datos.strip() else {}
+    except ValueError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Los datos del documento no son válidos.")
+    if not isinstance(crudos, dict):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Los datos del documento no son válidos.")
+    propios = {}
+    for c in tipo.campos or []:
+        v = crudos.get(c["clave"])
+        if v is None or str(v).strip() == "":
+            continue
+        v = str(v).strip()[:300]
+        if c["tipo"] == "fecha":
+            v = (_fecha(v, c["etiqueta"]) or date.today()).isoformat()
+        elif c["tipo"] == "numero":
+            try:
+                float(v.replace(",", "."))
+            except ValueError:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, f"«{c['etiqueta']}» debe ser un número.")
+        propios[c["clave"]] = v
+    return {"fecha_emision": emision, "vence": caduca, "numero": num, "datos": propios}
+
+
 @router.post("/documentos", status_code=201)
 def cargar_documento(
     archivo: UploadFile = File(...),
@@ -57,6 +106,10 @@ def cargar_documento(
     expediente_id: str | None = Form(None),
     ingreso_id: str | None = Form(None),
     registro_demanda_id: str | None = Form(None),
+    fecha_emision: str | None = Form(None),
+    vence: str | None = Form(None),
+    numero: str | None = Form(None),
+    datos: str | None = Form(None),
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
@@ -105,6 +158,10 @@ def cargar_documento(
     if tipo is None or not tipo.activo:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Tipo documental inválido.")
 
+    # Otras rutas llaman a esta función directamente: los parámetros de formulario omitidos llegan como objetos Form.
+    texto = lambda v: v if isinstance(v, str) else None  # noqa: E731
+    propios = datos_segun_tipo(tipo, texto(fecha_emision), texto(vence), texto(numero), texto(datos))
+
     cabecera = archivo.file.read(16)
     archivo.file.seek(0)
     mime = detectar_mime(cabecera)
@@ -146,6 +203,7 @@ def cargar_documento(
         almacenamiento=almacen.nombre,
         clave_almacenamiento=guardado.clave,
         cargado_por=ctx.id,
+        **propios,
     )
     db.add(doc)
     db.flush()
@@ -160,6 +218,7 @@ def cargar_documento(
             "sha256": doc.sha256,
             "tamano": doc.tamano,
             "identico_a": [str(d.id) for d in identicos],
+            "vence": propios["vence"].isoformat() if propios["vence"] else None,
         },
     )
     db.commit()
@@ -174,6 +233,45 @@ def cargar_documento(
             + " No ocupa espacio adicional."
         )
     return r
+
+
+def _clave_de(etiqueta: str, usadas: set[str]) -> str:
+    import re
+    import unicodedata
+
+    base = re.sub(r"[^a-z0-9]+", "_", unicodedata.normalize("NFD", etiqueta.lower()).encode("ascii", "ignore").decode()).strip("_") or "campo"
+    clave, n = base[:40], 1
+    while clave in usadas:
+        n += 1
+        clave = f"{base[:36]}_{n}"
+    usadas.add(clave)
+    return clave
+
+
+@router.post("/tipos-documentales", status_code=201)
+def crear_tipo_documental(datos: TipoDocumentalIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """Tipo de documento nuevo, con su plantilla (vencimiento, número y campos propios) para los próximos documentos."""
+    ctx.requerir("documentos", "crear")
+    nombre = " ".join(datos.nombre.split())
+    ya = db.execute(select(TipoDocumental).where(func.lower(TipoDocumental.nombre) == nombre.lower())).scalar_one_or_none()
+    if ya is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"Ya existe el tipo «{ya.nombre}»." + ("" if ya.activo else " Está desactivado: pida a la Dirección que lo reactive."))
+    usadas: set[str] = set()
+    t = TipoDocumental(
+        nombre=nombre,
+        descripcion=(datos.descripcion or "").strip() or None,
+        tiene_vencimiento=datos.tiene_vencimiento,
+        vigencia_dias=datos.vigencia_dias if datos.tiene_vencimiento else None,
+        usa_numero=datos.usa_numero,
+        campos=[{"clave": _clave_de(c.etiqueta, usadas), "etiqueta": c.etiqueta.strip(), "tipo": c.tipo} for c in datos.campos],
+        creado_por=ctx.id,
+        orden=1000,
+    )
+    db.add(t)
+    db.flush()
+    audit.registrar(db, ctx, "crear", "tipo_documental", t.id, None, {"nombre": t.nombre, "plantilla": tipo_documental_out(t)})
+    db.commit()
+    return tipo_documental_out(t)
 
 
 @router.get("/documentos/{documento_id}")
@@ -238,6 +336,14 @@ def modificar_documento(
         tipo = db.get(TipoDocumental, cambios_pedidos["tipo_documental_id"])
         if tipo is None or not tipo.activo:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Tipo documental inválido.")
+    tipo_final = db.get(TipoDocumental, cambios_pedidos.get("tipo_documental_id", d.tipo_documental_id))
+    if cambios_pedidos.get("vence") and not tipo_final.tiene_vencimiento:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Los documentos «{tipo_final.nombre}» no tienen vencimiento.")
+    if cambios_pedidos.get("numero") and not tipo_final.usa_numero:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Los documentos «{tipo_final.nombre}» no llevan número.")
+    if cambios_pedidos.get("datos"):
+        claves = {c["clave"] for c in tipo_final.campos or []}
+        cambios_pedidos["datos"] = {k: v for k, v in cambios_pedidos["datos"].items() if k in claves and str(v).strip()}
     if {"caso_id", "expediente_id"} & cambios_pedidos.keys():
         if d.persona_id is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "El documento no está asociado a un legajo.")
@@ -318,6 +424,10 @@ def cargar_fotos(
     persona_id: str | None = Form(None),
     caso_id: str | None = Form(None),
     registro_demanda_id: str | None = Form(None),
+    fecha_emision: str | None = Form(None),
+    vence: str | None = Form(None),
+    numero: str | None = Form(None),
+    datos: str | None = Form(None),
     ctx: Contexto = Depends(contexto),
     db: Session = Depends(get_db),
 ):
@@ -346,6 +456,10 @@ def cargar_fotos(
         expediente_id=None,
         ingreso_id=None,
         registro_demanda_id=registro_demanda_id,
+        fecha_emision=fecha_emision,
+        vence=vence,
+        numero=numero,
+        datos=datos,
         ctx=ctx,
         db=db,
     )

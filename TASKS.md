@@ -133,6 +133,17 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Informe mensual en PDF por persona | ⏳ etapa 2 |
 | Importar los datos de la app de Google (en el servidor de la Dirección) | ⏳ etapa 2 |
 
+## Digitalización con el celular
+
+| Funcionalidad | Estado |
+|---|---|
+| Bandeja de fotos por persona, armado de documentos con varias hojas | ✅ |
+| Tipos documentales nuevos con plantilla (vencimiento, número, campos propios) | ✅ |
+| Vencimiento visible en el legajo | ✅ |
+| Editar la plantilla de un tipo existente desde Administración › Catálogos | ⏳ |
+| Sugerir el tipo leyendo la foto (OCR local) | ⏳ |
+| Limpieza de fotos descartadas | ⏳ |
+
 ## Digitalización de fichas — en curso
 
 | Funcionalidad | Estado |

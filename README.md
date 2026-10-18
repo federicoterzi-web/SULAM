@@ -85,6 +85,10 @@ Para iniciarlo otro día: `cd backend`, `.venv\Scripts\activate`, `python -m sul
 
 Para los respaldos sin Docker, `pg_dump` y `pg_restore` deben estar en el PATH (vienen con PostgreSQL, en `C:\Program Files\PostgreSQL\16\bin`).
 
+## Digitalización de documentos con el celular
+
+Menú **Digitalización de documentos** (en el celular, ⋮ › Capturar documentos): se sacan todas las fotos seguidas y después se arman los documentos eligiendo las hojas, el legajo y el tipo. Un tipo nuevo se crea en el momento, con su plantilla (vencimiento, número, datos propios). El botón Sacar foto abre la app de cámara del teléfono.
+
 ## Avisos del navegador
 
 Botón **Activar avisos** (barra superior; en el celular, menú ⋮). Con SULAM abierto en otra pestaña, el navegador avisa de casos asignados, novedades para confirmar, carpetas y pedidos de personal, con texto genérico y sin datos de personas. Funciona en `localhost` y con HTTPS; por IP sin HTTPS el navegador no lo permite.

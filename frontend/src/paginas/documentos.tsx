@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api, type Caso, type Documento, type Expediente } from "../api";
-import { Aviso, Campo, Modal, Vacio, fechaHora, tamano, useEnvio, useSesion } from "../comun";
+import { Aviso, Campo, Modal, Vacio, fecha, fechaHora, tamano, useEnvio, useSesion } from "../comun";
 
 export function TablaDocumentos({
   documentos,
@@ -33,6 +33,7 @@ export function TablaDocumentos({
                     {d.nombre_original} · {tamano(d.tamano)}
                   </small>
                   {d.descripcion && <div className="tenue">{d.descripcion}</div>}
+                  <DatosDelDocumento d={d} />
                 </td>
                 <td>{d.tipo_documental.nombre}</td>
                 <td>
@@ -73,6 +74,30 @@ export function TablaDocumentos({
         </Modal>
       )}
     </>
+  );
+}
+
+/** Datos que pide la plantilla del tipo. El vencimiento se avisa solo acá, dentro del legajo. */
+function DatosDelDocumento({ d }: { d: Documento }) {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const etiquetas = new Map((d.tipo_documental.campos ?? []).map((c) => [c.clave, c]));
+  const propios = Object.entries(d.datos ?? {}).filter(([k]) => etiquetas.has(k));
+  if (!d.fecha_emision && !d.vence && !d.numero && propios.length === 0) return null;
+  const vencido = !!d.vence && d.vence < hoy;
+  return (
+    <div className="doc-datos">
+      {d.numero && <span>N° {d.numero}</span>}
+      {d.fecha_emision && <span>Emitido {fecha(d.fecha_emision)}</span>}
+      {d.vence && <span className={vencido ? "doc-vencido" : "doc-vigente"}>{vencido ? "Vencido el" : "Vence"} {fecha(d.vence)}</span>}
+      {propios.map(([k, v]) => {
+        const c = etiquetas.get(k)!;
+        return (
+          <span key={k}>
+            {c.etiqueta}: {c.tipo === "fecha" ? fecha(v) : v}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -132,7 +157,12 @@ export function FormDocumento({
   const [casoId, setCasoId] = useState(casoFijo ?? "");
   const [expedienteId, setExpedienteId] = useState("");
   const [advertencias, setAdvertencias] = useState<string[]>([]);
+  const [emision, setEmision] = useState("");
+  const [vence, setVence] = useState("");
+  const [numero, setNumero] = useState("");
+  const [propios, setPropios] = useState<Record<string, string>>({});
   const { enviando, error, ejecutar } = useEnvio();
+  const tipoElegido = catalogos.tipos_documentales.find((t) => String(t.id) === tipo);
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
@@ -147,6 +177,10 @@ export function FormDocumento({
     if (registroDemandaId) fd.append("registro_demanda_id", registroDemandaId);
     if (casoId) fd.append("caso_id", casoId);
     if (expedienteId) fd.append("expediente_id", expedienteId);
+    if (emision) fd.append("fecha_emision", emision);
+    if (tipoElegido?.tiene_vencimiento && vence) fd.append("vence", vence);
+    if (tipoElegido?.usa_numero && numero) fd.append("numero", numero);
+    if (Object.keys(propios).length) fd.append("datos", JSON.stringify(propios));
     const d = await ejecutar(() => api.post<Documento>("/documentos", fd));
     if (d) {
       if (d.advertencias?.length) {
@@ -172,7 +206,15 @@ export function FormDocumento({
       </Campo>
       <div className="grilla">
         <Campo etiqueta="Tipo documental *">
-          <select value={tipo} onChange={(e) => setTipo(e.target.value)} required>
+          <select
+            value={tipo}
+            onChange={(e) => {
+              setTipo(e.target.value);
+              setPropios({});
+              setVence("");
+            }}
+            required
+          >
             <option value="">Elegir…</option>
             {catalogos.tipos_documentales.map((t) => (
               <option key={t.id} value={t.id}>
@@ -207,6 +249,44 @@ export function FormDocumento({
               ))}
             </select>
           </Campo>
+        )}
+        {tipoElegido && (tipoElegido.tiene_vencimiento || tipoElegido.usa_numero || tipoElegido.campos.length > 0) && (
+          <>
+            <Campo etiqueta="Fecha de emisión">
+              <input
+                type="date"
+                value={emision}
+                onChange={(e) => {
+                  setEmision(e.target.value);
+                  if (tipoElegido.tiene_vencimiento && tipoElegido.vigencia_dias && e.target.value) {
+                    const d = new Date(e.target.value + "T12:00:00");
+                    d.setDate(d.getDate() + tipoElegido.vigencia_dias);
+                    setVence(d.toISOString().slice(0, 10));
+                  }
+                }}
+              />
+            </Campo>
+            {tipoElegido.tiene_vencimiento && (
+              <Campo etiqueta="Vence">
+                <input type="date" value={vence} onChange={(e) => setVence(e.target.value)} />
+              </Campo>
+            )}
+            {tipoElegido.usa_numero && (
+              <Campo etiqueta="Número o código">
+                <input value={numero} maxLength={100} onChange={(e) => setNumero(e.target.value)} />
+              </Campo>
+            )}
+            {tipoElegido.campos.map((c) => (
+              <Campo key={c.clave} etiqueta={c.etiqueta}>
+                <input
+                  type={c.tipo === "fecha" ? "date" : "text"}
+                  maxLength={300}
+                  value={propios[c.clave] ?? ""}
+                  onChange={(e) => setPropios({ ...propios, [c.clave]: e.target.value })}
+                />
+              </Campo>
+            ))}
+          </>
         )}
         <Campo etiqueta="Descripción" ancho="completo">
           <textarea rows={2} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />

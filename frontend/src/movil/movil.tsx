@@ -1,6 +1,7 @@
 // Versión para celular: las mismas funciones de SULAM pensadas para el pulgar.
 // Pantallas cortas, botones grandes, teclado numérico para DNI y fechas, y la
 // cámara integrada. Nada se guarda en el teléfono: todo va directo al servidor.
+import { PaginaBandeja } from "../paginas/bandeja";
 import { BotonAvisos, type Notificaciones } from "../notificaciones";
 import { CarpetaFisica, PaginaPases, PasesPendientes } from "../paginas/archivo";
 import { PaginaMiAsistencia, PedidosParaAprobar } from "../paginas/miasistencia";
@@ -55,6 +56,7 @@ function AvisoFlotante() {
 export function Movil({ avisos, ruta, alSalir, alCambiarPassword }: { avisos: Notificaciones; ruta: string; alSalir: () => void; alCambiarPassword: () => void }) {
   const p = ruta.split("?")[0].split("/").filter(Boolean).slice(1); // sin la "m"
   const [menu, setMenu] = useState(false);
+  const { puede } = useSesion();
   useEffect(() => setMenu(false), [ruta]);
 
   const salir = async () => {
@@ -91,6 +93,7 @@ export function Movil({ avisos, ruta, alSalir, alCambiarPassword }: { avisos: No
             <MenuUsuario />
             <a href="#/m/novedades">Novedades</a>
             <a href="#/m/pases">Pases de carpetas</a>
+            {puede("documentos", "crear") && <a href="#/m/bandeja">Capturar documentos</a>}
             <a href="#/m/mi-asistencia">Mi asistencia</a>
             <a href={"#" + equivalenteCompleto(p)}>Ver en la versión completa</a>
             <BotonAvisos avisos={avisos} className="" />
@@ -168,6 +171,8 @@ function titulo(p: string[]): string {
       return "Pases de carpetas";
     case "mi-asistencia":
       return "Mi asistencia";
+    case "bandeja":
+      return "Capturar documentos";
     case "informe":
       return "Informe";
     case "visitas":
@@ -210,6 +215,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "novedades") return "/novedades";
   if (p[0] === "pases") return "/pases";
   if (p[0] === "mi-asistencia") return "/mi-asistencia";
+  if (p[0] === "bandeja") return "/bandeja";
   if (p[0] === "informe" && p[1]) return `/informes/${p[1]}`;
   if (p[0] === "visitas") return "/visitas";
   return "/";
@@ -239,6 +245,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       return <PaginaPases movil />;
     case "mi-asistencia":
       return <PaginaMiAsistencia movil />;
+    case "bandeja":
+      return <PaginaBandeja movil />;
     case "informe":
       return <PaginaInforme id={p[1]} movil key={p[1]} />;
     case "visitas":
@@ -456,6 +464,11 @@ function InicioMovil() {
         {ofreceRecursos && (
           <Accion a="/m/recursos/nuevo" icono="＋">
             Agregar un lugar al mapa de recursos
+          </Accion>
+        )}
+        {puede("documentos", "crear") && (
+          <Accion a="/m/bandeja" icono="📷">
+            Sacar fotos de documentos y clasificarlas
           </Accion>
         )}
         <Accion a="/m/mi-asistencia" icono="📝" principal={actual === "personal"}>

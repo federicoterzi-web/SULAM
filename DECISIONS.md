@@ -107,6 +107,9 @@ Los campos filtrables se declaran una vez (`sulam/filtros.py`) y los usan las se
 ### D-027 · Avisos del navegador con texto genérico — *Vigente*
 Las notificaciones usan la API del navegador y no llevan nombres ni datos de personas (solo cantidades por tipo). Lo avisado se recuerda en el propio navegador. Las notificaciones push con SULAM cerrado pasan por servicios de Google, Apple o Mozilla: se harán solo con el mismo criterio de texto genérico y cuando exista el servidor con HTTPS (D-012).
 
+### D-028 · Captura por lotes con bandeja personal y tipos documentales con plantilla — *Vigente*
+Se reemplaza el diseño anterior de captura por QR (rama `captura-celular`, sin terminar): las fotos van a una bandeja personal y se clasifican después, en el celular o la computadora. Las plantillas de tipo (vencimiento, número, campos propios) las puede crear cualquier usuario que carga documentos, con auditoría. Los vencimientos se muestran solo dentro del legajo. Las fotos descartadas no se borran del almacenamiento (es por contenido y puede compartirse); su limpieza queda para una tarea de mantenimiento.
+
 ## Pendientes (no se inventan)
 
 | Id | Tema | Depende de |

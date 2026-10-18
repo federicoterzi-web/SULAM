@@ -208,6 +208,19 @@ def ingreso_out(i: Ingreso, persona: Persona | None = None) -> dict:
     }
 
 
+def tipo_documental_out(t) -> dict:
+    """El tipo con su plantilla: qué datos se piden al cargar un documento de este tipo."""
+    return {
+        "id": t.id,
+        "nombre": t.nombre,
+        "descripcion": t.descripcion,
+        "tiene_vencimiento": t.tiene_vencimiento,
+        "vigencia_dias": t.vigencia_dias,
+        "usa_numero": t.usa_numero,
+        "campos": t.campos or [],
+    }
+
+
 def documento_out(d: Documento, cargado_por: Usuario | None = None) -> dict:
     return {
         "id": str(d.id),
@@ -216,7 +229,11 @@ def documento_out(d: Documento, cargado_por: Usuario | None = None) -> dict:
         "expediente_id": str(d.expediente_id) if d.expediente_id else None,
         "ingreso_id": str(d.ingreso_id) if d.ingreso_id else None,
         "registro_demanda_id": str(d.registro_demanda_id) if d.registro_demanda_id else None,
-        "tipo_documental": {"id": d.tipo_documental.id, "nombre": d.tipo_documental.nombre},
+        "tipo_documental": tipo_documental_out(d.tipo_documental),
+        "fecha_emision": d.fecha_emision.isoformat() if d.fecha_emision else None,
+        "vence": d.vence.isoformat() if d.vence else None,
+        "numero": d.numero,
+        "datos": d.datos or {},
         "cargado_en": d.cargado_en.isoformat(),
         "eliminado": d.eliminado_en is not None,
         "titulo": d.titulo,
