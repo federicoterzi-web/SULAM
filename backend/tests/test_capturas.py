@@ -109,3 +109,36 @@ def test_validaciones_de_plantilla(admin):
     assert r.status_code == 200 and r.json()["vence"] == "2027-01-31"
 
 
+
+
+def test_editar_plantilla_de_un_tipo(admin):
+    p = nueva_persona(admin)
+    t = _tipo(admin).json()
+    ids = _subir(admin, 1)
+    doc = admin.post("/api/capturas/clasificar", json={
+        "paginas": ids, "tipo_documental_id": t["id"], "titulo": "x", "persona_id": p["id"],
+        "fecha_emision": "2026-01-10", "datos": {"emisor": "Clínica Norte"},
+    }).json()
+    campos = t["campos"]
+    # Cambiar el nombre y la vigencia, renombrar un dato y agregar otro.
+    r = admin.patch(f"/api/tipos-documentales/{t['id']}", json={
+        "nombre": "Certificado médico", "vigencia_dias": 365,
+        "campos": [{**campos[0], "etiqueta": "Institución emisora"}, campos[1], {"etiqueta": "Profesional", "tipo": "texto"}],
+    })
+    assert r.status_code == 200, r.text
+    nuevo = r.json()
+    assert nuevo["nombre"] == "Certificado médico" and nuevo["vigencia_dias"] == 365
+    assert [c["clave"] for c in nuevo["campos"]] == ["emisor", "fecha_del_estudio", "profesional"]
+    # Los datos ya cargados siguen ahí, con el nombre nuevo del dato.
+    guardado = admin.get(f"/api/personas/{p['id']}").json()["documentos"][0]
+    assert guardado["datos"] == {"emisor": "Clínica Norte"} and guardado["tipo_documental"]["campos"][0]["etiqueta"] == "Institución emisora"
+    assert guardado["vence"] == doc["vence"]
+    # No se pueden quitar datos ni cambiarles la clase; no se repite un nombre.
+    assert admin.patch(f"/api/tipos-documentales/{t['id']}", json={"campos": [campos[0]]}).status_code == 400
+    assert admin.patch(f"/api/tipos-documentales/{t['id']}", json={"campos": [{**campos[0], "tipo": "fecha"}, campos[1]]}).status_code == 400
+    otro = _tipo(admin, nombre="Otro tipo").json()
+    assert admin.patch(f"/api/tipos-documentales/{otro['id']}", json={"nombre": "certificado MÉDICO"}).status_code == 409
+    # Si ya no vence, no se guarda la vigencia.
+    sin = admin.patch(f"/api/tipos-documentales/{t['id']}", json={"tiene_vencimiento": False}).json()
+    assert sin["vigencia_dias"] is None
+    assert admin.patch("/api/tipos-documentales/99999", json={"nombre": "x1"}).status_code == 404

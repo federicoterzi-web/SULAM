@@ -140,7 +140,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Bandeja de fotos por persona, armado de documentos con varias hojas | ✅ |
 | Tipos documentales nuevos con plantilla (vencimiento, número, campos propios) | ✅ |
 | Vencimiento visible en el legajo | ✅ |
-| Editar la plantilla de un tipo existente desde Administración › Catálogos | ⏳ |
+| Editar la plantilla de un tipo existente (desde la clasificación de hojas; no se quitan datos ya definidos) | ✅ |
 | Sugerir el tipo leyendo la foto (OCR local) | ⏳ |
 | Limpieza de fotos descartadas | ⏳ |
 

@@ -16,7 +16,7 @@ from ..db import get_db
 from ..deps import contexto
 from ..models import Documento, Ingreso, Persona, RegistroDemanda, TipoDocumental, Usuario
 from ..permissions import Contexto, requerir_persona
-from ..schemas import DocumentoPatch, EliminarDocumentoIn, TipoDocumentalIn
+from ..schemas import DocumentoPatch, EliminarDocumentoIn, TipoDocumentalIn, TipoDocumentalPatch
 from ..security import ahora
 from ..serializers import documento_out, tipo_documental_out
 from ..storage import almacenamiento_actual, almacenamiento_por_nombre, copiar_a_temporal, detectar_mime
@@ -271,6 +271,58 @@ def crear_tipo_documental(datos: TipoDocumentalIn, ctx: Contexto = Depends(conte
     db.flush()
     audit.registrar(db, ctx, "crear", "tipo_documental", t.id, None, {"nombre": t.nombre, "plantilla": tipo_documental_out(t)})
     db.commit()
+    return tipo_documental_out(t)
+
+
+@router.patch("/tipos-documentales/{tipo_id}")
+def modificar_tipo_documental(
+    tipo_id: int, datos: TipoDocumentalPatch, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)
+):
+    """Edita la plantilla de un tipo. Los datos ya cargados no se pierden: los campos no se pueden quitar ni cambiar de clase."""
+    ctx.requerir("documentos", "crear")
+    t = db.get(TipoDocumental, tipo_id)
+    if t is None:
+        raise no_encontrado("Tipo documental")
+    antes = tipo_documental_out(t)
+    pedido = datos.model_dump(exclude_unset=True)
+    if "nombre" in pedido and pedido["nombre"] is not None:
+        nombre = " ".join(pedido["nombre"].split())
+        otro = db.execute(
+            select(TipoDocumental).where(func.lower(TipoDocumental.nombre) == nombre.lower(), TipoDocumental.id != t.id)
+        ).scalar_one_or_none()
+        if otro is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, f"Ya existe el tipo «{otro.nombre}».")
+        t.nombre = nombre
+    if "descripcion" in pedido:
+        t.descripcion = (pedido["descripcion"] or "").strip() or None
+    if pedido.get("tiene_vencimiento") is not None:
+        t.tiene_vencimiento = pedido["tiene_vencimiento"]
+    if "vigencia_dias" in pedido or pedido.get("tiene_vencimiento") is False:
+        t.vigencia_dias = pedido.get("vigencia_dias") if t.tiene_vencimiento else None
+    if pedido.get("usa_numero") is not None:
+        t.usa_numero = pedido["usa_numero"]
+    if pedido.get("campos") is not None:
+        actuales = {c["clave"]: c for c in t.campos or []}
+        nuevos, usadas = [], set(actuales)
+        recibidos = set()
+        for c in datos.campos or []:
+            if c.clave:
+                if c.clave not in actuales:
+                    raise HTTPException(status.HTTP_400_BAD_REQUEST, "Un dato no corresponde a este tipo.")
+                if c.tipo != actuales[c.clave]["tipo"]:
+                    raise HTTPException(status.HTTP_400_BAD_REQUEST, f"No se puede cambiar la clase del dato «{actuales[c.clave]['etiqueta']}».")
+                recibidos.add(c.clave)
+                nuevos.append({"clave": c.clave, "etiqueta": c.etiqueta.strip(), "tipo": c.tipo})
+            else:
+                nuevos.append({"clave": _clave_de(c.etiqueta, usadas), "etiqueta": c.etiqueta.strip(), "tipo": c.tipo})
+        if set(actuales) - recibidos:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Los datos existentes no se pueden quitar: ya hay documentos que los usan.")
+        t.campos = nuevos
+    despues = tipo_documental_out(t)
+    if despues != antes:
+        audit.registrar(db, ctx, "modificar", "tipo_documental", t.id, None, {"antes": antes, "despues": despues})
+        db.commit()
+        db.refresh(t)
     return tipo_documental_out(t)
 
 

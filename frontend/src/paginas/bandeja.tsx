@@ -177,6 +177,7 @@ function ClasificarHojas({
   const [persona, setPersona] = useState<PersonaResumen | null>(null);
   const [tipoId, setTipoId] = useState("");
   const [nuevoTipo, setNuevoTipo] = useState(false);
+  const [editandoTipo, setEditandoTipo] = useState(false);
   const [titulo, setTitulo] = useState("");
   const [tituloEditado, setTituloEditado] = useState(false);
   const [emision, setEmision] = useState("");
@@ -301,10 +302,22 @@ function ClasificarHojas({
             </Campo>
           </div>
 
+          {editandoTipo && tipo && (
+            <FormTipo
+              inicial={tipo}
+              alCancelar={() => setEditandoTipo(false)}
+              alGuardar={(t) => {
+                Object.assign(tipo, t);
+                recargarCatalogos();
+                setEditandoTipo(false);
+              }}
+            />
+          )}
+
           {nuevoTipo && (
-            <FormTipoNuevo
+            <FormTipo
               alCancelar={() => setNuevoTipo(false)}
-              alCrear={(t) => {
+              alGuardar={(t) => {
                 recargarCatalogos();
                 setNuevoTipo(false);
                 setTipoId(String(t.id));
@@ -314,7 +327,13 @@ function ClasificarHojas({
             />
           )}
 
-          {tipo && !nuevoTipo && (
+          {tipo && !nuevoTipo && !editandoTipo && (
+            <button type="button" className="boton boton-chico" onClick={() => setEditandoTipo(true)}>
+              Editar la plantilla de «{tipo.nombre}»
+            </button>
+          )}
+
+          {tipo && !nuevoTipo && !editandoTipo && (
             <div className="grilla">
               {tipo.descripcion && <p className="tenue">{tipo.descripcion}</p>}
               <Campo etiqueta="Fecha de emisión">
@@ -431,32 +450,46 @@ function BuscarLegajo({ alElegir }: { alElegir: (p: PersonaResumen) => void }) {
 
 // ---------------------------------------------------------------- tipo de documento nuevo
 
-function FormTipoNuevo({ alCrear, alCancelar }: { alCrear: (t: TipoDocumental) => void; alCancelar: () => void }) {
-  const [nombreTipo, setNombreTipo] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [vence, setVence] = useState(false);
-  const [meses, setMeses] = useState("");
-  const [numero, setNumero] = useState(false);
-  const [campos, setCampos] = useState<{ etiqueta: string; tipo: "texto" | "fecha" | "numero" }[]>([]);
+/** Alta o edición de la plantilla de un tipo. Al editar, los datos que ya existen no se pueden quitar ni cambiar de clase. */
+export function FormTipo({
+  inicial,
+  alGuardar,
+  alCancelar,
+}: {
+  inicial?: TipoDocumental;
+  alGuardar: (t: TipoDocumental) => void;
+  alCancelar: () => void;
+}) {
+  const [nombreTipo, setNombreTipo] = useState(inicial?.nombre ?? "");
+  const [descripcion, setDescripcion] = useState(inicial?.descripcion ?? "");
+  const [vence, setVence] = useState(inicial?.tiene_vencimiento ?? false);
+  const [meses, setMeses] = useState(inicial?.vigencia_dias ? String(Math.round(inicial.vigencia_dias / MESES_A_DIAS)) : "");
+  const [numero, setNumero] = useState(inicial?.usa_numero ?? false);
+  const [campos, setCampos] = useState<{ clave?: string; etiqueta: string; tipo: "texto" | "fecha" | "numero" }[]>(inicial?.campos ?? []);
   const { enviando, error, ejecutar } = useEnvio();
 
-  const crear = async () => {
+  const guardar = async () => {
+    const cuerpo = {
+      nombre: nombreTipo,
+      descripcion: descripcion || null,
+      tiene_vencimiento: vence,
+      vigencia_dias: vence && meses ? Math.round(Number(meses.replace(",", ".")) * MESES_A_DIAS) : null,
+      usa_numero: numero,
+      campos: campos.filter((c) => c.etiqueta.trim()),
+    };
     const t = await ejecutar(() =>
-      api.post<TipoDocumental>("/tipos-documentales", {
-        nombre: nombreTipo,
-        descripcion: descripcion || null,
-        tiene_vencimiento: vence,
-        vigencia_dias: vence && meses ? Math.round(Number(meses.replace(",", ".")) * MESES_A_DIAS) : null,
-        usa_numero: numero,
-        campos: campos.filter((c) => c.etiqueta.trim()),
-      }),
+      inicial ? api.patch<TipoDocumental>(`/tipos-documentales/${inicial.id}`, cuerpo) : api.post<TipoDocumental>("/tipos-documentales", cuerpo),
     );
-    if (t) alCrear(t);
+    if (t) alGuardar(t);
   };
 
   return (
-    <Seccion titulo="Tipo de documento nuevo">
-      <p className="tenue">Queda guardado como plantilla: la próxima vez se pedirán estos mismos datos.</p>
+    <Seccion titulo={inicial ? `Plantilla de «${inicial.nombre}»` : "Tipo de documento nuevo"}>
+      <p className="tenue">
+        {inicial
+          ? "Los cambios valen para los próximos documentos de este tipo. Los ya cargados conservan sus datos."
+          : "Queda guardado como plantilla: la próxima vez se pedirán estos mismos datos."}
+      </p>
       <div className="grilla">
         <Campo etiqueta="Nombre del tipo *">
           <input value={nombreTipo} maxLength={200} onChange={(e) => setNombreTipo(e.target.value)} autoFocus />
@@ -489,6 +522,7 @@ function FormTipoNuevo({ alCrear, alCancelar }: { alCrear: (t: TipoDocumental) =
             />
             <select
               aria-label={`Tipo del dato ${i + 1}`}
+              disabled={!!c.clave}
               value={c.tipo}
               onChange={(e) => setCampos(campos.map((x, j) => (j === i ? { ...x, tipo: e.target.value as "texto" | "fecha" | "numero" } : x)))}
             >
@@ -496,9 +530,11 @@ function FormTipoNuevo({ alCrear, alCancelar }: { alCrear: (t: TipoDocumental) =
               <option value="fecha">Fecha</option>
               <option value="numero">Número</option>
             </select>
-            <button type="button" className="boton boton-chico" onClick={() => setCampos(campos.filter((_, j) => j !== i))}>
-              Quitar
-            </button>
+            {!c.clave && (
+              <button type="button" className="boton boton-chico" onClick={() => setCampos(campos.filter((_, j) => j !== i))}>
+                Quitar
+              </button>
+            )}
           </div>
         ))}
         {campos.length < 12 && (
@@ -509,8 +545,8 @@ function FormTipoNuevo({ alCrear, alCancelar }: { alCrear: (t: TipoDocumental) =
       </div>
       <Aviso error={error} />
       <div className="fila-botones">
-        <button type="button" className="boton boton-primario" disabled={enviando || nombreTipo.trim().length < 2} onClick={crear}>
-          Crear tipo y usarlo
+        <button type="button" className="boton boton-primario" disabled={enviando || nombreTipo.trim().length < 2} onClick={guardar}>
+          {inicial ? "Guardar cambios" : "Crear tipo y usarlo"}
         </button>
         <button type="button" className="boton" onClick={alCancelar}>
           Cancelar

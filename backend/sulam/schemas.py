@@ -389,6 +389,7 @@ class DocumentoPatch(Entrada):
 
 
 class CampoDocumentoIn(Entrada):
+    clave: str | None = Field(default=None, max_length=40)  # los datos que ya existen conservan su clave
     etiqueta: str = Field(min_length=1, max_length=80)
     tipo: Literal["texto", "fecha", "numero"] = "texto"
 
@@ -400,6 +401,15 @@ class TipoDocumentalIn(Entrada):
     vigencia_dias: int | None = Field(default=None, ge=1, le=36500)
     usa_numero: bool = False
     campos: list[CampoDocumentoIn] = Field(default_factory=list, max_length=12)
+
+
+class TipoDocumentalPatch(Entrada):
+    nombre: str | None = Field(default=None, min_length=2, max_length=200)
+    descripcion: str | None = Field(default=None, max_length=1000)
+    tiene_vencimiento: bool | None = None
+    vigencia_dias: int | None = Field(default=None, ge=1, le=36500)
+    usa_numero: bool | None = None
+    campos: list[CampoDocumentoIn] | None = Field(default=None, max_length=12)
 
 
 class EliminarDocumentoIn(Entrada):
