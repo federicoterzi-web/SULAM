@@ -93,6 +93,59 @@ def casos_en_el_mapa(
     return {"puntos": puntos, "sin_ubicacion": sin_ubicacion, "partida": punto_de_partida()}
 
 
+TESELAS_PROPIAS = "/api/mapa/teselas/{z}/{x}/{y}.png"
+USER_AGENT = "SULAM/0.1 (Direccion de Adultos Mayores de Tucuman; direccionadultosmayores@gmail.com)"
+_DIAS_CACHE = 30
+
+
+def teselas_para_el_navegador() -> str:
+    """Las teselas se piden a este servidor, que las trae con un User-Agent propio y las guarda en disco, como pide la política
+    de uso de OpenStreetMap (el navegador no puede identificarse y a veces lo bloquean). Si se configuró un servidor propio
+    (SULAM_MAPA_TESELAS), el navegador lo usa directo."""
+    return TESELAS_PROPIAS if "SULAM_MAPA_TESELAS" not in os.environ else os.environ["SULAM_MAPA_TESELAS"]
+
+
+@router.get("/mapa/teselas/{z}/{x}/{y}.png")
+def tesela(z: int, x: int, y: int, ctx: Contexto = Depends(contexto)):
+    import time
+    from urllib.request import Request as Pedido
+    from urllib.request import urlopen
+
+    from fastapi import HTTPException
+    from fastapi.responses import Response
+
+    from ..config import get_settings
+
+    if not (0 <= z <= 19 and 0 <= x < 2**z and 0 <= y < 2**z):
+        raise HTTPException(404, "Tesela inexistente.")
+    cfg = get_settings()
+    cabeceras = {"Cache-Control": f"private, max-age={7 * 86400}"}
+    archivo = cfg.storage_dir.parent / "teselas" / str(z) / str(x) / f"{y}.png"
+    try:
+        if archivo.is_file() and time.time() - archivo.stat().st_mtime < _DIAS_CACHE * 86400:
+            return Response(archivo.read_bytes(), media_type="image/png", headers=cabeceras)
+    except OSError:
+        pass
+    origen = cfg.mapa_teselas.replace("{z}", str(z)).replace("{x}", str(x)).replace("{y}", str(y)).replace("{s}", "a")
+    try:
+        with urlopen(Pedido(origen, headers={"User-Agent": USER_AGENT, "Referer": "https://sulam.local/"}), timeout=8) as r:
+            datos = r.read(1_000_000)
+            tipo = r.headers.get_content_type()
+    except Exception:
+        # Sin internet o bloqueada: se usa la copia vieja si existe.
+        if archivo.is_file():
+            return Response(archivo.read_bytes(), media_type="image/png", headers={"Cache-Control": "no-store"})
+        raise HTTPException(502, "No se pudo obtener el mapa.")
+    if not tipo.startswith("image/"):
+        raise HTTPException(502, "No se pudo obtener el mapa.")
+    try:
+        archivo.parent.mkdir(parents=True, exist_ok=True)
+        archivo.write_bytes(datos)
+    except OSError:
+        pass
+    return Response(datos, media_type=tipo, headers=cabeceras)
+
+
 @router.get("/mapa/config")
 def configuracion_del_mapa(ctx: Contexto = Depends(contexto)):
     from ..config import get_settings
@@ -100,7 +153,7 @@ def configuracion_del_mapa(ctx: Contexto = Depends(contexto)):
 
     cfg = get_settings()
     return {
-        "teselas": cfg.mapa_teselas,
+        "teselas": teselas_para_el_navegador(),
         "atribucion": cfg.mapa_atribucion,
         "centro": [-26.83, -65.22],
         "caja": CAJA_TUCUMAN,

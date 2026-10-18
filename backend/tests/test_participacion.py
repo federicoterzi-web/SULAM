@@ -274,3 +274,28 @@ def test_aviso_de_reprogramacion(admin, cliente):
     # Un cambio nuevo del mismo evento vuelve a avisar (cambia el identificador).
     otro.patch(f"/api/participacion/eventos/{ev['id']}", json={"lugar": "Plaza", "aplicar_a": "esta"})
     assert set(avisos(p)) != set(a1) and len(avisos(d)) == 1
+
+
+def test_teselas_del_mapa_pasan_por_el_servidor(admin, monkeypatch):
+    import urllib.request
+
+    pedidos = []
+
+    class Resp:
+        headers = type("H", (), {"get_content_type": lambda s: "image/png"})()
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self, n=-1): return b"\x89PNG-demo"
+
+    def falso(pedido, timeout=0):
+        pedidos.append(pedido)
+        return Resp()
+
+    monkeypatch.setattr("urllib.request.urlopen", falso)
+    assert admin.get("/api/mapa/config").json()["teselas"] == "/api/mapa/teselas/{z}/{x}/{y}.png"
+    r = admin.get("/api/mapa/teselas/12/1300/2500.png")
+    assert r.status_code == 200 and r.content == b"\x89PNG-demo"
+    assert pedidos[0].get_header("User-agent").startswith("SULAM/")
+    admin.get("/api/mapa/teselas/12/1300/2500.png")
+    assert len(pedidos) == 1  # la segunda sale del disco
+    assert admin.get("/api/mapa/teselas/40/1/1.png").status_code == 404

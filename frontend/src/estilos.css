@@ -4900,3 +4900,5 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 .participacion-movil .part-fotos img, .participacion-movil .part-subir { width: 100%; }
 .participacion-movil .part-campanias { grid-template-columns: 1fr; }
 .participacion-movil .acciones { display: flex; flex-direction: column; gap: 8px; }
+
+.mapa-sin-imagenes { position: absolute; z-index: 1000; left: 50%; top: 8px; transform: translateX(-50%); max-width: 90%; background: #fff7e6; color: #7a4b00; border: 1px solid #f0c36d; border-radius: 6px; padding: 6px 10px; font-size: .85em; text-align: center; }

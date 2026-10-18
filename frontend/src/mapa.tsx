@@ -40,7 +40,24 @@ function icono(tipo: string, elegido: boolean, etiqueta?: string) {
 
 function crearMapa(div: HTMLDivElement, cfg: ConfigMapa) {
   const m = L.map(div, { zoomControl: true, attributionControl: true }).setView(cfg.centro, 12);
-  L.tileLayer(cfg.teselas, { attribution: cfg.atribucion, maxZoom: 19 }).addTo(m);
+  const capa = L.tileLayer(cfg.teselas, { attribution: cfg.atribucion, maxZoom: 19 }).addTo(m);
+  // Si las imágenes del mapa no llegan (el servidor sin internet o bloqueado), se avisa en vez de dejar el mapa gris.
+  let errores = 0;
+  let aviso: HTMLDivElement | null = null;
+  capa.on("tileerror", () => {
+    errores += 1;
+    if (errores >= 4 && !aviso) {
+      aviso = document.createElement("div");
+      aviso.className = "mapa-sin-imagenes";
+      aviso.textContent = "No se pudo cargar el fondo del mapa (se necesita internet en el servidor). Los puntos siguen disponibles.";
+      div.appendChild(aviso);
+    }
+  });
+  capa.on("tileload", () => {
+    errores = 0;
+    aviso?.remove();
+    aviso = null;
+  });
   return m;
 }
 

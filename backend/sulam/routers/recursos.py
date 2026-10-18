@@ -145,13 +145,15 @@ def _obtener(db: Session, recurso_id: uuid.UUID) -> Recurso:
 @router.get("/recursos/catalogo")
 def catalogo(ctx: Contexto = Depends(contexto)):
     ctx.requerir("recursos", "consultar")
+    from .mapa import teselas_para_el_navegador
+
     cfg = get_settings()
     return {
         "tipos": TIPOS,
         "origenes": ORIGENES,
         "departamentos": DEPARTAMENTOS,
         "mapa": {
-            "teselas": cfg.mapa_teselas,
+            "teselas": teselas_para_el_navegador(),
             "atribucion": cfg.mapa_atribucion,
             "centro": [-26.83, -65.22],  # San Miguel de Tucumán
             "caja": CAJA_TUCUMAN,
