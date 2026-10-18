@@ -20,6 +20,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import (
+    EventoAgenda,
+    ParticipanteAgenda,
     Agente,
     Area,
     Articulacion,
@@ -384,8 +386,42 @@ def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], c
             for clave in ("direccion", "jefa_admision", "jefe_promocion", "carga", "mesa"):
                 db.add(NovedadLectura(novedad_id=n.id, usuario_id=U[clave].id, confirmada_en=_dt(hoy - timedelta(days=dias - 1), 10)))
 
+    # ------------------------------------------------------------ agenda: salidas, visitas y reuniones
+    _agenda(db, U, tecnicos_area, casos + nuevos, areas, rnd, hoy)
+
     # ------------------------------------------------------------ personal: reloj, pedidos y quién no está hoy
     _personal(db, U, areas, almacen, rnd, hoy)
+
+
+def _agenda(db: Session, U: dict[str, Usuario], tecnicos_area: dict[str, list[Usuario]], casos: list[Caso], areas: dict[str, Area], rnd: random.Random, hoy: date) -> None:
+    """Actividades ficticias: algunas ya hechas (con su resultado en el caso), una sin resultado, otras de hoy y próximas."""
+    por_area = {a.id: n for n, a in areas.items()}
+    for area_nombre, tecnicos in tecnicos_area.items():
+        del_area = [c for c in casos if por_area.get(c.area_id) == area_nombre] or casos
+        for k, u in enumerate(tecnicos):
+            c1, c2, c3 = rnd.sample(del_area, 3) if len(del_area) >= 3 else (del_area[0],) * 3
+
+            def evento(dias, h, tipo, titulo, caso=None, estado="programado", resultado=None, otros=(), lugar=None, dur=1):
+                e = EventoAgenda(
+                    tipo=tipo, titulo=titulo, inicio=_dt(_habil(hoy + timedelta(days=dias)), h), fin=_dt(_habil(hoy + timedelta(days=dias)), h + dur),
+                    lugar=lugar, area_id=u.area_id, persona_id=caso.persona_id if caso else None, caso_id=caso.id if caso else None,
+                    estado=estado, resultado=resultado, creado_por=u.id,
+                )
+                if estado != "programado":
+                    e.resuelto_por, e.resuelto_en = u.id, _dt(_habil(hoy + timedelta(days=dias)), h + dur + 1)
+                e.participantes = [ParticipanteAgenda(usuario_id=x.id) for x in (u, *otros)]
+                db.add(e)
+                db.flush()
+                if caso and estado in ("realizado", "no_realizado"):
+                    db.add(CasoEvolucion(caso_id=caso.id, texto=f"{'Visita domiciliaria realizada' if estado == 'realizado' else 'Visita domiciliaria no realizada'}: {resultado} (ficticio)", fecha=e.inicio.date(), autor_id=u.id, usuario_id=u.id))
+
+            colega = tecnicos[(k + 1) % len(tecnicos)] if len(tecnicos) > 1 else None
+            evento(-9 - k, 10, "visita", "Visita domiciliaria", c1, "realizado", "Se la encontró bien; se acordó seguimiento telefónico.", lugar="Domicilio")
+            evento(-5, 9, "visita", "Visita domiciliaria", c2, "no_realizado", "No había nadie en el domicilio; se dejó aviso.", lugar="Domicilio")
+            evento(-2, 11, "entrevista", "Entrevista con familiar", c3, lugar="Oficina")  # pasó y falta el resultado
+            evento(0, 9 + (k % 3), "salida", "Salida a domicilio", c1, otros=[colega] if colega else (), lugar="Zona sur")
+            evento(2 + k % 3, 10, "reunion", "Reunión de equipo", otros=[colega] if colega else (), lugar="Sala de reuniones")
+            evento(6 + k % 4, 14, "audiencia", "Audiencia en juzgado", c2, lugar="Tribunales")
 
 
 def _con_grupos(codigos: list[str]) -> list[str]:

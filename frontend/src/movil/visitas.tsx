@@ -1,7 +1,8 @@
 // Salida de visitas desde el celular: elegir casos en el mapa y abrir el recorrido.
 import { useMemo, useState } from "react";
 import { api } from "../api";
-import { Aviso, Cargando, useDatos } from "../comun";
+import { Aviso, Cargando, useDatos, useSesion } from "../comun";
+import { ProgramarSalida } from "../paginas/agenda";
 import { MapaRecursos } from "../mapa";
 import { enlacesRecorrido, kilometros, type Lugar } from "../rutas";
 import { ubicacionActual, useConfigMapa } from "../paginas/ubicacion";
@@ -15,6 +16,9 @@ export function VisitasMovil() {
   const { datos, error } = useDatos(() => api.get<MapaCasos>("/mapa/casos", { de }), [de]);
   const partida = desde ?? (cfg.datos ? { lat: cfg.datos.partida[0], lng: cfg.datos.partida[1] } : null);
   const salida = useSalida(datos, partida);
+  const { puede } = useSesion();
+  const [agendando, setAgendando] = useState(false);
+  const [agendada, setAgendada] = useState(false);
   const puntos = useMemo(() => puntosDelMapa(datos, salida.orden), [datos, salida.orden]);
   if (cfg.error || error) return <Aviso error={cfg.error ?? error} />;
   if (!cfg.datos || !datos) return <Cargando />;
@@ -33,6 +37,22 @@ export function VisitasMovil() {
 
   return (
     <>
+      {agendando && (
+        <ProgramarSalida
+          casos={salida.orden.map((c) => ({ caso_id: c.caso_id, persona_id: c.persona.id }))}
+          alCerrar={() => setAgendando(false)}
+          alAgendar={() => {
+            setAgendando(false);
+            setAgendada(true);
+            salida.vaciar();
+          }}
+        />
+      )}
+      {agendada && (
+        <p className="m-aviso" role="status">
+          Salida agendada. La encontrás en <a href="#/m/agenda">tu agenda</a>.
+        </p>
+      )}
       <div className="m-segmentado" role="tablist">
         {(
           [
@@ -74,6 +94,11 @@ export function VisitasMovil() {
               {enlaces.length === 1 ? "Abrir recorrido en el mapa" : `Tramo ${i + 1}`}
             </a>
           ))}
+          {puede("agenda", "crear") && (
+            <button className="m-boton-texto" onClick={() => setAgendando(true)}>
+              Agendar esta salida
+            </button>
+          )}
           <button className="m-boton-texto" onClick={salida.vaciar}>
             Vaciar la salida
           </button>

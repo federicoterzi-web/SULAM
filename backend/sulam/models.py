@@ -584,6 +584,44 @@ class PaginaCaptura(Base):
     creada_en: Mapped[datetime] = _ts()
 
 
+class EventoAgenda(Base):
+    """Actividad agendada: salida, visita, reunión, audiencia, entrevista, trámite o recordatorio."""
+
+    __tablename__ = "agenda_eventos"
+    __table_args__ = (
+        CheckConstraint("estado IN ('programado','realizado','no_realizado','cancelado')", name="ck_agenda_estado"),
+        Index("ix_agenda_eventos_inicio", "inicio"),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    tipo: Mapped[str] = mapped_column(String(20))
+    titulo: Mapped[str] = mapped_column(String(200))
+    descripcion: Mapped[str | None] = mapped_column(Text)
+    inicio: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    fin: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    todo_el_dia: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    lugar: Mapped[str | None] = mapped_column(String(300))
+    area_id: Mapped[int | None] = mapped_column(ForeignKey("areas.id"))
+    persona_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("personas.id"), index=True)
+    caso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("casos.id"), index=True)
+    estado: Mapped[str] = mapped_column(String(15), default="programado", server_default="programado")
+    resultado: Mapped[str | None] = mapped_column(Text)
+    resuelto_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    resuelto_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    creado_por: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+
+    area: Mapped[Area | None] = relationship(lazy="joined")
+    participantes: Mapped[list["ParticipanteAgenda"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
+
+
+class ParticipanteAgenda(Base):
+    __tablename__ = "agenda_participantes"
+    evento_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agenda_eventos.id", ondelete="CASCADE"), primary_key=True)
+    usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"), primary_key=True)
+
+    usuario: Mapped[Usuario] = relationship(lazy="joined")
+
+
 class Ajuste(Base):
     """Ajuste del sistema que cambia el administrador (clave → valor JSON)."""
 

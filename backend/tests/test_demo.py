@@ -26,6 +26,13 @@ def test_datos_demo_completos():
     assert len(p.get("/api/personal/hoy").json()) >= 2
     assert Cliente("registro", PASSWORD_DEMO).get("/api/archivo/pendientes").json()["cantidad"] >= 2
     assert d.get("/api/estadisticas/interno").status_code == 200
+    from datetime import datetime, timedelta, timezone
+
+    t = Cliente("tecnica1", PASSWORD_DEMO)
+    ahora = datetime.now(timezone.utc)
+    ag = t.get("/api/agenda", params={"desde": (ahora - timedelta(days=30)).isoformat(), "hasta": (ahora + timedelta(days=30)).isoformat()}).json()["eventos"]
+    assert {e["estado"] for e in ag} >= {"realizado", "no_realizado", "programado"}
+    assert t.get("/api/agenda", params={"desde": (ahora - timedelta(days=60)).isoformat(), "hasta": ahora.isoformat(), "estado": "programado"}).json()["eventos"], "hay una actividad sin resultado"
 
 
 def test_datos_demo_con_personal_real(tmp_path):

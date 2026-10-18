@@ -504,7 +504,7 @@ function ClasificarHojas({
 }
 
 /** Buscador de legajo compacto (sirve también en la pantalla del celular). */
-function BuscarLegajo({ alElegir }: { alElegir: (p: PersonaResumen) => void }) {
+export function BuscarLegajo({ alElegir }: { alElegir: (p: PersonaResumen) => void }) {
   const [q, setQ] = useState("");
   const [r, setR] = useState<PersonaResumen[] | null>(null);
   const { error, enviando, ejecutar } = useEnvio();

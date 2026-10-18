@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..deps import contexto
-from ..models import Caso, CasoAsignacion, Novedad, SolicitudPersonal
+from ..models import Caso, CasoAsignacion, EventoAgenda, Novedad, ParticipanteAgenda, SolicitudPersonal
 from ..permissions import Contexto, filtro_casos
 from ..security import ahora
 from .archivo import _para_mi
@@ -89,6 +89,25 @@ def avisos(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
                     Caso.estado != "cerrado",
                     ~Caso.id.in_(select(CasoAsignacion.caso_id).where(CasoAsignacion.hasta.is_(None))),
                 )
+            ).scalars()
+        )
+
+    # Agenda: lo que tengo agendado para las próximas horas (solo actividades en las que participo). El inicio va en el id:
+    # si se reprograma, se vuelve a avisar.
+    if ctx.tiene("agenda", "consultar"):
+        ahora_ = ahora()
+        salida["agenda"] = _ids(
+            f"{e.id}:{e.inicio.isoformat()}"
+            for e in db.execute(
+                select(EventoAgenda)
+                .join(ParticipanteAgenda, ParticipanteAgenda.evento_id == EventoAgenda.id)
+                .where(
+                    ParticipanteAgenda.usuario_id == ctx.id,
+                    EventoAgenda.estado == "programado",
+                    EventoAgenda.inicio >= ahora_ - timedelta(hours=1),
+                    EventoAgenda.inicio < ahora_ + timedelta(hours=36),
+                )
+                .order_by(EventoAgenda.inicio)
             ).scalars()
         )
 

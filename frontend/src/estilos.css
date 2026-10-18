@@ -4821,3 +4821,32 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 .txt-caja { position: absolute; mix-blend-mode: multiply; opacity: 0.55; border-radius: 2px; pointer-events: auto; }
 .txt-hoja-interna { position: relative; }
 .band-grupos { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+
+/* Agenda */
+.agenda-barra { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+.agenda-mes-cabecera { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.agenda-mes-cabecera h2 { margin: 0; flex: 1; text-align: center; font-size: 1.15rem; }
+.agenda-grilla { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--borde, #ccc); border-left: 1px solid var(--borde, #ccc); }
+.agenda-dia-nombre { padding: 4px 6px; font-size: 0.78rem; text-transform: uppercase; opacity: 0.7; border-right: 1px solid var(--borde, #ccc); border-bottom: 1px solid var(--borde, #ccc); }
+.agenda-celda { min-height: 96px; padding: 4px; border-right: 1px solid var(--borde, #ccc); border-bottom: 1px solid var(--borde, #ccc); display: flex; flex-direction: column; gap: 2px; cursor: pointer; overflow: hidden; }
+.agenda-celda.fuera { opacity: 0.45; }
+.agenda-celda.hoy .agenda-num { background: var(--primario, #1a3a63); color: #fff; border-radius: 50%; padding: 0 6px; }
+.agenda-celda.elegido { outline: 2px solid var(--primario, #1a3a63); outline-offset: -2px; }
+.agenda-num { font-size: 0.8rem; align-self: flex-start; }
+.agenda-chip { font-size: 0.74rem; text-align: left; border: 0; border-radius: 3px; padding: 1px 4px; background: #dbeafe; color: #111; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda-chip.estado-realizado { background: #bbf7d0; }
+.agenda-chip.estado-no_realizado { background: #fecaca; }
+.agenda-chip.estado-cancelado { background: #e5e7eb; text-decoration: line-through; }
+.agenda-titulo-dia { font-size: 1.05rem; margin: 16px 0 6px; }
+.agenda-lista { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.agenda-item { display: flex; gap: 12px; width: 100%; text-align: left; padding: 8px 10px; border: 1px solid var(--borde, #ccc); border-radius: 6px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+.agenda-hora { min-width: 72px; font-variant-numeric: tabular-nums; }
+.agenda-lista .estado-cancelado strong { text-decoration: line-through; }
+.agenda-pendientes { border: 1px solid #f59e0b; background: color-mix(in srgb, #f59e0b 12%, transparent); border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.agenda-pendientes ul { margin: 4px 0 0; padding-left: 18px; }
+.agenda-detalle { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0 0 12px; }
+.agenda-detalle dt { font-weight: 600; }
+.agenda-detalle dd { margin: 0; }
+.agenda-quienes { border: 1px solid var(--borde, #ccc); border-radius: 6px; max-height: 180px; overflow: auto; }
+.agenda-movil .agenda-grilla { display: none; }
+.agenda-mes-cabecera h2::first-letter, .agenda-titulo-dia::first-letter { text-transform: uppercase; }

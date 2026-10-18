@@ -1,7 +1,8 @@
 // Mapa de casos y armado de salidas de visita.
+import { ProgramarSalida } from "./agenda";
 import { useMemo, useState } from "react";
 import { api, type UsuarioBreve } from "../api";
-import { Aviso, Cargando, Enlace, ESTADOS, Seccion, Vacio, fecha, useDatos } from "../comun";
+import { Aviso, Cargando, Enlace, ESTADOS, Seccion, Vacio, fecha, useDatos, useSesion } from "../comun";
 import { MapaRecursos, type Punto } from "../mapa";
 import { enlacesRecorrido, kilometros, ordenarRecorrido, type Lugar } from "../rutas";
 import { useConfigMapa } from "./ubicacion";
@@ -71,6 +72,9 @@ export function PaginaVisitas() {
   const recursos = useDatos(() => (conRecursos ? api.get<Recurso[]>("/recursos") : Promise.resolve([] as Recurso[])), [conRecursos]);
   const partida = cfg.datos ? { lat: cfg.datos.partida[0], lng: cfg.datos.partida[1] } : null;
   const salida = useSalida(datos, partida);
+  const { puede } = useSesion();
+  const [agendando, setAgendando] = useState(false);
+  const [agendada, setAgendada] = useState(false);
   const puntos = useMemo(() => puntosDelMapa(datos, salida.orden, recursos.datos ?? []), [datos, salida.orden, recursos.datos]);
 
   if (cfg.error || error) return <Aviso error={cfg.error ?? error} />;
@@ -79,6 +83,22 @@ export function PaginaVisitas() {
 
   return (
     <>
+      {agendando && (
+        <ProgramarSalida
+          casos={salida.orden.map((c) => ({ caso_id: c.caso_id, persona_id: c.persona.id }))}
+          alCerrar={() => setAgendando(false)}
+          alAgendar={() => {
+            setAgendando(false);
+            setAgendada(true);
+            salida.vaciar();
+          }}
+        />
+      )}
+      {agendada && (
+        <p className="aviso aviso-exito" role="status">
+          Salida agendada. La encontrás en <a href="#/agenda">la agenda</a>.
+        </p>
+      )}
       <div className="inicio-cabecera">
         <h1>Mapa de casos y salidas</h1>
         <div className="segmentado" role="group" aria-label="Qué casos mostrar">
@@ -130,6 +150,11 @@ export function PaginaVisitas() {
                 <a className="boton boton-chico" href={`#/imprimir/salida?ids=${salida.orden.map((c) => c.caso_id).join(",")}`} target="_blank" rel="noreferrer">
                   Imprimir hoja de salida
                 </a>
+                {puede("agenda", "crear") && (
+                  <button className="boton boton-chico" onClick={() => setAgendando(true)}>
+                    Agendar esta salida
+                  </button>
+                )}
                 <button className="boton boton-chico" onClick={salida.vaciar}>
                   Vaciar
                 </button>

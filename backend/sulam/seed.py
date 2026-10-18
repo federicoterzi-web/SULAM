@@ -62,6 +62,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Gestión de permisos, plantillas, configuraciones y operaciones institucionales autorizadas.",
         "permisos": [
+            ("agenda", "consultar", T), ("agenda", "crear", T), ("agenda", "modificar", T),
             ("personal", "consultar", T), ("personal", "administrar", T), ("personal", "aprobar", T), ("estadisticas", "consultar", T),
             ("novedades", "publicar", T),
             ("plantillas", "modificar", T),
@@ -81,6 +82,7 @@ ROLES: dict[str, dict] = {
         "inicio": "direccion",
         "descripcion": "Conducción de la Dirección: ve todos los casos y la auditoría, y puede derivar y asignar. No administra usuarios ni permisos.",
         "permisos": [
+            ("agenda", "consultar", T), ("agenda", "crear", T), ("agenda", "modificar", T),
             ("personal", "consultar", T), ("personal", "aprobar", T), ("estadisticas", "consultar", T),
             ("novedades", "publicar", T),
             ("plantillas", "modificar", T),
@@ -98,6 +100,7 @@ ROLES: dict[str, dict] = {
         "inicio": "jefatura",
         "descripcion": "Conduce un departamento que maneja casos (Admisión o Promoción, según el área del usuario): abre carátulas y asigna técnicos en su área.",
         "permisos": [
+            ("agenda", "consultar", AR), ("agenda", "crear", AR), ("agenda", "modificar", AR),
             ("personal", "aprobar", AR), ("estadisticas", "consultar", AR),
             ("novedades", "publicar", AR),
             ("plantillas", "modificar", AR),
@@ -114,6 +117,7 @@ ROLES: dict[str, dict] = {
         "inicio": "jefatura",
         "descripcion": "Conduce una división (Participación y Sensibilización Ciudadana, Cuidados y Promoción de Autonomía) o cumple esa función en un departamento. Mismos permisos que un jefe de departamento, sobre el área del usuario.",
         "permisos": [
+            ("agenda", "consultar", AR), ("agenda", "crear", AR), ("agenda", "modificar", AR),
             ("personal", "aprobar", AR), ("estadisticas", "consultar", AR),
             ("novedades", "publicar", AR),
             ("plantillas", "modificar", AR),
@@ -130,6 +134,7 @@ ROLES: dict[str, dict] = {
         "inicio": "carga",
         "descripcion": "Acceso transversal a los legajos y herramientas de incorporación y actualización de información.",
         "permisos": [
+            ("agenda", "consultar", P), ("agenda", "crear", P), ("agenda", "modificar", P),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", T),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", T),
             # "modificar" permite transcribir carátulas, registros de demanda y evoluciones en papel.
@@ -144,6 +149,7 @@ ROLES: dict[str, dict] = {
         "inicio": "tecnico",
         "descripcion": "Consulta general de legajos, con tablero centrado en sus casos asignados.",
         "permisos": [
+            ("agenda", "consultar", AR), ("agenda", "crear", AR), ("agenda", "modificar", P),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", P),
             ("personas", "consultar", T), ("personas", "crear", T), ("personas", "modificar", AS),
             ("casos", "consultar", T), ("casos", "crear", T), ("casos", "modificar", AS),
@@ -156,6 +162,7 @@ ROLES: dict[str, dict] = {
         "inicio": "personal",
         "descripcion": "Encargada/o de personal: asistencias, horarios, justificativos, licencias y comisiones.",
         "permisos": [
+            ("agenda", "consultar", P), ("agenda", "crear", P), ("agenda", "modificar", P),
             ("personal", "consultar", T), ("personal", "administrar", T),
             ("recursos", "consultar", T),
         ],
@@ -164,6 +171,7 @@ ROLES: dict[str, dict] = {
         "inicio": "mesa",
         "descripcion": "Registro de ingresos, números de expedientes y movimientos administrativos.",
         "permisos": [
+            ("agenda", "consultar", P), ("agenda", "crear", P), ("agenda", "modificar", P),
             ("recursos", "consultar", T),
             ("mesa_entrada", "consultar", T), ("mesa_entrada", "crear", T), ("mesa_entrada", "modificar", T),
             ("personas", "consultar", T),
@@ -175,6 +183,7 @@ ROLES: dict[str, dict] = {
         "inicio": "administrativo_area",
         "descripcion": "Funciones específicas del área, como documentación y gestión administrativa.",
         "permisos": [
+            ("agenda", "consultar", AR), ("agenda", "crear", AR), ("agenda", "modificar", AR),
             ("recursos", "consultar", T), ("recursos", "crear", T), ("recursos", "modificar", P),
             ("personas", "consultar", AR),
             ("casos", "consultar", AR),
@@ -208,9 +217,35 @@ def inicializar_catalogos(db: Session) -> None:
         rol.permisos = [RolPermiso(modulo=m, accion=a, alcance=al) for m, a, al in d["permisos"]]
         db.add(rol)
     db.flush()
+    _permisos_de_modulos_nuevos(db, existentes)
     from .informes import crear_plantillas_iniciales
 
     crear_plantillas_iniciales(db)
+    db.flush()
+
+
+# Módulos agregados después de la primera instalación: sus permisos se suman UNA vez a los roles ya existentes
+# (si después alguien los quita desde Administración, no se vuelven a poner).
+MODULOS_NUEVOS = ("agenda",)
+
+
+def _permisos_de_modulos_nuevos(db: Session, roles_previos: set[str]) -> None:
+    from .models import Ajuste
+
+    for modulo in MODULOS_NUEVOS:
+        clave = f"permisos_iniciales_{modulo}"
+        if db.get(Ajuste, clave) is not None:
+            continue
+        for rol in db.execute(select(Rol)).scalars():
+            d = ROLES.get(rol.nombre)
+            if d is None or rol.nombre not in roles_previos:
+                continue  # los roles nuevos ya vienen completos; los creados a mano no se tocan
+            if any(p.modulo == modulo for p in rol.permisos):
+                continue
+            for m, a, al in d["permisos"]:
+                if m == modulo:
+                    rol.permisos.append(RolPermiso(modulo=m, accion=a, alcance=al))
+        db.add(Ajuste(clave=clave, valor=True))
     db.flush()
 
 

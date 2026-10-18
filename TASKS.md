@@ -195,3 +195,20 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 - Cada regla funcional nueva se documenta en FUNCTIONAL_SPEC.md y, si implica una elección, en DECISIONS.md.
 - No se agregan campos administrativos que no surjan del relevamiento.
 - Las pruebas deben pasar antes de integrar cambios: `cd backend && pytest`.
+
+
+## Agenda (salidas, visitas y actividades)
+
+| Tarea | Estado |
+|---|---|
+| Actividades con clase, día y hora, lugar, participantes, ligadas opcionalmente a legajo y caso | ✅ |
+| Permisos del módulo «agenda» (consultar/crear/modificar con alcance propios, área o todos); se suman una vez a los roles existentes | ✅ |
+| Vista mensual y de próximos días; «la mía» y «de mi área» | ✅ |
+| Registrar resultado (realizada / no realizada con motivo / cancelada); si hay caso queda en su evolución | ✅ |
+| Pendientes de resultado resaltados | ✅ |
+| Agendar una salida con los casos elegidos en el mapa (una actividad por caso) | ✅ |
+| Aviso del navegador solo para lo agendado en que participa la persona | ✅ |
+| Versión para celular (lista) | ✅ |
+| Reprogramar con historial de cambios; actividades repetidas (semanales, mensuales) | ⏳ |
+| Mostrar en la agenda los vencimientos de documentos y las ausencias del personal (solo lectura) | ⏳ |
+| Agenda de toda el área para jefaturas con filtro por persona | ⏳ |

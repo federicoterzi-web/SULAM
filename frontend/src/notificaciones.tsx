@@ -7,6 +7,7 @@ import { api, type Yo } from "./api";
 type Avisos = Record<string, string[]>;
 
 const TEXTOS: Record<string, { uno: string; varios: (n: number) => string; ruta: string }> = {
+  agenda: { uno: "Tenés una actividad agendada para las próximas horas", varios: (n) => `Tenés ${n} actividades agendadas para las próximas horas`, ruta: "/agenda" },
   casos_asignados: { uno: "Te asignaron un caso", varios: (n) => `Te asignaron ${n} casos`, ruta: "/casos" },
   casos_sin_asignar: { uno: "Hay un caso para asignar", varios: (n) => `Hay ${n} casos para asignar`, ruta: "/casos" },
   novedades: { uno: "Hay una novedad para confirmar", varios: (n) => `Hay ${n} novedades para confirmar`, ruta: "/novedades" },
