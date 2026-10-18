@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
+from ..localidades import LOCALIDADES
+from ..formularios import DEPARTAMENTOS
 from ..models import (
     Area,
     Auditoria,
@@ -19,6 +21,8 @@ from ..models import (
     Expediente,
     Ingreso,
     Persona,
+    Recurso,
+    Contacto,
     TipoDocumental,
     TipoVinculo,
     Usuario,
@@ -108,6 +112,19 @@ def buscar(
     audit.registrar(db, ctx, "busqueda", "general", detalle={"q": q[:200]})
     db.commit()
     return resultado
+
+
+@router.get("/localidades")
+def localidades(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """Localidades por departamento: la lista de partida más las que ya se cargaron en legajos, recursos y contactos."""
+    salida: dict[str, dict[str, str]] = {d: {normalizar(x): x for x in LOCALIDADES.get(d, [])} for d in DEPARTAMENTOS}
+    for modelo in (Persona, Recurso, Contacto):
+        filas = db.execute(select(modelo.departamento, modelo.localidad).where(modelo.departamento.is_not(None), modelo.localidad.is_not(None)).distinct()).all()
+        for dep, loc in filas:
+            dep, loc = dep.strip(), loc.strip()
+            if dep in salida and len(loc) >= 2 and len(loc) <= 100:
+                salida[dep].setdefault(normalizar(loc), loc)
+    return {d: sorted(v.values(), key=normalizar) for d, v in salida.items()}
 
 
 @router.get("/catalogos")

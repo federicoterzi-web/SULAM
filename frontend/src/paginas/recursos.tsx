@@ -3,6 +3,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { BarraFiltros, parametroF, useFiltrosUrl } from "./filtros";
 import { api } from "../api";
 import { Aviso, Campo, Cargando, Enlace, Seccion, Vacio, fechaHora, navegar, useDatos, useEnvio, useSesion } from "../comun";
+import { SelectorDepartamento, SelectorLocalidad, alElegirDepartamento, alElegirLocalidad, useLocalidades } from "../lugar";
 import { MapaRecursos, MapaSelector, enlaceComoLlegar, type ConfigMapa, type Punto } from "../mapa";
 import { ContactosDelRecurso } from "./contactos";
 import { DocumentacionDelRecurso, PersonasInternadas } from "./residencias";
@@ -378,6 +379,7 @@ export function FormRecurso({
   const busqueda = useEnvio();
   const { enviando, error, ejecutar } = useEnvio();
   const set = (c: Partial<typeof d>) => setD({ ...d, ...c });
+  const mapaLoc = useLocalidades();
   const tipo = cat.tipos.find((t) => t.codigo === d.tipo);
   const cuidador = d.tipo === "cuidador";
 
@@ -445,16 +447,11 @@ export function FormRecurso({
             <Campo etiqueta="Dirección" ancho="completo">
               <input value={d.direccion} onChange={(e) => set({ direccion: e.target.value })} />
             </Campo>
-            <Campo etiqueta="Localidad">
-              <input value={d.localidad} onChange={(e) => set({ localidad: e.target.value })} />
-            </Campo>
             <Campo etiqueta="Departamento">
-              <select value={d.departamento} onChange={(e) => set({ departamento: e.target.value })}>
-                <option value="">—</option>
-                {cat.departamentos.map((x) => (
-                  <option key={x}>{x}</option>
-                ))}
-              </select>
+              <SelectorDepartamento valor={d.departamento} alCambiar={(v) => set(alElegirDepartamento(mapaLoc, d, v))} />
+            </Campo>
+            <Campo etiqueta="Localidad">
+              <SelectorLocalidad departamento={d.departamento} valor={d.localidad} alCambiar={(l, dep) => set(alElegirLocalidad(l, dep))} />
             </Campo>
             <Campo etiqueta="Teléfono">
               <input type="tel" value={d.telefono} onChange={(e) => set({ telefono: e.target.value })} />

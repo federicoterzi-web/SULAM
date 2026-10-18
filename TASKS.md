@@ -246,6 +246,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Internaciones en el legajo (lugar, fechas, egreso con motivo, historial) y personas internadas en la ficha de la residencia | ✅ |
 | Panel «Residencias e internaciones» (documentación por residencia, internados) | ✅ |
 | Subsidios (residencia, cuidados, alimentarios, materiales, otros): trámite con lista de papeles, resolución y vigencia; pagos mensuales con su documentación y estado; panel y «Pagos del mes» (D-039) | ✅ |
+| Departamento → localidad: desplegable buscable en cascada en todos los formularios (D-041; lista de partida a completar con el listado oficial) | ✅ |
 | Papeles de la institución cargados una vez por residencia y mes, vinculados a cada residente (D-040) | ✅ |
 | Cuidadores: horas por semana y pagos mensuales dentro del subsidio de cuidados | ✅ (falta revisar la documentación mensual con el área) |
 | Versión para celular de residencias e internaciones | ⏳ |

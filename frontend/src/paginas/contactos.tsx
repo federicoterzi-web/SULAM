@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { BarraFiltros, parametroF, useFiltrosUrl } from "./filtros";
 import { api } from "../api";
 import { Aviso, Campo, Cargando, Enlace, Modal, Vacio, useDatos, useEnvio, useSesion } from "../comun";
+import { SelectorDepartamento, SelectorLocalidad, alElegirDepartamento, alElegirLocalidad, useLocalidades } from "../lugar";
 import { CampoOrigen, telefonoLimpio, textoOrigen, useCatalogoRecursos, type CatalogoRecursos } from "./recursos";
 
 export interface Contacto {
@@ -201,6 +202,7 @@ export function FormContacto({
   });
   const { enviando, error, ejecutar } = useEnvio();
   const set = (c: Partial<typeof d>) => setD({ ...d, ...c });
+  const mapaLoc = useLocalidades();
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
     const cuerpo = { ...d, recurso_id: contacto?.recurso_id ?? recurso?.id ?? null };
@@ -229,16 +231,11 @@ export function FormContacto({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Localidad">
-          <input value={d.localidad} onChange={(e) => set({ localidad: e.target.value })} />
-        </Campo>
         <Campo etiqueta="Departamento">
-          <select value={d.departamento} onChange={(e) => set({ departamento: e.target.value })}>
-            <option value="">—</option>
-            {cat.departamentos.map((x) => (
-              <option key={x}>{x}</option>
-            ))}
-          </select>
+          <SelectorDepartamento valor={d.departamento} alCambiar={(v) => set(alElegirDepartamento(mapaLoc, d, v))} />
+        </Campo>
+        <Campo etiqueta="Localidad">
+          <SelectorLocalidad departamento={d.departamento} valor={d.localidad} alCambiar={(l, dep) => set(alElegirLocalidad(l, dep))} />
         </Campo>
         <Campo etiqueta="Teléfono">
           <input type="tel" value={d.telefono} onChange={(e) => set({ telefono: e.target.value })} />

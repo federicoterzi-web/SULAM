@@ -4945,3 +4945,39 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 .te-estirar:hover { background: color-mix(in srgb, #2563eb 55%, transparent); }
 .te-ocultos { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
 @media (max-width: 800px) { .te-bloque { grid-column: 1 / -1 !important; } }
+
+/* Localidad con búsqueda */
+.combo {
+  position: relative;
+}
+
+.combo-lista {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 2px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--superficie);
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+.combo-lista li {
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.combo-lista li:hover,
+.combo-lista .combo-activa {
+  background: var(--primario-claro);
+}
+
+.combo-lista-movil li {
+  padding: 13px 14px;
+  font-size: 17px;
+}

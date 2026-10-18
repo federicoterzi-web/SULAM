@@ -4,6 +4,7 @@ import { SelectorEquipo } from "./equipo";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ApiError, api, type Caso, type Demanda, type Evolucion, type Opcion, type PersonaDetalle } from "../api";
 import { Aviso, Campo, Cargando, ESTADOS, Seccion, Vacio, documento, edad, fecha, fechaHora, navegar, nombre, useEnvio, useSesion } from "../comun";
+import { SelectorDepartamento, SelectorLocalidad, alElegirDepartamento, alElegirLocalidad, useLocalidades } from "../lugar";
 
 // ---------------------------------------------------------------- textos
 
@@ -316,6 +317,7 @@ export function FormCaratula({
 
   if (!d || !persona) return error ? <Aviso error={error} /> : <Cargando />;
   const set = (c: Partial<DatosCaratula>) => setD({ ...d, ...c });
+  const mapaLoc = useLocalidades();
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
@@ -443,21 +445,16 @@ export function FormCaratula({
           <Campo etiqueta="Dirección" ancho="completo">
             <input value={d.domicilio} onChange={(e) => set({ domicilio: e.target.value })} />
           </Campo>
-          <Campo etiqueta="Localidad">
-            <input value={d.localidad} onChange={(e) => set({ localidad: e.target.value })} />
-          </Campo>
           <Campo etiqueta="Departamento">
-            <input list="departamentos" value={d.departamento} onChange={(e) => set({ departamento: e.target.value })} />
+            <SelectorDepartamento valor={d.departamento} alCambiar={(v) => set(alElegirDepartamento(mapaLoc, d, v))} />
+          </Campo>
+          <Campo etiqueta="Localidad">
+            <SelectorLocalidad departamento={d.departamento} valor={d.localidad} alCambiar={(l, dep) => set(alElegirLocalidad(l, dep))} />
           </Campo>
           <Campo etiqueta="Teléfono">
             <input value={d.telefono} onChange={(e) => set({ telefono: e.target.value })} />
           </Campo>
         </div>
-        <datalist id="departamentos">
-          {f.departamentos.map((x) => (
-            <option key={x} value={x} />
-          ))}
-        </datalist>
       </section>
 
       <section>
@@ -636,6 +633,7 @@ export function FormDemanda({
 
   if (!d) return error ? <Aviso error={error} /> : <Cargando />;
   const set = (c: Record<string, any>) => setD({ ...d, ...c });
+  const mapaLoc = useLocalidades();
   const txt = (k: string) => ({ value: d[k] ?? "", onChange: (e: { target: { value: string } }) => set({ [k]: e.target.value }) });
 
   const enviar = async (e: FormEvent) => {
@@ -767,18 +765,13 @@ export function FormDemanda({
           <Campo etiqueta="Barrio">
             <input {...txt("barrio")} />
           </Campo>
-          <Campo etiqueta="Localidad">
-            <input {...txt("localidad")} />
-          </Campo>
           <Campo etiqueta="Departamento">
-            <input list="departamentos-d" {...txt("departamento")} />
+            <SelectorDepartamento valor={d.departamento ?? ""} alCambiar={(v) => set(alElegirDepartamento(mapaLoc, { localidad: d.localidad ?? "" }, v))} />
+          </Campo>
+          <Campo etiqueta="Localidad">
+            <SelectorLocalidad departamento={d.departamento ?? ""} valor={d.localidad ?? ""} alCambiar={(l, dep) => set(alElegirLocalidad(l, dep))} />
           </Campo>
         </div>
-        <datalist id="departamentos-d">
-          {f.departamentos.map((x) => (
-            <option key={x} value={x} />
-          ))}
-        </datalist>
         <Unica etiqueta="Tipo de vivienda" nombreCampo="tipo_vivienda" opciones={f.tipo_vivienda} valor={d.tipo_vivienda ?? null} alCambiar={(v) => set({ tipo_vivienda: v })} />
         {d.tipo_vivienda === "institucional" && (
           <Campo etiqueta="Institución">

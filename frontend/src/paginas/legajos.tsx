@@ -16,6 +16,7 @@ import {
   useEnvio,
   useSesion,
 } from "../comun";
+import { SelectorDepartamento, SelectorLocalidad, alElegirDepartamento, alElegirLocalidad, useLocalidades } from "../lugar";
 
 export function PaginaLegajos() {
   const { puede } = useSesion();
@@ -202,6 +203,7 @@ export function FormPersona({
 }) {
   const { formularios } = useSesion();
   const [d, setD] = useState<DatosPersona>(inicial(persona, sugerido));
+  const mapaLoc = useLocalidades();
   const [coincidencias, setCoincidencias] = useState<Coincidencia[]>([]);
   const [confirmado, setConfirmado] = useState(false);
   const [motivoConfirmacion, setMotivoConfirmacion] = useState("");
@@ -338,16 +340,11 @@ export function FormPersona({
         <Campo etiqueta="Barrio">
           <input value={d.barrio} onChange={cambia("barrio")} />
         </Campo>
-        <Campo etiqueta="Localidad">
-          <input value={d.localidad} onChange={cambia("localidad")} />
-        </Campo>
         <Campo etiqueta="Departamento">
-          <input list="departamentos-p" value={d.departamento} onChange={cambia("departamento")} />
-          <datalist id="departamentos-p">
-            {formularios.departamentos.map((x) => (
-              <option key={x} value={x} />
-            ))}
-          </datalist>
+          <SelectorDepartamento valor={d.departamento} alCambiar={(v) => setD((x) => ({ ...x, ...alElegirDepartamento(mapaLoc, x, v) }))} />
+        </Campo>
+        <Campo etiqueta="Localidad">
+          <SelectorLocalidad departamento={d.departamento} valor={d.localidad} alCambiar={(l, dep) => setD((x) => ({ ...x, ...alElegirLocalidad(l, dep) }))} />
         </Campo>
         <Campo etiqueta="Teléfono">
           <input value={d.telefono} onChange={cambia("telefono")} />

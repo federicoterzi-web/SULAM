@@ -3,6 +3,7 @@ import { SelectorEquipo } from "../paginas/equipo";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { ApiError, api, type Caso, type Coincidencia, type PersonaDetalle, type PersonaResumen } from "../api";
 import { Aviso, Cargando, documento, edad, nombre, useEnvio, useSesion } from "../comun";
+import { SelectorDepartamento, SelectorLocalidad, alElegirDepartamento, alElegirLocalidad, useLocalidades } from "../lugar";
 import { Marcas, TipoIngreso, Unica, Varias, hoy, textoDe, textoLista } from "../paginas/formularios";
 import { Accion, Tarjeta, avisar } from "./movil";
 
@@ -252,6 +253,7 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
       .catch(setError);
   }, [personaId, setError]);
 
+  const mapaLoc = useLocalidades();
   if (!persona || !d) return error ? <Aviso error={error} /> : <Cargando />;
   const set = (c: Partial<Datos>) => setD({ ...d, ...c });
 
@@ -365,21 +367,13 @@ export function CaratulaMovil({ personaId }: { personaId: string }) {
             <input value={d.domicilio} onChange={(e) => set({ domicilio: e.target.value })} autoComplete="off" />
           </label>
           <label className="m-campo">
-            <span>Localidad</span>
-            <input value={d.localidad} onChange={(e) => set({ localidad: e.target.value })} autoComplete="off" />
-          </label>
-          <label className="m-campo">
             <span>Departamento</span>
-            <select value={d.departamento} onChange={(e) => set({ departamento: e.target.value })}>
-              <option value="">—</option>
-              {d.departamento && !f.departamentos.includes(d.departamento) && <option value={d.departamento}>{d.departamento}</option>}
-              {f.departamentos.map((x) => (
-                <option key={x} value={x}>
-                  {x}
-                </option>
-              ))}
-            </select>
+            <SelectorDepartamento movil valor={d.departamento} alCambiar={(v) => set(alElegirDepartamento(mapaLoc, d, v))} />
           </label>
+          <div className="m-campo">
+            <span>Localidad</span>
+            <SelectorLocalidad movil departamento={d.departamento} valor={d.localidad} alCambiar={(l, dep) => set(alElegirLocalidad(l, dep))} />
+          </div>
           <label className="m-campo">
             <span>Teléfono</span>
             <input type="tel" inputMode="tel" value={d.telefono} onChange={(e) => set({ telefono: e.target.value })} autoComplete="off" />
