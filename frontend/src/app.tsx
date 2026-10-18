@@ -3,6 +3,7 @@ import { PaginaNovedades, usePendientes } from "./paginas/novedades";
 import { PaginaPersonal } from "./paginas/personal";
 import { PaginaEstadisticas } from "./paginas/estadisticas";
 import { PaginaBandeja } from "./paginas/bandeja";
+import { PaginaBuscarDocumentos } from "./paginas/textos";
 import { BotonAvisos, useNotificaciones } from "./notificaciones";
 import { PaginaMiAsistencia, usePendientesPersonal } from "./paginas/miasistencia";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
@@ -218,6 +219,7 @@ const MENU: { ruta: string; texto: string; permiso?: [string, string] }[] = [
   { ruta: "/mesa", texto: "Mesa de Entrada", permiso: ["mesa_entrada", "consultar"] },
   { ruta: "/expedientes", texto: "Expedientes", permiso: ["expedientes", "consultar"] },
   { ruta: "/bandeja", texto: "Digitalización de documentos", permiso: ["documentos", "crear"] },
+  { ruta: "/buscar-documentos", texto: "Buscar en documentos", permiso: ["documentos", "consultar"] },
   { ruta: "/fichas", texto: "Fichas en papel" },
   { ruta: "/plantillas", texto: "Plantillas de informes", permiso: ["plantillas", "modificar"] },
   { ruta: "/estadisticas", texto: "Estadísticas", permiso: ["estadisticas", "consultar"] },
@@ -391,6 +393,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return <PaginaMiAsistencia />;
     case "bandeja":
       return <PaginaBandeja />;
+    case "buscar-documentos":
+      return <PaginaBuscarDocumentos />;
     case "recursos":
       return p[1] ? <PaginaRecurso id={p[1]} key={p[1]} /> : <PaginaRecursos />;
     case "imprimir-caratulas":

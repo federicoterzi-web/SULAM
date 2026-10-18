@@ -265,6 +265,25 @@ def cmd_fichas(args) -> None:
         print(f"Generada: {ruta}")
 
 
+def cmd_indexar_textos(args) -> None:
+    """Lee el texto de los documentos que todavía no lo tienen (los cargados antes de que existiera la lectura)."""
+    from sqlalchemy import select
+
+    from .db import session_factory
+    from .indexacion import indexar_documento
+    from .models import Documento
+
+    estados = ("pendiente", "error") if args.reintentar else ("pendiente",)
+    with session_factory()() as db:
+        ids = db.execute(select(Documento.id).where(Documento.eliminado_en.is_(None), Documento.texto_estado.in_(estados))).scalars().all()
+    cuenta: dict[str, int] = {}
+    for i, doc_id in enumerate(ids, 1):
+        e = indexar_documento(doc_id)
+        cuenta[e] = cuenta.get(e, 0) + 1
+        print(f"\r{i}/{len(ids)}", end="", flush=True)
+    print(f"\nListo: {cuenta or 'no había documentos pendientes'}")
+
+
 def cmd_importar_personal(args) -> None:
     from .db import session_factory
     from .personal_importar import ErrorImportacion, guardar_credenciales, importar
@@ -384,6 +403,10 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--password-comun", default=None, help="Contraseña temporal igual para todas las cuentas (por defecto, una distinta por persona)")
     p.add_argument("--credenciales", default="credenciales-personal.csv")
     p.set_defaults(func=cmd_importar_personal)
+
+    p = sub.add_parser("indexar-textos", help="Lee el texto de los documentos que aún no lo tienen")
+    p.add_argument("--reintentar", action="store_true", help="Incluye los que dieron error")
+    p.set_defaults(func=cmd_indexar_textos)
 
     p = sub.add_parser("servidor")
     p.add_argument("--host", default="127.0.0.1")

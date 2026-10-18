@@ -185,3 +185,64 @@ def test_leer_fotos_sugiere_legajo_y_tipo(admin):
     assert j["persona"] and j["persona"]["id"] == p["id"]
     assert j["grupos"] == [[pid]]
     assert admin.post("/api/capturas/leer", json={"paginas": [pid, pid]}).status_code == 400
+
+
+def _pdf_con_texto(lineas: list[str]) -> bytes:
+    """PDF mínimo con una hoja por cada elemento (texto real, sin OCR)."""
+    objs, kids = [], []
+    for i, linea in enumerate(lineas):
+        n = 4 + i * 2
+        kids.append(f"{n} 0 R")
+        flujo = f"BT /F1 14 Tf 40 700 Td ({linea}) Tj ET"
+        objs.append(f"{n} 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents {n + 1} 0 R /Resources << /Font << /F1 3 0 R >> >> >> endobj")
+        objs.append(f"{n + 1} 0 obj << /Length {len(flujo)} >> stream\n{flujo}\nendstream endobj")
+    cuerpo = ["%PDF-1.4", "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
+              f"2 0 obj << /Type /Pages /Kids [{' '.join(kids)}] /Count {len(kids)} >> endobj",
+              "3 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj", *objs]
+    return ("\n".join(cuerpo) + "\ntrailer << /Root 1 0 R >>\n%%EOF").encode("latin-1")
+
+
+def test_texto_busqueda_y_resaltado(admin, cliente):
+    from sulam import indexacion
+
+    crear_usuario("tec", "Técnico", AREA_ADMISION)
+    p = nueva_persona(admin, apellidos="GUTIÉRREZ", nombres="Rosa Elena", numero_documento="12345678")
+    otra = nueva_persona(admin, apellidos="OTRA", nombres="Persona", numero_documento="22333444")
+    tipo = _tipo(admin).json()
+    pdf = _pdf_con_texto([
+        "Constancia de residencia de Rosa Elena Gutierrez DNI 12.345.678",
+        "Emitida para la Direccion de Adultos Mayores de Tucuman. Resolucion 245/2026",
+    ])
+
+    def cargar(persona, pdf_bytes, titulo):
+        r = admin.post("/api/documentos", data={"tipo_documental_id": tipo["id"], "titulo": titulo, "persona_id": persona["id"]},
+                       files={"archivo": ("c.pdf", pdf_bytes, "application/pdf")})
+        assert r.status_code == 201, r.text
+        return r.json()
+
+    d = cargar(p, pdf, "Constancia")
+    assert d["texto_estado"] == "pendiente"
+    assert admin.post(f"/api/documentos/{d['id']}/leer-texto").json()["estado"] == "listo"
+
+    t = admin.get(f"/api/documentos/{d['id']}/texto").json()
+    assert len(t["hojas"]) == 2
+    marcado = {(x["k"], x["t"]) for h in t["hojas"] for x in h["trozos"] if x["k"]}
+    assert ("documento", "12.345.678") in marcado
+    assert ("nombre", "Rosa") in marcado and ("nombre", "Gutierrez") in marcado
+    assert ("institucion", "Direccion de Adultos Mayores") in marcado
+    assert t["alerta"] is None
+
+    # Búsqueda: sin tildes, por prefijo y con todas las palabras.
+    r = admin.get("/api/documentos/buscar", params={"q": "resolución 245"}).json()
+    assert r["total"] == 1 and r["resultados"][0]["id"] == d["id"]
+    assert "245" in r["resultados"][0]["fragmento"] and r["resultados"][0]["persona"]["nombre"].startswith("GUTIÉRREZ")
+    assert admin.get("/api/documentos/buscar", params={"q": "inexistente"}).json()["total"] == 0
+
+    # Documento en el legajo equivocado: advierte.
+    mal = cargar(otra, pdf, "Mismo papel, otro legajo")
+    admin.post(f"/api/documentos/{mal['id']}/leer-texto")
+    assert "no aparece" in admin.get(f"/api/documentos/{mal['id']}/texto").json()["alerta"]
+
+    # Quien no puede ver el legajo no lo encuentra; y el documento eliminado tampoco.
+    assert cliente("tec").get("/api/documentos/buscar", params={"q": "resolucion"}).status_code in (200, 403)
+    assert indexacion.resaltar("Ñandú", [("nombre", r"nandu")]) == [{"t": "Ñandú", "k": "nombre"}]

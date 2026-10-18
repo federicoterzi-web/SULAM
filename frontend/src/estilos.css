@@ -4802,3 +4802,17 @@ label.campo.campo-casilla input { width: auto; flex: 0 0 auto; }
 .band-resultados small { color: var(--texto-tenue); }
 .band-buscar .buscador { display: flex; gap: 8px; margin-top: 6px; }
 .band-buscar .buscador input { flex: 1; }
+
+/* Texto leído de los documentos */
+.txt-barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.txt-leyenda { padding: 2px 8px; border-radius: 4px; font-size: 0.85rem; }
+.txt-cuerpo { max-height: 55vh; overflow: auto; border: 1px solid var(--borde, #ccc); border-radius: 6px; padding: 8px 12px; margin: 8px 0; white-space: pre-wrap; line-height: 1.5; }
+.txt-cuerpo h3 { font-size: 0.8rem; text-transform: uppercase; opacity: 0.7; margin: 10px 0 2px; }
+.txt-cuerpo mark, .txt-leyenda { color: inherit; }
+.txt-nombre { background: #fde68a; }
+.txt-documento { background: #bfdbfe; }
+.txt-institucion { background: #bbf7d0; }
+mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
+@media (prefers-color-scheme: dark) { .txt-nombre { background: #854d0e; } .txt-documento { background: #1e3a8a; } .txt-institucion { background: #166534; } }
+.txt-resultados { list-style: none; padding: 0; display: grid; gap: 10px; }
+.txt-resultados li { border: 1px solid var(--borde, #ccc); border-radius: 6px; padding: 10px 12px; }

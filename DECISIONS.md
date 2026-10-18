@@ -130,3 +130,6 @@ Se reemplaza el diseño anterior de captura por QR (rama `captura-celular`, sin 
 
 ## D-029 — Lectura automática de documentos fotografiados
 OCR local con Tesseract (idioma español, instalado en la imagen Docker); ninguna imagen sale del servidor. El resultado son sugerencias que rellenan solo campos vacíos del formulario de clasificación; nunca se guarda ni clasifica sin confirmación. Se lee al abrir «Armar documento» (hasta 20 hojas). Si Tesseract no está, la función se omite sin error.
+
+## D-030 — Texto de los documentos: guardado, búsqueda y resaltado
+El texto leído se guarda en `documentos.texto` (hojas separadas por salto de página) y en una versión sin tildes para el índice de búsqueda de PostgreSQL. Se lee en segundo plano al cargar; los anteriores se leen con `indexar-textos`. La búsqueda y la vista del texto aplican el mismo control de acceso que abrir el documento; las búsquedas se auditan (texto buscado y cantidad, no el contenido). Las menciones institucionales se configuran con `SULAM_MENCIONES` (separadas por «;»). El resaltado sobre la imagen queda para una etapa posterior.

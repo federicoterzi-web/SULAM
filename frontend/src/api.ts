@@ -302,6 +302,7 @@ export interface Documento {
   tamano?: number;
   cargado_por?: UsuarioBreve | null;
   advertencias?: string[];
+  texto_estado?: "pendiente" | "listo" | "sin_texto" | "error";
 }
 
 export interface Ingreso {

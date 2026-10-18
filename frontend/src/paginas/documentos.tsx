@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api, type Caso, type Documento, type Expediente } from "../api";
+import { VerTexto } from "./textos";
 import { Aviso, Campo, Modal, Vacio, fecha, fechaHora, tamano, useEnvio, useSesion } from "../comun";
 
 export function TablaDocumentos({
@@ -11,6 +12,7 @@ export function TablaDocumentos({
 }) {
   const { puede } = useSesion();
   const [eliminar, setEliminar] = useState<Documento | null>(null);
+  const [verTexto, setVerTexto] = useState<Documento | null>(null);
   if (documentos.length === 0) return <Vacio>No hay documentos cargados.</Vacio>;
   return (
     <>
@@ -52,6 +54,9 @@ export function TablaDocumentos({
                       </a>
                     </>
                   )}
+                  <button className="boton boton-chico" onClick={() => setVerTexto(d)}>
+                    Texto
+                  </button>
                   {puede("documentos", "administrar") && alCambiar && (
                     <button className="boton boton-chico boton-peligro" onClick={() => setEliminar(d)}>
                       Dar de baja
@@ -62,6 +67,7 @@ export function TablaDocumentos({
           ))}
         </tbody>
       </table>
+      {verTexto && <VerTexto documento={verTexto} alCerrar={() => setVerTexto(null)} />}
       {eliminar && (
         <Modal titulo="Dar de baja documento" alCerrar={() => setEliminar(null)}>
           <BajaDocumento

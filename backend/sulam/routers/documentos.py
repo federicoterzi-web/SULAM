@@ -10,7 +10,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, indexacion
 from ..config import get_settings
 from ..db import get_db
 from ..deps import contexto
@@ -222,6 +222,7 @@ def cargar_documento(
         },
     )
     db.commit()
+    indexacion.lanzar(doc.id)
 
     r = documento_out(doc, ctx.usuario)
     r["advertencias"] = []
@@ -324,6 +325,79 @@ def modificar_tipo_documental(
         db.commit()
         db.refresh(t)
     return tipo_documental_out(t)
+
+
+@router.get("/documentos/buscar")
+def buscar_en_textos(
+    q: str = Query(min_length=2, max_length=200),
+    limite: int = Query(30, ge=1, le=100),
+    ctx: Contexto = Depends(contexto),
+    db: Session = Depends(get_db),
+):
+    """Busca en el texto leído de los documentos. Solo aparecen los que quien busca puede abrir."""
+    ctx.requerir("documentos", "consultar")
+    consulta = indexacion.consulta_tsquery(q)
+    if consulta is None:
+        return {"total": 0, "resultados": []}
+    vector = func.to_tsvector("simple", func.coalesce(Documento.texto_busqueda, ""))
+    tsq = func.to_tsquery("simple", consulta)
+    filas = db.execute(
+        select(Documento)
+        .where(Documento.eliminado_en.is_(None), vector.op("@@")(tsq))
+        .order_by(func.ts_rank(vector, tsq).desc(), Documento.cargado_en.desc())
+        .limit(300)
+    ).scalars().all()
+    resultados = []
+    for d in filas:
+        try:
+            _verificar_acceso(db, ctx, d, "consultar")
+        except HTTPException:
+            continue
+        p = db.get(Persona, d.persona_id) if d.persona_id else None
+        resultados.append({
+            **documento_out(d),
+            "persona": {"id": str(p.id), "nombre": f"{p.apellidos}, {p.nombres}"} if p else None,
+            "fragmento": indexacion.fragmento(d.texto, q),
+        })
+        if len(resultados) >= limite:
+            break
+    audit.registrar(db, ctx, "buscar_texto", "documento", None, None, {"q": q[:200], "resultados": len(resultados)})
+    db.commit()
+    return {"total": len(resultados), "resultados": resultados}
+
+
+@router.get("/documentos/{documento_id}/texto")
+def ver_texto(documento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """Texto leído del documento, por hoja, con marcas sobre el nombre y los datos de la persona y las menciones a la Dirección."""
+    d = db.get(Documento, documento_id)
+    if d is None:
+        raise no_encontrado("Documento")
+    _verificar_acceso(db, ctx, d, "consultar")
+    persona = db.get(Persona, d.persona_id) if d.persona_id else None
+    pats_persona = indexacion.patrones_persona(persona) if persona else []
+    pats = pats_persona + indexacion.patrones_institucion()
+    hojas = (d.texto or "").split(indexacion.SALTO) if d.texto else []
+    salida = [{"hoja": i + 1, "trozos": indexacion.resaltar(h, pats)} for i, h in enumerate(hojas)]
+    cuenta = {"nombre": 0, "documento": 0, "institucion": 0}
+    for h in salida:
+        for t in h["trozos"]:
+            if t["k"]:
+                cuenta[t["k"]] += 1
+    alerta = None
+    if persona and d.texto_estado == "listo" and len(d.texto or "") > 60 and not cuenta["nombre"] and not cuenta["documento"]:
+        alerta = "En el texto no aparece el nombre ni el documento de la persona de este legajo. Verifique que esté en el legajo correcto."
+    return {"estado": d.texto_estado, "hojas": salida, "cuenta": cuenta, "alerta": alerta}
+
+
+@router.post("/documentos/{documento_id}/leer-texto")
+def releer_texto(documento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """Vuelve a leer el texto del archivo (por ejemplo, para documentos cargados antes de que existiera la lectura)."""
+    d = db.get(Documento, documento_id)
+    if d is None:
+        raise no_encontrado("Documento")
+    _verificar_acceso(db, ctx, d, "crear")
+    estado = indexacion.indexar_documento(d.id)
+    return {"estado": estado}
 
 
 @router.get("/documentos/{documento_id}")

@@ -558,6 +558,11 @@ class Documento(Base):
     vence: Mapped[date | None] = mapped_column(Date)
     numero: Mapped[str | None] = mapped_column(String(100))
     datos: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
+    # Texto leído del archivo (hojas separadas por salto de página) y su versión normalizada para buscar.
+    texto: Mapped[str | None] = mapped_column(Text)
+    texto_busqueda: Mapped[str | None] = mapped_column(Text)
+    texto_estado: Mapped[str] = mapped_column(String(12), default="pendiente", server_default="pendiente")
+    texto_leido_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     tipo_documental: Mapped[TipoDocumental] = relationship(lazy="joined")
 

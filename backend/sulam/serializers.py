@@ -242,6 +242,7 @@ def documento_out(d: Documento, cargado_por: Usuario | None = None) -> dict:
         "mime": d.mime,
         "tamano": d.tamano,
         "sha256": d.sha256,
+        "texto_estado": d.texto_estado,
         "cargado_por": usuario_breve(cargado_por),
     }
 

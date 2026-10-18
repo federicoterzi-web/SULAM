@@ -20,6 +20,7 @@ os.environ["SULAM_DATA_DIR"] = str(_tmp)
 os.environ["SULAM_STORAGE_DIR"] = str(_tmp / "archivos")
 os.environ["SULAM_BACKUP_DIR"] = str(_tmp / "respaldos")
 os.environ["SULAM_ENV"] = "pruebas"
+os.environ["SULAM_INDEXAR_TEXTO"] = "0"  # las pruebas leen el texto a pedido, no en segundo plano
 os.environ["SULAM_FRONTEND_DIST"] = str(_tmp / "sin-frontend")
 
 from fastapi.testclient import TestClient  # noqa: E402
