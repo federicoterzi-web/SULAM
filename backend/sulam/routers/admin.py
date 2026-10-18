@@ -13,11 +13,11 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
-from ..models import Area, Caso, Rol, RolPermiso, TipoDocumental, TipoVinculo, Usuario
+from ..models import Area, Caso, CasoAsignacion, Rol, RolPermiso, TipoDocumental, TipoVinculo, Usuario
 from ..permissions import ALCANCES, CATALOGO, DESCRIPCION_ACCIONES, Contexto, permiso_valido, permisos_efectivos
 from ..numbering import fijar_proximo, proximo
 from ..schemas import CatalogoIn, NumeracionIn, ResetPasswordIn, RolIn, UsuarioIn, UsuarioPatch
-from ..security import hash_password, revocar_sesiones_usuario, validar_password_nueva
+from ..security import ahora, hash_password, revocar_sesiones_usuario, validar_password_nueva
 
 router = APIRouter(prefix="/admin", tags=["administración"])
 
@@ -200,6 +200,46 @@ def crear_usuario(datos: UsuarioIn, ctx: Contexto = Depends(_admin), db: Session
     return _usuario_out(u)
 
 
+def _casos_a_cargo(db: Session, usuario_id: uuid.UUID) -> list[CasoAsignacion]:
+    """Asignaciones vigentes de casos que no están cerrados."""
+    return list(
+        db.execute(
+            select(CasoAsignacion)
+            .join(Caso, Caso.id == CasoAsignacion.caso_id)
+            .where(CasoAsignacion.usuario_id == usuario_id, CasoAsignacion.hasta.is_(None), Caso.estado != "cerrado")
+        ).scalars()
+    )
+
+
+@router.get("/usuarios/{usuario_id}/casos-a-cargo")
+def casos_a_cargo(usuario_id: uuid.UUID, ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
+    if db.get(Usuario, usuario_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario inexistente.")
+    return {"cantidad": len(_casos_a_cargo(db, usuario_id))}
+
+
+def _liberar_casos(db: Session, ctx: Contexto, u: Usuario, destino: Usuario | None) -> int:
+    """Cierra las asignaciones del usuario dado de baja y, si se pidió, las pasa a otra persona."""
+    asignaciones = _casos_a_cargo(db, u.id)
+    for a in asignaciones:
+        a.hasta = ahora()
+        a.finalizado_por = ctx.id
+        caso = db.get(Caso, a.caso_id)
+        if destino is not None:
+            ya = db.execute(
+                select(CasoAsignacion.id).where(
+                    CasoAsignacion.caso_id == a.caso_id, CasoAsignacion.usuario_id == destino.id, CasoAsignacion.hasta.is_(None)
+                )
+            ).first()
+            if ya is None:
+                db.add(CasoAsignacion(caso_id=a.caso_id, usuario_id=destino.id, asignado_por=ctx.id, motivo=f"Baja de {u.nombre_completo}"))
+        audit.registrar(
+            db, ctx, "finalizar_asignacion", "caso", a.caso_id, caso.persona_id if caso else None,
+            {"usuario": u.usuario, "motivo": "Baja del usuario", "pasa_a": destino.usuario if destino else None},
+        )
+    return len(asignaciones)
+
+
 @router.patch("/usuarios/{usuario_id}")
 def modificar_usuario(
     usuario_id: uuid.UUID, datos: UsuarioPatch, ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)
@@ -209,6 +249,21 @@ def modificar_usuario(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario inexistente.")
     cambios_pedidos = datos.model_dump(exclude_unset=True)
     roles_nuevos = cambios_pedidos.pop("roles", None)
+    reasignar_a = cambios_pedidos.pop("reasignar_a", None)
+    dejar_sin_asignar = cambios_pedidos.pop("dejar_sin_asignar", False)
+    baja = cambios_pedidos.get("activo") is False and u.activo
+    destino = None
+    if baja:
+        pendientes = len(_casos_a_cargo(db, u.id))
+        if pendientes and reasignar_a is None and not dejar_sin_asignar:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                {"mensaje": f"Tiene {pendientes} casos a cargo. Indique a quién pasarlos o déjelos para asignar.", "casos": pendientes},
+            )
+        if reasignar_a is not None:
+            destino = db.get(Usuario, reasignar_a)
+            if destino is None or not destino.activo or destino.id == u.id:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "La persona elegida para recibir los casos no existe o está inactiva.")
     if "area_id" in cambios_pedidos:
         _validar_area(db, cambios_pedidos["area_id"])
     diff = audit.cambios(u, cambios_pedidos)
@@ -226,6 +281,8 @@ def modificar_usuario(
             raise
         if cambios_pedidos.get("activo") is False:
             revocar_sesiones_usuario(db, u.id)
+            if baja:
+                diff["casos_liberados"] = _liberar_casos(db, ctx, u, destino)
         audit.registrar(db, ctx, "modificar", "usuario", u.id, detalle={"cambios": diff})
         db.commit()
         db.refresh(u)

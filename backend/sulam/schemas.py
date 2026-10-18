@@ -448,6 +448,9 @@ class UsuarioPatch(Entrada):
     area_id: int | None = None
     roles: list[int] | None = None
     activo: bool | None = None
+    # Al dar de baja a quien tiene casos a cargo: a quién pasarlos, o dejarlos para asignar.
+    reasignar_a: uuid.UUID | None = None
+    dejar_sin_asignar: bool = False
 
 
 class ResetPasswordIn(Entrada):

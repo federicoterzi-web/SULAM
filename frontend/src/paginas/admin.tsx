@@ -1,5 +1,5 @@
 import { Tableros } from "./admin-tableros";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api";
 import { Calibracion, HistorialPases } from "./admin-extra";
 import { Aviso, Campo, Cargando, Enlace, Modal, Seccion, fechaHora, useDatos, useEnvio, useSesion } from "../comun";
@@ -172,6 +172,16 @@ function FormUsuario({ usuario, roles, alGuardar }: { usuario?: UsuarioAdmin; ro
   const [rolesSel, setRolesSel] = useState<Set<number>>(new Set(usuario?.roles.map((r) => r.id) ?? []));
   const { enviando, error, ejecutar } = useEnvio();
   const cambia = (k: keyof typeof d) => (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value });
+  // Al dar de baja a alguien con casos a cargo hay que decidir qué pasa con ellos.
+  const dandoDeBaja = !!usuario?.activo && !d.activo;
+  const [casos, setCasos] = useState(0);
+  const [destino, setDestino] = useState("");
+  const [candidatos, setCandidatos] = useState<UsuarioAdmin[]>([]);
+  useEffect(() => {
+    if (!dandoDeBaja || !usuario) return;
+    api.get<{ cantidad: number }>(`/admin/usuarios/${usuario.id}/casos-a-cargo`).then((r) => setCasos(r.cantidad)).catch(() => setCasos(0));
+    api.get<UsuarioAdmin[]>("/admin/usuarios").then((l) => setCandidatos(l.filter((x) => x.activo && x.id !== usuario.id))).catch(() => setCandidatos([]));
+  }, [dandoDeBaja, usuario]);
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
@@ -183,7 +193,7 @@ function FormUsuario({ usuario, roles, alGuardar }: { usuario?: UsuarioAdmin; ro
     };
     const r = await ejecutar(() =>
       usuario
-        ? api.patch(`/admin/usuarios/${usuario.id}`, { ...comun, activo: d.activo })
+        ? api.patch(`/admin/usuarios/${usuario.id}`, { ...comun, activo: d.activo, ...(dandoDeBaja && casos > 0 ? (destino ? { reasignar_a: destino } : { dejar_sin_asignar: true }) : {}) })
         : api.post("/admin/usuarios", { ...comun, usuario: d.usuario, password_inicial: d.password_inicial }),
     );
     if (r) alGuardar();
@@ -238,6 +248,18 @@ function FormUsuario({ usuario, roles, alGuardar }: { usuario?: UsuarioAdmin; ro
       ) : (
         <Campo etiqueta="Contraseña inicial *" ayuda="Al menos 10 caracteres. La persona deberá cambiarla en su primer ingreso.">
           <input type="text" value={d.password_inicial} onChange={cambia("password_inicial")} required minLength={10} autoComplete="off" />
+        </Campo>
+      )}
+      {dandoDeBaja && casos > 0 && (
+        <Campo etiqueta={`Tiene ${casos} ${casos === 1 ? "caso" : "casos"} a cargo`} ayuda="Los casos cerrados no se tocan. Queda el historial de la asignación.">
+          <select value={destino} onChange={(e) => setDestino(e.target.value)} aria-label="Qué hacer con sus casos">
+            <option value="">Dejarlos para asignar (le aparecen a la jefatura)</option>
+            {candidatos.map((c) => (
+              <option key={c.id} value={c.id}>
+                Pasarlos a {c.nombre_completo}
+              </option>
+            ))}
+          </select>
         </Campo>
       )}
       <Aviso error={error} />
