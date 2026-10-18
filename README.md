@@ -149,6 +149,7 @@ Creados por `datos-demo`. Contraseña de todos: `demo-sulam-2026`.
 | `mesa` | Mesa de Entrada | Ingresos sin legajo y su vinculación |
 | `registro` | Oficina de Registro | Carpetas para entregar y recibir (pases) |
 | `personal` | Personal | Planta, horarios, reloj, revisión de jornadas, pedidos para registrar, quién no está hoy, Excel de incidencias |
+| `participacion` | Participación y Sensibilización | Eventos, flyer, campañas, planificación semanal, brief para Comunicación, estadísticas del área; también desde el celular |
 | `adminarea` | Administrativo de Área | Alcance limitado a su área (hoy figura de licencia) |
 
 Además existe `admin` con la contraseña definida al inicializar.
