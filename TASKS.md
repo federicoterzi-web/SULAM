@@ -190,6 +190,33 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 - [ ] Estadísticas institucionales.
 - [ ] Segundo proveedor de almacenamiento (D-008).
 
+## Pendientes después del primer corte (18/10/2026)
+Surgen de lo conversado con la Dirección y del documento de diseño inicial (§2.3, §13.2, §15 y §16). Lo hecho hasta acá: núcleo, digitalización, informes, archivo físico, agenda, mapa de recursos, personal, participación, tableros, residencias, internaciones y subsidios.
+
+### Para validar con la Dirección
+- [ ] Subsidios alimentarios y de materiales: lista de papeles (hoy vacía, a completar con lo que se pida).
+- [ ] Cuidadores: documentación mensual que se presenta (hoy solo «comprobantes de gastos del mes»).
+- [ ] Papeles de la institución: confirmar que se piden una vez por residencia y mes (D-040).
+- [ ] Listado oficial de localidades por departamento (D-041; hoy es una lista de partida que se completa sola).
+- [ ] §15: campos exactos de carátula y demanda, matriz definitiva de roles y permisos, reglas de asignación y derivación, estados y circuitos de expedientes, organización del archivo físico, conservación y eliminación documental.
+- [ ] Revisar con Ivana, Cristina y Nancy los roles y el texto de las pantallas.
+
+### Por construir
+- [ ] Residencias e internaciones y subsidios en la versión para celular.
+- [ ] Residencias y subsidios en las estadísticas y en el tablero de la Dirección; avisos de pagos pendientes.
+- [ ] Autorizaciones desde el celular con passkeys (§9 del diseño).
+- [ ] Estadísticas institucionales avanzadas y auditoría avanzada (§2.3, fase 5).
+- [ ] Integraciones con otros sistemas institucionales (§2.3).
+- [ ] Segundo proveedor de almacenamiento y migración al alojamiento definitivo (D-008).
+- [ ] Reconocimiento de fichas anteriores y de dígitos manuscritos; calibrar con documentos y fichas reales.
+- [ ] Informe mensual de asistencia en PDF; personal etapa 2; estadísticas en el celular.
+- [ ] Pantalla de revisión campo por campo de la lectura automática.
+
+### Para poner en producción
+- [ ] Definir alojamiento (servidor del Ministerio con HTTPS, o túnel de Cloudflare con control de acceso como alternativa de bajo costo), respaldos programados y prueba de restauración en otro servidor.
+- [ ] Aval formal para datos reales (Ley 25.326), responsables de seguridad y respaldo, procedimiento ante incidentes (§15).
+- [ ] Prueba con técnicos reales y teléfonos del equipo; carga inicial de recursos.
+
 ## Convenciones de trabajo
 - Cada cambio de esquema va en una migración nueva de Alembic (`backend/alembic/versions`), nunca editando una existente.
 - Cada regla funcional nueva se documenta en FUNCTIONAL_SPEC.md y, si implica una elección, en DECISIONS.md.
