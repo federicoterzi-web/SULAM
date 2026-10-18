@@ -584,6 +584,27 @@ class PaginaCaptura(Base):
     creada_en: Mapped[datetime] = _ts()
 
 
+class Ajuste(Base):
+    """Ajuste del sistema que cambia el administrador (clave → valor JSON)."""
+
+    __tablename__ = "ajustes"
+    clave: Mapped[str] = mapped_column(String(60), primary_key=True)
+    valor: Mapped[dict | list | bool | str | int | None] = mapped_column(JSONB)
+
+
+class CasoCalibracion(Base):
+    """Una comparación entre lo que sugirió la lectura automática y lo que se confirmó. Sin datos personales."""
+
+    __tablename__ = "calibracion_casos"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    creado_en: Mapped[datetime] = _ts()
+    campo: Mapped[str] = mapped_column(String(30))
+    resultado: Mapped[str] = mapped_column(String(20))  # acierto / corregido / faltante / sobrante
+    tipo_documental: Mapped[str | None] = mapped_column(String(200))
+    detalle: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
+    fragmento: Mapped[str | None] = mapped_column(Text)
+
+
 # ---------------------------------------------------------------------------
 # Auditoría (solo agregado)
 # ---------------------------------------------------------------------------

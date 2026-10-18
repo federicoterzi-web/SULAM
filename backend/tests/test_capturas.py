@@ -316,3 +316,76 @@ def test_leer_agrupa_hojas_por_numero_de_pagina(admin):
     a, b_, c = hoja("Pagina 1 de 2"), hoja("Pagina 2 de 2"), hoja("Hoja suelta")
     g = admin.post("/api/capturas/leer", json={"paginas": [a, b_, c]}).json()["grupos"]
     assert g == [[a, b_], [c]]
+
+
+def test_calibracion_registra_diferencias_sin_datos_personales(admin):
+    import pytest
+    from PIL import ImageDraw, ImageFont
+
+    from sulam import reconocimiento
+
+    if not reconocimiento.disponible():
+        pytest.skip("Tesseract no está instalado")
+    p = nueva_persona(admin, apellidos="GUTIERREZ", nombres="Rosa", numero_documento="12345678")
+    tipo = _tipo(admin, nombre="Disability certificate").json()
+    try:
+        f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 56)
+    except OSError:
+        f = ImageFont.load_default(56)
+    img = Image.new("RGB", (1400, 700), "white")
+    d = ImageDraw.Draw(img)
+    d.text((60, 60), "Disability certificate", fill="black", font=f)
+    d.text((60, 200), "DNI 12.345.678 Rosa Gutierrez", fill="black", font=f)
+    d.text((60, 340), "Valid until 01/02/2029", fill="black", font=f)
+    b = io.BytesIO()
+    img.save(b, "JPEG")
+    pid = admin.post("/api/capturas", files={"foto": ("a.jpg", b.getvalue(), "image/jpeg")}).json()["id"]
+
+    # Apagada: no se guarda nada.
+    assert admin.get("/api/admin/calibracion").json()["activo"] is False
+    admin.post("/api/capturas/leer", json={"paginas": [pid]})
+
+    assert admin.put("/api/admin/calibracion", json={"activo": True, "fragmentos": True}).json() == {"activo": True, "fragmentos": True}
+    assert admin.post("/api/capturas/leer", json={"paginas": [pid]}).status_code == 200
+    r = admin.post("/api/capturas/clasificar", json={
+        "paginas": [pid], "tipo_documental_id": tipo["id"], "titulo": "x", "persona_id": p["id"],
+        "fecha_emision": "2024-02-01", "vence": "2029-02-01", "numero": "AB-123"})
+    assert r.status_code == 201, r.text
+    res = admin.get("/api/admin/calibracion").json()
+    assert res["total"] >= 4
+    assert res["por_campo"]["persona"]["acierto"] == 1
+    assert res["por_campo"]["tipo"]["acierto"] == 1
+    assert res["por_campo"]["fecha_emision"]["faltante"] == 1  # corrigió: la lectura no la sugirió
+    assert res["por_campo"]["numero"]["faltante"] == 1
+
+    informe = admin.get("/api/admin/calibracion/exportar")
+    assert informe.status_code == 200
+    texto = informe.text
+    assert "12345678" not in texto and "12.345.678" not in texto and "Gutierrez" not in texto and "Rosa" not in texto
+    import json
+    casos = json.loads(texto)["casos_con_diferencias"]
+    frags = [c["fragmento"] for c in casos if c["fragmento"]]
+    assert frags and all(not any(ch.isdigit() for ch in fr) for fr in frags)
+
+    assert admin.delete("/api/admin/calibracion").json()["borrados"] >= 4
+    assert admin.get("/api/admin/calibracion").json()["total"] == 0
+
+
+def test_enmascarado_tapa_numeros_y_nombres():
+    from sulam import calibracion
+
+    t = calibracion.enmascarar("Válido hasta 01/02/2029 para Rosa Gutierrez de Tucumán, Dirección de Adultos Mayores", {"gutierrez"})
+    assert "2029" not in t and "Rosa" not in t and "Gutierrez" not in t and "Tucum" not in t
+    assert "Válido hasta ##/##/####" in t and "Dirección de Adultos Mayores" in t
+
+
+def test_historial_de_pases_solo_administrador(admin, cliente):
+    from conftest import AREA_ADMISION, crear_usuario
+
+    crear_usuario("tec", "Técnico", AREA_ADMISION)
+    assert cliente("tec").get("/api/admin/pases").status_code == 403
+    r = admin.get("/api/admin/pases")
+    assert r.status_code == 200 and r.json()["total"] == 0
+    assert admin.get("/api/admin/pases", params={"desde": "ayer"}).status_code == 400
+    c = admin.get("/api/admin/pases/exportar")
+    assert c.status_code == 200 and c.text.lstrip("﻿").startswith("N°,Tipo")

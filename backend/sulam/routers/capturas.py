@@ -18,7 +18,7 @@ from pydantic import Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .. import audit, reconocimiento
+from .. import audit, calibracion, reconocimiento
 from ..config import get_settings
 from ..db import get_db
 from ..deps import contexto
@@ -172,6 +172,15 @@ def clasificar(datos: ClasificarIn, ctx: Contexto = Depends(contexto), db: Sessi
     for p in paginas:
         p.estado = "clasificada"
         p.documento_id = uuid.UUID(doc["id"])
+    persona = db.get(Persona, datos.persona_id)
+    calibracion.registrar(
+        db,
+        paginas=[p.id for p in paginas],
+        final={"persona": str(datos.persona_id), "tipo": datos.tipo_documental_id, "fecha_emision": datos.fecha_emision or None,
+               "vence": datos.vence or None, "numero": datos.numero or None},
+        tipo_nombre=doc["tipo_documental"]["nombre"],
+        nombres_persona=set(f"{persona.apellidos_norm} {persona.nombres_norm}".split()) if persona else set(),
+    )
     audit.registrar(db, ctx, "clasificar_captura", "documento", uuid.UUID(doc["id"]), datos.persona_id, {"hojas": len(paginas)})
     db.commit()
     return doc
@@ -227,7 +236,7 @@ def leer(datos: LeerIn, ctx: Contexto = Depends(contexto), db: Session = Depends
     )
     fechas = reconocimiento.fechas_en(todo)
     marcas = [reconocimiento.pagina_de(t) for t in textos]
-    return {
+    salida = {
         "disponible": True,
         "persona": persona,
         "tipo_documental_id": probables[0][0] if probables else None,
@@ -237,3 +246,11 @@ def leer(datos: LeerIn, ctx: Contexto = Depends(contexto), db: Session = Depends
         "numero": reconocimiento.numero_en(todo),
         "grupos": [[str(paginas[i].id) for i in g] for g in reconocimiento.agrupar(marcas)],
     }
+    if calibracion.config(db)["activo"]:
+        calibracion.recordar_lectura(
+            [p.id for p in paginas],
+            {"persona": persona["id"] if persona else None, "tipo": salida["tipo_documental_id"], "fecha_emision": salida["fecha_emision"],
+             "vence": salida["vence"], "numero": salida["numero"], "grupos": salida["grupos"]},
+            todo,
+        )
+    return salida

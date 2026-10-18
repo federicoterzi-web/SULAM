@@ -99,6 +99,7 @@ export const api = {
   post: <T,>(ruta: string, cuerpo?: unknown) => pedir<T>("POST", ruta, cuerpo ?? {}),
   patch: <T,>(ruta: string, cuerpo: unknown) => pedir<T>("PATCH", ruta, cuerpo),
   put: <T,>(ruta: string, cuerpo: unknown) => pedir<T>("PUT", ruta, cuerpo),
+  delete: <T,>(ruta: string) => pedir<T>("DELETE", ruta),
 };
 
 // ---------------------------------------------------------------- tipos

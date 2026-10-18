@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -342,3 +343,153 @@ def fijar_numeracion(datos: NumeracionIn, ctx: Contexto = Depends(_admin), db: S
     )
     db.commit()
     return {"anio": datos.anio, "proximo": datos.proximo, "mayor_registrado": ultimo}
+
+
+# ---------------------------------------------------------------- historial de pases de carpetas
+
+def _consulta_pases(estado: str | None, tipo: str | None, area_id: int | None, desde: str | None, hasta: str | None):
+    from datetime import date, timedelta
+
+    from sqlalchemy import or_, select
+
+    from ..models import Pase
+
+    q = select(Pase)
+    if estado:
+        q = q.where(Pase.estado == estado)
+    if tipo:
+        q = q.where(Pase.tipo == tipo)
+    if area_id:
+        q = q.where(or_(Pase.desde_area_id == area_id, Pase.hacia_area_id == area_id))
+    try:
+        if desde:
+            q = q.where(Pase.iniciado_en >= date.fromisoformat(desde))
+        if hasta:
+            q = q.where(Pase.iniciado_en < date.fromisoformat(hasta) + timedelta(days=1))
+    except ValueError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Fecha inválida (use AAAA-MM-DD).")
+    return q.order_by(Pase.iniciado_en.desc(), Pase.id.desc())
+
+
+@router.get("/pases")
+def historial_de_pases(
+    estado: str | None = None,
+    tipo: str | None = None,
+    area_id: int | None = None,
+    desde: str | None = None,
+    hasta: str | None = None,
+    limite: int = Query(50, ge=1, le=200),
+    pagina: int = Query(1, ge=1),
+    ctx: Contexto = Depends(_admin),
+    db: Session = Depends(get_db),
+):
+    """Todos los pases de carpetas del sistema (pedidos y envíos), con su estado y quién los resolvió."""
+    from sqlalchemy import func, select
+
+    from ..models import Pase
+    from .archivo import _pase_out
+
+    q = _consulta_pases(estado, tipo, area_id, desde, hasta)
+    total = db.execute(select(func.count()).select_from(q.order_by(None).subquery())).scalar_one()
+    filas = db.execute(q.limit(limite).offset((pagina - 1) * limite)).scalars().all()
+    return {"total": total, "pagina": pagina, "pases": [_pase_out(db, ctx, p) for p in filas]}
+
+
+@router.get("/pases/exportar")
+def exportar_pases(
+    estado: str | None = None,
+    tipo: str | None = None,
+    area_id: int | None = None,
+    desde: str | None = None,
+    hasta: str | None = None,
+    ctx: Contexto = Depends(_admin),
+    db: Session = Depends(get_db),
+):
+    import csv
+    import io
+
+    from fastapi.responses import Response
+
+    from .archivo import _pase_out
+
+    filas = db.execute(_consulta_pases(estado, tipo, area_id, desde, hasta).limit(20000)).scalars().all()
+    s = io.StringIO()
+    w = csv.writer(s)
+    w.writerow(["N°", "Tipo", "Carpeta", "De (área)", "De (persona)", "Hacia (área)", "Hacia (persona)", "Motivo", "Estado",
+                "Iniciado por", "Iniciado", "Resuelto por", "Resuelto", "Respuesta"])
+    for p in filas:
+        o = _pase_out(db, ctx, p)
+        w.writerow([o["id"], o["tipo"], o["objeto"]["texto"], o["desde"]["area"] or "", (o["desde"]["usuario"] or {}).get("nombre_completo", ""),
+                    o["hacia"]["area"], (o["hacia"]["usuario"] or {}).get("nombre_completo", ""), o["motivo"] or "", o["estado"],
+                    (o["iniciado_por"] or {}).get("nombre_completo", ""), o["iniciado_en"], (o["resuelto_por"] or {}).get("nombre_completo", ""),
+                    o["resuelto_en"] or "", o["respuesta"] or ""])
+    audit.registrar(db, ctx, "exportar_pases", "pase", None, None, {"filas": len(filas)})
+    db.commit()
+    return Response("﻿" + s.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="historial-de-pases.csv"', "Cache-Control": "no-store"})
+
+
+# ---------------------------------------------------------------- calibración del reconocimiento
+
+class CalibracionIn(BaseModel):
+    activo: bool
+    fragmentos: bool = False
+
+
+@router.get("/calibracion")
+def ver_calibracion(ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
+    from .. import calibracion, reconocimiento
+
+    return {**calibracion.config(db), "lector_disponible": reconocimiento.disponible(), **calibracion.resumen(db)}
+
+
+@router.put("/calibracion")
+def cambiar_calibracion(datos: CalibracionIn, ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
+    from .. import calibracion
+
+    nueva = calibracion.guardar_config(db, datos.activo, datos.fragmentos and datos.activo)
+    audit.registrar(db, ctx, "configurar_calibracion", "ajuste", None, None, nueva)
+    db.commit()
+    return nueva
+
+
+@router.get("/calibracion/exportar")
+def exportar_calibracion(ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
+    """Informe para ajustar las reglas: resumen y casos de falla. No contiene nombres, números ni imágenes."""
+    import json
+    from datetime import datetime, timezone
+
+    from fastapi.responses import Response
+    from sqlalchemy import select
+
+    from .. import calibracion
+    from ..models import CasoCalibracion
+
+    casos = db.execute(select(CasoCalibracion).where(CasoCalibracion.resultado != "acierto").order_by(CasoCalibracion.id).limit(5000)).scalars().all()
+    informe = {
+        "generado": datetime.now(timezone.utc).isoformat(),
+        "nota": "Sin datos personales. Los fragmentos de texto, si hay, tienen los números y las palabras en mayúscula tapados.",
+        "configuracion": calibracion.config(db),
+        "resumen": calibracion.resumen(db),
+        "casos_con_diferencias": [
+            {"fecha": c.creado_en.isoformat(), "campo": c.campo, "resultado": c.resultado, "tipo_documental": c.tipo_documental,
+             "detalle": c.detalle, "fragmento": c.fragmento}
+            for c in casos
+        ],
+    }
+    audit.registrar(db, ctx, "exportar_calibracion", "ajuste", None, None, {"casos": len(casos)})
+    db.commit()
+    return Response(json.dumps(informe, ensure_ascii=False, indent=2), media_type="application/json",
+                    headers={"Content-Disposition": 'attachment; filename="calibracion-sulam.json"', "Cache-Control": "no-store"})
+
+
+@router.delete("/calibracion")
+def vaciar_calibracion(ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
+    from sqlalchemy import delete
+
+    from ..models import CasoCalibracion
+
+    n = db.execute(delete(CasoCalibracion)).rowcount
+    audit.registrar(db, ctx, "vaciar_calibracion", "ajuste", None, None, {"casos": n})
+    db.commit()
+    return {"borrados": n}

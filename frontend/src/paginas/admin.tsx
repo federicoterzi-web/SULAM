@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../api";
+import { Calibracion, HistorialPases } from "./admin-extra";
 import { Aviso, Campo, Cargando, Enlace, Modal, Seccion, fechaHora, useDatos, useEnvio, useSesion } from "../comun";
 
 interface UsuarioAdmin {
@@ -66,8 +67,14 @@ export function PaginaAdmin({ pestaña }: { pestaña: string }) {
         <Enlace a="/admin/catalogos" className={pestaña === "catalogos" ? "activo" : ""}>
           Catálogos
         </Enlace>
+        <Enlace a="/admin/pases" className={pestaña === "pases" ? "activo" : ""}>
+          Historial de pases
+        </Enlace>
+        <Enlace a="/admin/calibracion" className={pestaña === "calibracion" ? "activo" : ""}>
+          Calibración
+        </Enlace>
       </nav>
-      {pestaña === "roles" ? <Roles /> : pestaña === "catalogos" ? <Catalogos /> : <Usuarios />}
+      {pestaña === "roles" ? <Roles /> : pestaña === "catalogos" ? <Catalogos /> : pestaña === "pases" ? <HistorialPases /> : pestaña === "calibracion" ? <Calibracion /> : <Usuarios />}
     </>
   );
 }

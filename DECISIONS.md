@@ -136,3 +136,6 @@ El texto leído se guarda en `documentos.texto` (hojas separadas por salto de p�
 
 ## D-031 — Marcas sobre la imagen de la hoja
 Las cajas se calculan al abrir la vista (se dibuja la hoja y se ubican las palabras con OCR), sin guardar coordenadas: no hay datos nuevos que proteger ni migrar. Ver la hoja como imagen exige el permiso de descarga y se audita; las marcas solo, el de consulta.
+
+## D-032 — Calibración del reconocimiento y historial de pases en Administración
+La calibración es opcional y la enciende el administrador (tabla `ajustes`). Compara lo sugerido con lo confirmado y guarda solo la diferencia (campo, resultado, tipo documental) en `calibracion_casos`. El fragmento de texto, también opcional, se guarda con todos los números tapados y toda palabra que empiece con mayúscula tapada salvo palabras clave de fechas y la Dirección. La lectura sugerida se recuerda en memoria del servidor hasta 2 horas para poder compararla; si el servidor se reinicia en ese lapso, ese caso no se registra. El informe exportable y el vaciado quedan auditados. El historial de pases es de solo lectura y solo para quien administra.
