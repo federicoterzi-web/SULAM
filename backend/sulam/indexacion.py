@@ -162,3 +162,60 @@ def resaltar(texto: str, patrones: list[tuple[str, str]]) -> list[dict]:
     if pos < len(texto):
         trozos.append({"t": texto[pos:], "k": None})
     return trozos
+
+
+# --- marcas sobre la imagen de la hoja ---------------------------------------------------------
+
+def imagen_de_hoja(datos: bytes, mime: str, n: int) -> tuple[bytes, int] | None:
+    """JPEG de la hoja n (desde 1) y la cantidad de hojas del archivo. None si la hoja no existe."""
+    if mime in ("image/jpeg", "image/png"):
+        if n != 1:
+            return None
+        from PIL import Image
+
+        b = io.BytesIO()
+        Image.open(io.BytesIO(datos)).convert("RGB").save(b, "JPEG", quality=88)
+        return b.getvalue(), 1
+    if mime != "application/pdf":
+        return None
+    import pypdfium2 as pdfium
+
+    pdf = pdfium.PdfDocument(datos)
+    if not 1 <= n <= len(pdf):
+        return None
+    b = io.BytesIO()
+    pdf[n - 1].render(scale=2).to_pil().convert("RGB").save(b, "JPEG", quality=88)
+    return b.getvalue(), len(pdf)
+
+
+def cantidad_de_hojas(datos: bytes, mime: str) -> int:
+    if mime == "application/pdf":
+        import pypdfium2 as pdfium
+
+        return len(pdfium.PdfDocument(datos))
+    return 1 if mime in ("image/jpeg", "image/png") else 0
+
+
+def marcar_palabras(palabras: list[dict], persona, menciones: list[str]) -> list[dict]:
+    """Cajas (en fracción de la hoja) de las palabras que son del nombre o documento de la persona, o menciones a la Dirección."""
+    nombres = set()
+    digitos_persona: list[str] = []
+    if persona is not None:
+        for campo in (persona.apellidos, persona.nombres):
+            nombres |= {w for w in normalizar(campo).split() if len(w) >= 3}
+        digitos_persona = [d for d in (re.sub(r"\D", "", x or "") for x in (persona.numero_documento, persona.cuil)) if len(d) >= 7]
+    norm = [normalizar(p["t"]) for p in palabras]
+    clases: list[str | None] = [None] * len(palabras)
+    for i, (p, n) in enumerate(zip(palabras, norm)):
+        d = re.sub(r"\D", "", p["t"])
+        if n and n in nombres:
+            clases[i] = "nombre"
+        elif len(d) >= 7 and any(d in x for x in digitos_persona):
+            clases[i] = "documento"
+    for m in menciones:
+        seq = normalizar(m).split()
+        for i in range(len(palabras) - len(seq) + 1):
+            if seq and norm[i:i + len(seq)] == seq:
+                for j in range(i, i + len(seq)):
+                    clases[j] = "institucion"
+    return [(p, c) for p, c in zip(palabras, clases) if c]  # type: ignore[misc]

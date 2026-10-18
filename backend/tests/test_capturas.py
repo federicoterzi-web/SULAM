@@ -246,3 +246,36 @@ def test_texto_busqueda_y_resaltado(admin, cliente):
     # Quien no puede ver el legajo no lo encuentra; y el documento eliminado tampoco.
     assert cliente("tec").get("/api/documentos/buscar", params={"q": "resolucion"}).status_code in (200, 403)
     assert indexacion.resaltar("Ñandú", [("nombre", r"nandu")]) == [{"t": "Ñandú", "k": "nombre"}]
+
+
+def test_marcas_sobre_la_imagen_de_la_hoja(admin):
+    import pytest
+    from PIL import ImageDraw, ImageFont
+
+    from sulam import reconocimiento
+
+    if not reconocimiento.disponible():
+        pytest.skip("Tesseract no está instalado")
+    p = nueva_persona(admin, apellidos="GUTIERREZ", nombres="Rosa", numero_documento="12345678")
+    tipo = _tipo(admin, nombre="Constancia simple").json()
+    img = Image.new("RGB", (1400, 700), "white")
+    d = ImageDraw.Draw(img)
+    try:
+        f = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 54)
+    except OSError:
+        f = ImageFont.load_default(54)
+    d.text((60, 60), "Rosa Gutierrez", fill="black", font=f)
+    d.text((60, 200), "DNI 12.345.678", fill="black", font=f)
+    d.text((60, 340), "Adultos Mayores", fill="black", font=f)
+    b = io.BytesIO()
+    img.save(b, "PNG")
+    doc = admin.post("/api/documentos", data={"tipo_documental_id": tipo["id"], "titulo": "Foto", "persona_id": p["id"]},
+                     files={"archivo": ("a.png", b.getvalue(), "image/png")}).json()
+    r = admin.get(f"/api/documentos/{doc['id']}/hojas/1/marcas")
+    assert r.status_code == 200, r.text
+    clases = {m["k"] for m in r.json()["marcas"]}
+    assert {"nombre", "documento", "institucion"} <= clases
+    m = r.json()["marcas"][0]
+    assert 0 <= m["x"] <= 1 and 0 < m["w"] <= 1
+    assert admin.get(f"/api/documentos/{doc['id']}/hojas/1/imagen").headers["content-type"] == "image/jpeg"
+    assert admin.get(f"/api/documentos/{doc['id']}/hojas/2/marcas").status_code == 404

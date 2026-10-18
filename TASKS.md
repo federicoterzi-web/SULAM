@@ -144,7 +144,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Lectura automática (OCR local, Tesseract español): sugiere legajo por DNI/CUIL, tipo por palabras del nombre, emisión, vencimiento y número; la persona confirma | ✅ |
 | Reconocimiento: aprender palabras de documentos ya confirmados; agrupar solas las hojas de la bandeja (el servidor ya detecta «Página X de Y»); calibrar con documentos reales | ⏳ |
 | Texto de cada documento guardado (PDF con texto u OCR), buscador «Buscar en documentos» respetando permisos y auditado, vista del texto con marcas en nombre/DNI/CUIL de la persona y menciones a la Dirección, alerta si el legajo no coincide; comando `indexar-textos` para los ya cargados | ✅ |
-| Resaltar sobre la imagen de la hoja (guardar posición de cada palabra) | ⏳ |
+| Resaltar sobre la imagen de la hoja (se ubican las palabras al abrir la vista; requiere permiso de descarga y queda auditado) | ✅ |
 | Sugerir el tipo leyendo la foto (OCR local) | ⏳ |
 | Limpieza de fotos descartadas | ⏳ |
 

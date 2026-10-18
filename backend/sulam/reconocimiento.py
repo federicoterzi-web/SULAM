@@ -150,3 +150,30 @@ def tipos_probables(texto: str, tipos: list[tuple[int, str, str | None]]) -> lis
         if p >= 0.5:
             puntajes.append((tid, round(p, 2)))
     return sorted(puntajes, key=lambda x: -x[1])
+
+
+def leer_palabras(jpeg: bytes) -> tuple[int, int, list[dict]]:
+    """(ancho, alto, palabras con su caja en píxeles) de una foto, con la salida TSV de Tesseract."""
+    from PIL import Image
+
+    ancho, alto = Image.open(__import__("io").BytesIO(jpeg)).size
+    idioma = _idioma()
+    if idioma is None:
+        return ancho, alto, []
+    try:
+        r = subprocess.run(
+            [shutil.which("tesseract") or "tesseract", "stdin", "stdout", "-l", idioma, "--psm", "3", "tsv"],
+            input=jpeg, capture_output=True, timeout=90,
+        )
+    except Exception:
+        return ancho, alto, []
+    palabras = []
+    for linea in r.stdout.decode("utf-8", "replace").splitlines()[1:]:
+        c = linea.split("\t")
+        if len(c) < 12 or c[0] != "5" or not c[11].strip():
+            continue
+        try:
+            palabras.append({"t": c[11].strip(), "x": int(c[6]), "y": int(c[7]), "w": int(c[8]), "h": int(c[9])})
+        except ValueError:
+            continue
+    return ancho, alto, palabras

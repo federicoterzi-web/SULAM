@@ -366,6 +366,54 @@ def buscar_en_textos(
     return {"total": len(resultados), "resultados": resultados}
 
 
+def _bytes_del_archivo(d: Documento) -> bytes:
+    with almacenamiento_por_nombre(d.almacenamiento).abrir(d.clave_almacenamiento) as f:
+        return f.read()
+
+
+@router.get("/documentos/{documento_id}/hojas/{hoja}/imagen")
+def imagen_de_hoja(documento_id: uuid.UUID, hoja: int, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """La hoja como imagen, para verla con las marcas encima. Equivale a ver el archivo: pide permiso de descarga."""
+    from fastapi.responses import Response
+
+    d = db.get(Documento, documento_id)
+    if d is None:
+        raise no_encontrado("Documento")
+    _verificar_acceso(db, ctx, d, "descargar")
+    r = indexacion.imagen_de_hoja(_bytes_del_archivo(d), d.mime, hoja)
+    if r is None:
+        raise no_encontrado("Hoja")
+    audit.registrar(db, ctx, "ver_hoja", "documento", d.id, d.persona_id, {"hoja": hoja})
+    db.commit()
+    return Response(r[0], media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+
+
+@router.get("/documentos/{documento_id}/hojas/{hoja}/marcas")
+def marcas_de_hoja(documento_id: uuid.UUID, hoja: int, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """Dónde están, sobre la imagen de la hoja, el nombre y los datos de la persona y las menciones a la Dirección (en fracciones 0–1)."""
+    from .. import reconocimiento
+
+    d = db.get(Documento, documento_id)
+    if d is None:
+        raise no_encontrado("Documento")
+    _verificar_acceso(db, ctx, d, "consultar")
+    datos = _bytes_del_archivo(d)
+    r = indexacion.imagen_de_hoja(datos, d.mime, hoja)
+    if r is None:
+        raise no_encontrado("Hoja")
+    ancho, alto, palabras = reconocimiento.leer_palabras(r[0])
+    persona = db.get(Persona, d.persona_id) if d.persona_id else None
+    marcadas = indexacion.marcar_palabras(palabras, persona, indexacion.menciones_institucion())
+    return {
+        "hojas": r[1],
+        "disponible": reconocimiento.disponible(),
+        "marcas": [
+            {"k": k, "t": p["t"], "x": p["x"] / ancho, "y": p["y"] / alto, "w": p["w"] / ancho, "h": p["h"] / alto}
+            for p, k in marcadas
+        ],
+    }
+
+
 @router.get("/documentos/{documento_id}/texto")
 def ver_texto(documento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
     """Texto leído del documento, por hoja, con marcas sobre el nombre y los datos de la persona y las menciones a la Dirección."""
@@ -386,7 +434,7 @@ def ver_texto(documento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Se
     alerta = None
     if persona and d.texto_estado == "listo" and len(d.texto or "") > 60 and not cuenta["nombre"] and not cuenta["documento"]:
         alerta = "En el texto no aparece el nombre ni el documento de la persona de este legajo. Verifique que esté en el legajo correcto."
-    return {"estado": d.texto_estado, "hojas": salida, "cuenta": cuenta, "alerta": alerta}
+    return {"estado": d.texto_estado, "hojas": salida, "cuenta": cuenta, "alerta": alerta, "paginas": indexacion.cantidad_de_hojas(_bytes_del_archivo(d), d.mime)}
 
 
 @router.post("/documentos/{documento_id}/leer-texto")

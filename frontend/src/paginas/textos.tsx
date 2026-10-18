@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api, type Documento } from "../api";
-import { Aviso, Cargando, Modal, Vacio, useDatos, useEnvio } from "../comun";
+import { Aviso, Cargando, Modal, Vacio, useDatos, useEnvio, useSesion } from "../comun";
 
 interface TextoDoc {
   estado: "pendiente" | "listo" | "sin_texto" | "error";
   hojas: { hoja: number; trozos: { t: string; k: "nombre" | "documento" | "institucion" | null }[] }[];
   cuenta: { nombre: number; documento: number; institucion: number };
   alerta: string | null;
+  paginas: number;
 }
 
 const ROTULO: Record<string, string> = { nombre: "Nombre de la persona", documento: "Documento de la persona", institucion: "Dirección" };
@@ -15,6 +16,8 @@ const ROTULO: Record<string, string> = { nombre: "Nombre de la persona", documen
 export function VerTexto({ documento, alCerrar }: { documento: Documento; alCerrar: () => void }) {
   const { datos, error, recargar } = useDatos(() => api.get<TextoDoc>(`/documentos/${documento.id}/texto`), [documento.id]);
   const { enviando, error: errorLeer, ejecutar } = useEnvio();
+  const { puede } = useSesion();
+  const [sobreHoja, setSobreHoja] = useState(false);
   const cuerpo = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState(-1);
 
@@ -57,7 +60,18 @@ export function VerTexto({ documento, alCerrar }: { documento: Documento; alCerr
               </button>
             </div>
           )}
-          <div ref={cuerpo} className="txt-cuerpo">
+          {datos.paginas > 0 && puede("documentos", "descargar") && (
+            <div className="txt-barra">
+              <button type="button" className={`boton boton-chico ${sobreHoja ? "" : "boton-primario"}`} onClick={() => setSobreHoja(false)}>
+                Ver el texto
+              </button>
+              <button type="button" className={`boton boton-chico ${sobreHoja ? "boton-primario" : ""}`} onClick={() => setSobreHoja(true)}>
+                Ver marcado sobre la hoja
+              </button>
+            </div>
+          )}
+          {sobreHoja && <HojaMarcada id={documento.id} paginas={datos.paginas} />}
+          <div ref={cuerpo} className="txt-cuerpo" hidden={sobreHoja}>
             {datos.hojas.map((h) => (
               <section key={h.hoja}>
                 <h3>Hoja {h.hoja}</h3>
@@ -75,6 +89,50 @@ export function VerTexto({ documento, alCerrar }: { documento: Documento; alCerr
         </>
       )}
     </Modal>
+  );
+}
+
+interface Marcas {
+  hojas: number;
+  disponible: boolean;
+  marcas: { k: "nombre" | "documento" | "institucion"; t: string; x: number; y: number; w: number; h: number }[];
+}
+
+/** La hoja como imagen con cajas de color sobre cada palabra marcada. */
+function HojaMarcada({ id, paginas }: { id: string; paginas: number }) {
+  const [hoja, setHoja] = useState(1);
+  const { datos, error } = useDatos(() => api.get<Marcas>(`/documentos/${id}/hojas/${hoja}/marcas`), [id, hoja]);
+  return (
+    <div>
+      <div className="txt-barra">
+        <button type="button" className="boton boton-chico" disabled={hoja <= 1} onClick={() => setHoja(hoja - 1)}>
+          ◀ Hoja anterior
+        </button>
+        <span>
+          Hoja {hoja} de {paginas}
+        </span>
+        <button type="button" className="boton boton-chico" disabled={hoja >= paginas} onClick={() => setHoja(hoja + 1)}>
+          Hoja siguiente ▶
+        </button>
+        {datos && <small className="tenue">{datos.marcas.length} marcas</small>}
+      </div>
+      <Aviso error={error} />
+      {!datos && !error && <Cargando />}
+      {datos && !datos.disponible && <p className="tenue">El lector de texto no está instalado en el servidor: no se pueden ubicar las marcas.</p>}
+      <div className="txt-hoja">
+       <div className="txt-hoja-interna">
+        <img src={`/api/documentos/${id}/hojas/${hoja}/imagen`} alt={`Hoja ${hoja}`} />
+        {datos?.marcas.map((m, i) => (
+          <span
+            key={i}
+            className={`txt-caja txt-${m.k}`}
+            title={ROTULO[m.k]}
+            style={{ left: `${m.x * 100}%`, top: `${m.y * 100}%`, width: `${m.w * 100}%`, height: `${m.h * 100}%` }}
+          />
+        ))}
+       </div>
+      </div>
+    </div>
   );
 }
 

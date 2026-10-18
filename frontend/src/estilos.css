@@ -4816,3 +4816,7 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 @media (prefers-color-scheme: dark) { .txt-nombre { background: #854d0e; } .txt-documento { background: #1e3a8a; } .txt-institucion { background: #166534; } }
 .txt-resultados { list-style: none; padding: 0; display: grid; gap: 10px; }
 .txt-resultados li { border: 1px solid var(--borde, #ccc); border-radius: 6px; padding: 10px 12px; }
+.txt-hoja { max-height: 60vh; overflow: auto; border: 1px solid var(--borde, #ccc); border-radius: 6px; }
+.txt-hoja img { display: block; width: 100%; height: auto; }
+.txt-caja { position: absolute; mix-blend-mode: multiply; opacity: 0.55; border-radius: 2px; pointer-events: auto; }
+.txt-hoja-interna { position: relative; }

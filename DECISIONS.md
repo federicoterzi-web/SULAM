@@ -133,3 +133,6 @@ OCR local con Tesseract (idioma español, instalado en la imagen Docker); ningun
 
 ## D-030 — Texto de los documentos: guardado, búsqueda y resaltado
 El texto leído se guarda en `documentos.texto` (hojas separadas por salto de página) y en una versión sin tildes para el índice de búsqueda de PostgreSQL. Se lee en segundo plano al cargar; los anteriores se leen con `indexar-textos`. La búsqueda y la vista del texto aplican el mismo control de acceso que abrir el documento; las búsquedas se auditan (texto buscado y cantidad, no el contenido). Las menciones institucionales se configuran con `SULAM_MENCIONES` (separadas por «;»). El resaltado sobre la imagen queda para una etapa posterior.
+
+## D-031 — Marcas sobre la imagen de la hoja
+Las cajas se calculan al abrir la vista (se dibuja la hoja y se ubican las palabras con OCR), sin guardar coordenadas: no hay datos nuevos que proteger ni migrar. Ver la hoja como imagen exige el permiso de descarga y se audita; las marcas solo, el de consulta.
