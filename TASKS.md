@@ -209,6 +209,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Agendar una salida con los casos elegidos en el mapa (una actividad por caso) | ✅ |
 | Aviso del navegador solo para lo agendado en que participa la persona | ✅ |
 | Versión para celular (lista) | ✅ |
-| Reprogramar con historial de cambios; actividades repetidas (semanales, mensuales) | ⏳ |
-| Mostrar en la agenda los vencimientos de documentos y las ausencias del personal (solo lectura) | ⏳ |
-| Agenda de toda el área para jefaturas con filtro por persona | ⏳ |
+| Reprogramar con historial de cambios (quién, cuándo, motivo, antes y después) | ✅ |
+| Actividades repetidas (días hábiles, semanal, quincenal, mensual; hasta 52); editar o cancelar «solo esta» o «esta y las siguientes» | ✅ |
+| Mostrar en la agenda los vencimientos de documentos y las ausencias del personal (solo lectura, según permisos) | ✅ |
+| Agenda del área con filtro por persona | ✅ |

@@ -401,11 +401,11 @@ def _agenda(db: Session, U: dict[str, Usuario], tecnicos_area: dict[str, list[Us
         for k, u in enumerate(tecnicos):
             c1, c2, c3 = rnd.sample(del_area, 3) if len(del_area) >= 3 else (del_area[0],) * 3
 
-            def evento(dias, h, tipo, titulo, caso=None, estado="programado", resultado=None, otros=(), lugar=None, dur=1):
+            def evento(dias, h, tipo, titulo, caso=None, estado="programado", resultado=None, otros=(), lugar=None, dur=1, serie=None, repeticion=None):
                 e = EventoAgenda(
                     tipo=tipo, titulo=titulo, inicio=_dt(_habil(hoy + timedelta(days=dias)), h), fin=_dt(_habil(hoy + timedelta(days=dias)), h + dur),
                     lugar=lugar, area_id=u.area_id, persona_id=caso.persona_id if caso else None, caso_id=caso.id if caso else None,
-                    estado=estado, resultado=resultado, creado_por=u.id,
+                    estado=estado, resultado=resultado, creado_por=u.id, serie_id=serie, repeticion=repeticion,
                 )
                 if estado != "programado":
                     e.resuelto_por, e.resuelto_en = u.id, _dt(_habil(hoy + timedelta(days=dias)), h + dur + 1)
@@ -420,7 +420,9 @@ def _agenda(db: Session, U: dict[str, Usuario], tecnicos_area: dict[str, list[Us
             evento(-5, 9, "visita", "Visita domiciliaria", c2, "no_realizado", "No había nadie en el domicilio; se dejó aviso.", lugar="Domicilio")
             evento(-2, 11, "entrevista", "Entrevista con familiar", c3, lugar="Oficina")  # pasó y falta el resultado
             evento(0, 9 + (k % 3), "salida", "Salida a domicilio", c1, otros=[colega] if colega else (), lugar="Zona sur")
-            evento(2 + k % 3, 10, "reunion", "Reunión de equipo", otros=[colega] if colega else (), lugar="Sala de reuniones")
+            serie = uuid.uuid4()
+            for semana in range(4):  # reunión semanal (actividad repetida)
+                evento(2 + k % 3 + 7 * semana, 10, "reunion", "Reunión de equipo", otros=[colega] if colega else (), lugar="Sala de reuniones", serie=serie, repeticion="semanal")
             evento(6 + k % 4, 14, "audiencia", "Audiencia en juzgado", c2, lugar="Tribunales")
 
 

@@ -609,6 +609,9 @@ class EventoAgenda(Base):
     resuelto_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     creado_por: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"))
     creado_en: Mapped[datetime] = _ts()
+    # Actividades repetidas: todas las de una serie comparten ``serie_id``; cada una tiene su propio resultado.
+    serie_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
+    repeticion: Mapped[str | None] = mapped_column(String(12))
 
     area: Mapped[Area | None] = relationship(lazy="joined")
     participantes: Mapped[list["ParticipanteAgenda"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
@@ -618,6 +621,20 @@ class ParticipanteAgenda(Base):
     __tablename__ = "agenda_participantes"
     evento_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agenda_eventos.id", ondelete="CASCADE"), primary_key=True)
     usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"), primary_key=True)
+
+    usuario: Mapped[Usuario] = relationship(lazy="joined")
+
+
+class CambioAgenda(Base):
+    """Historial de cambios de una actividad (reprogramaciones, lugar, participantes…)."""
+
+    __tablename__ = "agenda_cambios"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    evento_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("agenda_eventos.id", ondelete="CASCADE"), index=True)
+    usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"))
+    en: Mapped[datetime] = _ts()
+    cambios: Mapped[dict] = mapped_column(JSONB)  # {campo: [antes, después]}
+    motivo: Mapped[str | None] = mapped_column(Text)
 
     usuario: Mapped[Usuario] = relationship(lazy="joined")
 

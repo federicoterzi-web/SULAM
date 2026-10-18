@@ -24,6 +24,23 @@ export interface Actividad {
   creado_por: string | null;
   soy_participante: boolean;
   puedo_modificar: boolean;
+  serie_id: string | null;
+  repeticion: string | null;
+  repeticion_texto: string | null;
+  historial?: Cambio[];
+  en_la_serie?: { total: number; siguientes: number };
+}
+
+interface Cambio {
+  en: string;
+  por: string;
+  motivo: string | null;
+  cambios: { campo: string; texto: string; antes: string | boolean | null; despues: string | boolean | null }[];
+}
+
+interface Superpuestos {
+  vencimientos: { fecha: string; documento_id: string; tipo: string; persona: { id: string; nombre: string } }[];
+  ausencias: { desde: string; hasta: string; agente: string; usuario_id: string | null; tipo_texto: string; lugar: string | null; horas: string | null }[];
 }
 
 const ESTADO: Record<string, string> = { programado: "Programada", realizado: "Realizada", no_realizado: "No realizada", cancelado: "Cancelada" };
@@ -41,6 +58,18 @@ const lunesDe = (d: Date) => {
 };
 
 type Ambito = "mio" | "area";
+
+const FRECUENCIAS: [string, string][] = [
+  ["", "No se repite"],
+  ["diaria", "Todos los días hábiles"],
+  ["semanal", "Todas las semanas"],
+  ["quincenal", "Cada 15 días"],
+  ["mensual", "Todos los meses"],
+];
+
+const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-AR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const valorDe = (campo: string, v: string | boolean | null) =>
+  v === null || v === "" ? "—" : typeof v === "boolean" ? (v ? "sí" : "no") : campo === "inicio" || campo === "fin" ? fechaHora(v) : String(v);
 type Vista = "mes" | "lista";
 
 export function PaginaAgenda({ movil = false }: { movil?: boolean }) {
@@ -52,6 +81,9 @@ export function PaginaAgenda({ movil = false }: { movil?: boolean }) {
   const [dia, setDia] = useState(() => claveDia(new Date()));
   const [abierta, setAbierta] = useState<Actividad | null>(null);
   const [nueva, setNueva] = useState<string | null>(null);
+  const [quien, setQuien] = useState("");
+  const [verVenc, setVerVenc] = useState(true);
+  const [verAus, setVerAus] = useState(true);
 
   const rango = useMemo(() => {
     if (vista === "mes") {
@@ -63,8 +95,29 @@ export function PaginaAgenda({ movil = false }: { movil?: boolean }) {
   }, [vista, mes]);
 
   const { datos, error, recargar } = useDatos(
-    () => api.get<{ eventos: Actividad[] }>("/agenda", { desde: rango.desde.toISOString(), hasta: rango.hasta.toISOString(), ambito }),
-    [rango.desde.getTime(), rango.hasta.getTime(), ambito],
+    () =>
+      api.get<{ eventos: Actividad[] }>("/agenda", {
+        desde: rango.desde.toISOString(),
+        hasta: rango.hasta.toISOString(),
+        ambito,
+        ...(ambito !== "mio" && quien ? { usuario_id: quien } : {}),
+      }),
+    [rango.desde.getTime(), rango.hasta.getTime(), ambito, quien],
+  );
+  // Vencimientos de documentos y ausencias del personal: solo para mirar junto con la agenda.
+  const sup = useDatos(
+    () =>
+      api.get<Superpuestos>("/agenda/superpuestos", {
+        desde: rango.desde.toISOString(),
+        hasta: rango.hasta.toISOString(),
+        ambito,
+        ...(ambito !== "mio" && quien ? { usuario_id: quien } : {}),
+      }),
+    [rango.desde.getTime(), rango.hasta.getTime(), ambito, quien],
+  );
+  const gente = useDatos(
+    () => (puede("agenda", "crear") ? api.get<{ id: string; nombre: string; area: string | null }[]>("/agenda/participantes") : Promise.resolve([])),
+    [],
   );
   // Lo que ya pasó y quedó sin registrar el resultado.
   const pendientes = useDatos(
@@ -75,9 +128,10 @@ export function PaginaAgenda({ movil = false }: { movil?: boolean }) {
         hasta: new Date().toISOString(),
         ambito,
         estado: "programado",
+        ...(ambito !== "mio" && quien ? { usuario_id: quien } : {}),
       });
     },
-    [ambito],
+    [ambito, quien],
   );
   const refrescar = () => {
     recargar();
@@ -92,6 +146,22 @@ export function PaginaAgenda({ movil = false }: { movil?: boolean }) {
     }
     return m;
   }, [datos]);
+
+  // Lo de otros módulos, por día (las ausencias ocupan todos los días de su rango).
+  const extraPorDia = useMemo(() => {
+    const m = new Map<string, { venc: Superpuestos["vencimientos"]; aus: Superpuestos["ausencias"] }>();
+    const nodo = (k: string) => m.get(k) ?? (m.set(k, { venc: [], aus: [] }), m.get(k)!);
+    if (verVenc) for (const v of sup.datos?.vencimientos ?? []) nodo(v.fecha).venc.push(v);
+    if (verAus)
+      for (const a of sup.datos?.ausencias ?? []) {
+        const fin = new Date(a.hasta + "T12:00:00");
+        for (let d = new Date(a.desde + "T12:00:00"); d <= fin; d.setDate(d.getDate() + 1)) {
+          const k = claveDia(d);
+          if (k >= claveDia(rango.desde) && k < claveDia(rango.hasta) && ![6, 0].includes(d.getDay())) nodo(k).aus.push(a);
+        }
+      }
+    return m;
+  }, [sup.datos, verVenc, verAus, rango]);
 
   if (!puede("agenda", "consultar")) return <Aviso error="No tiene acceso a la agenda." />;
 
@@ -108,13 +178,30 @@ export function PaginaAgenda({ movil = false }: { movil?: boolean }) {
       <div className="agenda-barra">
         {alcance !== "propios" && (
           <div className="segmentado" role="group" aria-label="De quién">
-            <button className={ambito === "mio" ? "activo" : ""} onClick={() => setAmbito("mio")} aria-pressed={ambito === "mio"}>
+            <button
+              className={ambito === "mio" ? "activo" : ""}
+              onClick={() => {
+                setAmbito("mio");
+                setQuien("");
+              }}
+              aria-pressed={ambito === "mio"}
+            >
               La mía
             </button>
             <button className={ambito === "area" ? "activo" : ""} onClick={() => setAmbito("area")} aria-pressed={ambito === "area"}>
               De mi área
             </button>
           </div>
+        )}
+        {ambito !== "mio" && (gente.datos?.length ?? 0) > 1 && (
+          <select aria-label="Persona" value={quien} onChange={(e) => setQuien(e.target.value)}>
+            <option value="">Todas las personas</option>
+            {gente.datos!.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nombre}
+              </option>
+            ))}
+          </select>
         )}
         {!movil && (
           <div className="segmentado" role="group" aria-label="Vista">
@@ -133,6 +220,15 @@ export function PaginaAgenda({ movil = false }: { movil?: boolean }) {
         )}
       </div>
       <Aviso error={error} />
+      <div className="agenda-superpuestos">
+        <span className="tenue">También mostrar:</span>
+        <label className="campo campo-casilla">
+          <input type="checkbox" checked={verVenc} onChange={(e) => setVerVenc(e.target.checked)} /> Vencimientos de documentos
+        </label>
+        <label className="campo campo-casilla">
+          <input type="checkbox" checked={verAus} onChange={(e) => setVerAus(e.target.checked)} /> Ausencias del personal
+        </label>
+      </div>
 
       {(pendientes.datos?.eventos.length ?? 0) > 0 && (
         <section className="agenda-pendientes" aria-label="Sin resultado">
@@ -205,16 +301,27 @@ export function PaginaAgenda({ movil = false }: { movil?: boolean }) {
                     </button>
                   ))}
                   {es.length > 3 && <span className="tenue">+{es.length - 3} más</span>}
+                  {(extraPorDia.get(k)?.venc.length ?? 0) > 0 && (
+                    <span className="agenda-marca agenda-marca-venc" title="Documentos que vencen">
+                      📄 {extraPorDia.get(k)!.venc.length}
+                    </span>
+                  )}
+                  {(extraPorDia.get(k)?.aus.length ?? 0) > 0 && (
+                    <span className="agenda-marca agenda-marca-aus" title="Personal ausente">
+                      🚫 {extraPorDia.get(k)!.aus.length}
+                    </span>
+                  )}
                 </div>
               );
             })}
           </div>
           <h2 className="agenda-titulo-dia">{diaLargo(new Date(dia + "T12:00:00"))}</h2>
           <ListaDia eventos={porDia.get(dia) ?? []} alAbrir={setAbierta} vacio="Nada agendado este día." />
+          <ExtrasDelDia extra={extraPorDia.get(dia)} />
         </>
       )}
 
-      {datos && vista === "lista" && <ProximosDias eventos={datos.eventos} alAbrir={setAbierta} />}
+      {datos && vista === "lista" && <ProximosDias eventos={datos.eventos} alAbrir={setAbierta} extra={extraPorDia} />}
 
       {abierta && (
         <DetalleActividad
@@ -265,19 +372,46 @@ function ListaDia({ eventos, alAbrir, vacio }: { eventos: Actividad[]; alAbrir: 
   );
 }
 
-function ProximosDias({ eventos, alAbrir }: { eventos: Actividad[]; alAbrir: (a: Actividad) => void }) {
+type ExtraDia = { venc: Superpuestos["vencimientos"]; aus: Superpuestos["ausencias"] };
+
+/** Vencimientos y ausencias del día: solo lectura. */
+function ExtrasDelDia({ extra }: { extra?: ExtraDia }) {
+  if (!extra || (extra.venc.length === 0 && extra.aus.length === 0)) return null;
+  return (
+    <ul className="agenda-extras">
+      {extra.aus.map((a, i) => (
+        <li key={`a${i}`}>
+          🚫 <strong>{a.agente}</strong> · {a.tipo_texto}
+          {a.lugar && ` (${a.lugar})`}
+          {a.horas && ` · ${a.horas}`}
+        </li>
+      ))}
+      {extra.venc.map((v) => (
+        <li key={v.documento_id}>
+          📄 Vence <strong>{v.tipo}</strong> · <a href={`#/legajos/${v.persona.id}`}>{v.persona.nombre}</a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ProximosDias({ eventos, alAbrir, extra }: { eventos: Actividad[]; alAbrir: (a: Actividad) => void; extra: Map<string, ExtraDia> }) {
   const grupos = new Map<string, Actividad[]>();
   for (const e of eventos) {
     const k = claveDia(new Date(e.inicio));
     grupos.set(k, [...(grupos.get(k) ?? []), e]);
   }
+  // Los días sin actividades pero con vencimientos o ausencias, dentro de las próximas semanas, también se muestran.
+  for (const k of extra.keys()) if (!grupos.has(k) && k >= claveDia(new Date())) grupos.set(k, []);
+  const ordenados = [...grupos.entries()].sort(([a], [b]) => (a < b ? -1 : 1));
   if (grupos.size === 0) return <Vacio>No hay nada agendado en los próximos días.</Vacio>;
   return (
     <>
-      {[...grupos.entries()].map(([k, es]) => (
+      {ordenados.map(([k, es]) => (
         <section key={k}>
           <h2 className="agenda-titulo-dia">{diaLargo(new Date(k + "T12:00:00"))}</h2>
           <ListaDia eventos={es} alAbrir={alAbrir} vacio="" />
+          <ExtrasDelDia extra={extra.get(k)} />
         </section>
       ))}
     </>
@@ -286,20 +420,24 @@ function ProximosDias({ eventos, alAbrir }: { eventos: Actividad[]; alAbrir: (a:
 
 // ---------------------------------------------------------------- detalle y resultado
 
-function DetalleActividad({ actividad: a, alCerrar, alCambiar }: { actividad: Actividad; alCerrar: () => void; alCambiar: () => void }) {
+function DetalleActividad({ actividad: base, alCerrar, alCambiar }: { actividad: Actividad; alCerrar: () => void; alCambiar: () => void }) {
+  const completa = useDatos(() => api.get<Actividad>(`/agenda/${base.id}`), [base.id]);
+  const a = completa.datos ?? base;
+  const [aplicar, setAplicar] = useState<"esta" | "siguientes">("esta");
+  const siguientes = a.en_la_serie?.siguientes ?? 0;
   const [modo, setModo] = useState<"ver" | "editar" | "resultado">("ver");
   const [estado, setEstado] = useState<"realizado" | "no_realizado" | "cancelado">("realizado");
   const [texto, setTexto] = useState("");
   const { enviando, error, ejecutar } = useEnvio();
   const guardarResultado = async (e: FormEvent) => {
     e.preventDefault();
-    const r = await ejecutar(() => api.post(`/agenda/${a.id}/resultado`, { estado, resultado: texto || null }));
+    const r = await ejecutar(() => api.post(`/agenda/${a.id}/resultado`, { estado, resultado: texto || null, aplicar_a: estado === "cancelado" ? aplicar : "esta" }));
     if (r) alCambiar();
   };
   return (
     <Modal titulo={a.titulo} alCerrar={alCerrar} ancho>
       {modo === "editar" ? (
-        <FormActividad actividad={a} alGuardar={alCambiar} />
+        <FormActividad actividad={a} alGuardar={alCambiar} siguientes={siguientes} />
       ) : (
         <>
           <dl className="agenda-detalle">
@@ -310,6 +448,15 @@ function DetalleActividad({ actividad: a, alCerrar, alCambiar }: { actividad: Ac
             </dd>
             <dt>Clase</dt>
             <dd>{a.tipo_texto}</dd>
+            {a.repeticion_texto && (
+              <>
+                <dt>Se repite</dt>
+                <dd>
+                  {a.repeticion_texto}
+                  {a.en_la_serie && <small className="tenue"> · {a.en_la_serie.total} actividades en la serie</small>}
+                </dd>
+              </>
+            )}
             {a.lugar && (
               <>
                 <dt>Lugar</dt>
@@ -358,6 +505,26 @@ function DetalleActividad({ actividad: a, alCerrar, alCambiar }: { actividad: Ac
               </button>
             </div>
           )}
+          {modo === "ver" && (a.historial?.length ?? 0) > 0 && (
+            <details className="agenda-historial">
+              <summary>Historial de cambios ({a.historial!.length})</summary>
+              <ul>
+                {a.historial!.map((h, i) => (
+                  <li key={i}>
+                    <strong>{new Date(h.en).toLocaleString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</strong> · {h.por}
+                    {h.motivo && <em> — {h.motivo}</em>}
+                    <ul>
+                      {h.cambios.map((c) => (
+                        <li key={c.campo}>
+                          {c.texto}: {valorDe(c.campo, c.antes)} → {valorDe(c.campo, c.despues)}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           {modo === "resultado" && (
             <form className="formulario" onSubmit={guardarResultado}>
               <div className="segmentado" role="group" aria-label="Resultado">
@@ -376,6 +543,7 @@ function DetalleActividad({ actividad: a, alCerrar, alCambiar }: { actividad: Ac
               <Campo etiqueta={estado === "no_realizado" ? "Motivo *" : "Cómo fue (queda en la evolución del caso)"}>
                 <textarea rows={4} value={texto} maxLength={5000} required={estado === "no_realizado"} onChange={(e) => setTexto(e.target.value)} />
               </Campo>
+              {estado === "cancelado" && siguientes > 0 && <AplicarA valor={aplicar} alCambiar={setAplicar} siguientes={siguientes} />}
               <Aviso error={error} />
               <div className="fila-botones">
                 <button className="boton boton-primario" disabled={enviando}>
@@ -393,16 +561,33 @@ function DetalleActividad({ actividad: a, alCerrar, alCambiar }: { actividad: Ac
   );
 }
 
+function AplicarA({ valor, alCambiar, siguientes }: { valor: "esta" | "siguientes"; alCambiar: (v: "esta" | "siguientes") => void; siguientes: number }) {
+  return (
+    <fieldset className="agenda-quienes">
+      <legend>Esta actividad se repite</legend>
+      <label className="campo campo-casilla">
+        <input type="radio" name="aplicar" checked={valor === "esta"} onChange={() => alCambiar("esta")} /> Solo esta
+      </label>
+      <label className="campo campo-casilla">
+        <input type="radio" name="aplicar" checked={valor === "siguientes"} onChange={() => alCambiar("siguientes")} /> Esta y las {siguientes}{" "}
+        {siguientes === 1 ? "siguiente" : "siguientes"}
+      </label>
+    </fieldset>
+  );
+}
+
 // ---------------------------------------------------------------- alta y edición
 
 export function FormActividad({
   actividad,
   diaInicial,
   alGuardar,
+  siguientes = 0,
 }: {
   actividad?: Actividad;
   diaInicial?: string;
   alGuardar: () => void;
+  siguientes?: number;
 }) {
   const { yo } = useSesion();
   const ini = actividad ? new Date(actividad.inicio) : null;
@@ -423,6 +608,12 @@ export function FormActividad({
   const [casoId, setCasoId] = useState(actividad?.caso?.id ?? "");
   const personaId = persona?.id ?? vinculoActual?.id ?? null;
   const casos = useDatos(() => (personaId ? api.get<Caso[]>("/casos", { persona_id: personaId, limite: 50 }) : Promise.resolve([] as Caso[])), [personaId]);
+  const [frecuencia, setFrecuencia] = useState("");
+  const [terminaEn, setTerminaEn] = useState<"cantidad" | "hasta">("cantidad");
+  const [cantidad, setCantidad] = useState(4);
+  const [hastaDia, setHastaDia] = useState("");
+  const [aplicar, setAplicar] = useState<"esta" | "siguientes">("esta");
+  const [motivo, setMotivo] = useState("");
   const { enviando, error, ejecutar } = useEnvio();
 
   const guardar = async (e: FormEvent) => {
@@ -440,6 +631,11 @@ export function FormActividad({
       persona_id: personaId,
       caso_id: personaId && casoId ? casoId : null,
       participantes: quienes,
+      ...(actividad
+        ? { aplicar_a: aplicar, motivo: motivo || null }
+        : frecuencia
+          ? { repetir: { frecuencia, ...(terminaEn === "cantidad" ? { cantidad } : { hasta: hastaDia }) } }
+          : {}),
     };
     const r = await ejecutar(() => (actividad ? api.patch(`/agenda/${actividad.id}`, cuerpo) : api.post("/agenda", cuerpo)));
     if (r) alGuardar();
@@ -482,6 +678,45 @@ export function FormActividad({
           <input value={lugar} maxLength={300} onChange={(e) => setLugar(e.target.value)} />
         </Campo>
       </div>
+
+      {!actividad && (
+        <div className="grilla">
+          <Campo etiqueta="Repetir">
+            <select value={frecuencia} onChange={(e) => setFrecuencia(e.target.value)}>
+              {FRECUENCIAS.map(([k, t]) => (
+                <option key={k} value={k}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          {frecuencia && (
+            <>
+              <Campo etiqueta="Termina">
+                <select value={terminaEn} onChange={(e) => setTerminaEn(e.target.value as "cantidad" | "hasta")}>
+                  <option value="cantidad">Después de cierta cantidad</option>
+                  <option value="hasta">En un día</option>
+                </select>
+              </Campo>
+              {terminaEn === "cantidad" ? (
+                <Campo etiqueta="Cantidad de veces (con esta)">
+                  <input type="number" min={2} max={52} value={cantidad} required onChange={(e) => setCantidad(Number(e.target.value))} />
+                </Campo>
+              ) : (
+                <Campo etiqueta="Hasta el día *">
+                  <input type="date" value={hastaDia} min={dia} required onChange={(e) => setHastaDia(e.target.value)} />
+                </Campo>
+              )}
+            </>
+          )}
+        </div>
+      )}
+      {actividad && siguientes > 0 && <AplicarA valor={aplicar} alCambiar={setAplicar} siguientes={siguientes} />}
+      {actividad && (
+        <Campo etiqueta="Motivo del cambio (opcional, queda en el historial)">
+          <input value={motivo} maxLength={1000} onChange={(e) => setMotivo(e.target.value)} />
+        </Campo>
+      )}
 
       <fieldset className="agenda-quienes">
         <legend>Quiénes participan</legend>
