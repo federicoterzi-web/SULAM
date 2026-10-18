@@ -24,18 +24,20 @@ import {
   useSesion,
 } from "../comun";
 import { FormDocumento, TablaDocumentos } from "./documentos";
+import { FotoPersona, PanelDocumentacion, RecorteFoto } from "./foto-documentacion";
 import { SeccionInternacion } from "./residencias";
 import { SeccionSubsidios } from "./subsidios";
 import { FormCaratula, textoDe, textoLista } from "./formularios";
 import { FormPersona, SelectorPersona } from "./legajos";
 
-type Dialogo = null | "editar" | "caso" | "expediente" | "vinculado" | "documento" | "unificar";
+type Dialogo = null | "editar" | "caso" | "expediente" | "vinculado" | "documento" | "unificar" | "foto";
 
 export function PaginaLegajo({ id }: { id: string }) {
   const { formularios } = useSesion();
   const { datos: l, error, recargar } = useDatos(() => api.get<Legajo>(`/personas/${id}`), [id]);
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [vinculadoEditado, setVinculadoEditado] = useState<Vinculado | null>(null);
+  const [versionFoto, setVersionFoto] = useState(0);
 
   if (error instanceof ApiError && error.status === 409 && error.detalle?.unificada_en_id) {
     return (
@@ -58,7 +60,8 @@ export function PaginaLegajo({ id }: { id: string }) {
   return (
     <>
       <div className="ficha">
-        <div>
+        <FotoPersona personaId={l.id} tiene={!!l.tiene_foto} nombre={nombre(l)} version={versionFoto} />
+        <div style={{ flex: 1 }}>
           <span className="ficha-legajo">
             Legajo {l.numero_legajo}
             {l.legajo_provisorio && l.legajo_provisorio !== l.numero_legajo && ` (antes ${l.legajo_provisorio})`}
@@ -81,6 +84,11 @@ export function PaginaLegajo({ id }: { id: string }) {
           {l.permisos.modificar && (
             <button className="boton" onClick={() => setDialogo("editar")}>
               Editar datos
+            </button>
+          )}
+          {l.permisos.modificar && (
+            <button className="boton" onClick={() => setDialogo("foto")}>
+              {l.tiene_foto ? "Cambiar foto" : "Foto del DNI"}
             </button>
           )}
           {l.permisos.unificar && (
@@ -234,6 +242,8 @@ export function PaginaLegajo({ id }: { id: string }) {
 
       <SeccionInformes personaId={l.id} puedeCrear={l.permisos.modificar} />
 
+      <PanelDocumentacion personaId={l.id} puedeCargar={!!l.permisos.cargar_documento} alCargar={() => setDialogo("documento")} version={l.documentos.length} />
+
       <Seccion
         id="s-docs"
         titulo="Documentos"
@@ -287,6 +297,17 @@ export function PaginaLegajo({ id }: { id: string }) {
         <Modal titulo="Cargar documento" alCerrar={cerrar}>
           <FormDocumento personaId={l.id} casos={l.casos} expedientes={l.expedientes} alGuardar={listo} />
         </Modal>
+      )}
+      {dialogo === "foto" && (
+        <RecorteFoto
+          personaId={l.id}
+          documentos={l.documentos}
+          alCerrar={cerrar}
+          alGuardar={() => {
+            setVersionFoto((v) => v + 1);
+            listo();
+          }}
+        />
       )}
       {dialogo === "unificar" && (
         <Modal titulo="Unificar legajos" alCerrar={cerrar} ancho>

@@ -10,7 +10,7 @@ from sqlalchemy import text
 from . import __version__
 from .config import get_settings
 from .db import get_engine
-from .routers import admin, auth, casos, demandas, documentos, expedientes, general, ingresos, personas, recursos, contactos, mapa, informes, anses, novedades, archivo, personal, avisos, capturas, agenda, participacion, residencias, subsidios, filtros as filtros_router, estadisticas
+from .routers import admin, auth, casos, demandas, documentos, foto_persona, expedientes, general, ingresos, personas, recursos, contactos, mapa, informes, anses, novedades, archivo, personal, avisos, capturas, agenda, participacion, residencias, subsidios, filtros as filtros_router, estadisticas
 from .routers import inicio as inicio_por_rol
 
 API = "/api"
@@ -27,7 +27,7 @@ def crear_app() -> FastAPI:
         openapi_url=f"{API}/openapi.json" if cfg.environment != "produccion" else None,
     )
 
-    for r in (auth, personas, casos, demandas, expedientes, ingresos, documentos, general, inicio_por_rol, recursos, contactos, mapa, informes, anses, novedades, archivo, personal, avisos, capturas, agenda, participacion, residencias, subsidios, filtros_router, estadisticas, admin):
+    for r in (auth, personas, casos, demandas, expedientes, ingresos, documentos, foto_persona, general, inicio_por_rol, recursos, contactos, mapa, informes, anses, novedades, archivo, personal, avisos, capturas, agenda, participacion, residencias, subsidios, filtros_router, estadisticas, admin):
         app.include_router(r.router, prefix=API)
 
     @app.get(f"{API}/salud", tags=["general"])

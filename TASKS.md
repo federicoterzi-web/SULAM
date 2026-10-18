@@ -217,6 +217,14 @@ Surgen de lo conversado con la Dirección y del documento de diseño inicial (§
 - [ ] Aval formal para datos reales (Ley 25.326), responsables de seguridad y respaldo, procedimiento ante incidentes (§15).
 - [ ] Prueba con técnicos reales y teléfonos del equipo; carga inicial de recursos.
 
+### Foto del DNI y documentación del caso abierto (D-044)
+- [x] Recorte de la foto desde el DNI cargado, con propuesta automática y ajuste manual.
+- [x] Panel «Documentación del caso abierto»: requeridos presentes, vencidos o faltantes.
+- [ ] Calibrar la detección de la cara con DNI reales (hoy puede no encontrarla: se recorta a mano).
+- [ ] Definir con la Dirección qué documentos se exigen en un caso abierto (hoy solo el DNI).
+- [ ] Proponer la foto sola al cargar un DNI y recortar en tanda los DNI ya cargados (después de calibrar).
+- [ ] Mostrar la foto también en la versión para celular.
+
 ## Convenciones de trabajo
 - Cada cambio de esquema va en una migración nueva de Alembic (`backend/alembic/versions`), nunca editando una existente.
 - Cada regla funcional nueva se documenta en FUNCTIONAL_SPEC.md y, si implica una elección, en DECISIONS.md.

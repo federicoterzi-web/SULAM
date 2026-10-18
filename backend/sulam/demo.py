@@ -14,13 +14,14 @@ import hashlib
 import io
 import random
 import uuid
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .subsidios_catalogo import MENSUAL_INSTITUCION, requisitos_de
 from .models import (
+    Documento,
     Internacion,
     RecursoDocumento,
     RecursoPeriodoRequisito,
@@ -129,6 +130,28 @@ def _habil(d: date) -> date:
     while d.weekday() >= 5:
         d -= timedelta(days=1)
     return d
+
+
+def _dnis(db: Session, U: dict[str, Usuario], personas: list[Persona], tipos: dict, almacen) -> None:
+    """DNI ficticios cargados; a los dos primeros ya se les recortó la foto, a los demás se les puede hacer en la demostración."""
+    from . import foto_dni
+    from PIL import Image
+
+    tipo = next((t for n, t in tipos.items() if n.startswith("DNI")), None)
+    if tipo is None:
+        return
+    for i, p in enumerate(personas[:5]):
+        if i == 3:
+            continue  # a esta persona le falta el DNI: se ve en «Documentación del caso abierto»
+        datos = _dni_demo(p, i)
+        g = almacen.guardar(io.BytesIO(datos))
+        doc = Documento(persona_id=p.id, tipo_documental_id=tipo.id, titulo="DNI (ficticio)", nombre_original="dni-ficticio.jpg", mime="image/jpeg", tamano=len(datos),
+                        sha256=g.sha256, almacenamiento=almacen.nombre, clave_almacenamiento=g.clave, cargado_por=U["carga"].id)
+        db.add(doc)
+        db.flush()
+        if i < 2:
+            p.foto = foto_dni.recortar(Image.open(io.BytesIO(datos)), foto_dni.ampliar({"x": 0.12, "y": 0.27, "w": 0.14, "h": 0.22}))
+            p.foto_en, p.foto_por, p.foto_documento_id = datetime.now(timezone.utc), U["carga"].id, doc.id
 
 
 def _residencias(db: Session, U: dict[str, Usuario], recursos: list[Recurso], personas: list[Persona], hoy: date) -> None:
@@ -371,6 +394,7 @@ def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], c
         recursos.append(r)
     db.flush()
     _residencias(db, U, recursos, nuevas, hoy)
+    _dnis(db, U, nuevas, tipos, almacen)
     contactos = []
     for nombre, cargo, inst, cat, rec in (
         ("Lic. Ficticia Andrea", "Trabajadora social", "CAPS Barrio Norte (ficticio)", "salud", recursos[3]),
@@ -513,6 +537,26 @@ def _agenda(db: Session, U: dict[str, Usuario], tecnicos_area: dict[str, list[Us
             for semana in range(4):  # reunión semanal (actividad repetida)
                 evento(2 + k % 3 + 7 * semana, 10, "reunion", "Reunión de equipo", otros=[colega] if colega else (), lugar="Sala de reuniones", serie=serie, repeticion="semanal")
             evento(6 + k % 4, 14, "audiencia", "Audiencia en juzgado", c2, lugar="Tribunales")
+
+
+def _dni_demo(persona: Persona, n: int) -> bytes:
+    """Imagen de un DNI FICTICIO (con una silueta en lugar de una cara), para mostrar la carga de la foto."""
+    from PIL import Image, ImageDraw
+
+    img = Image.new("RGB", (1000, 630), (214, 226, 238))
+    d = ImageDraw.Draw(img)
+    d.rectangle((20, 20, 980, 610), outline=(40, 70, 110), width=5)
+    d.text((60, 45), "DOCUMENTO DE DEMOSTRACIÓN · FICTICIO · NO ES UN DNI", fill=(40, 70, 110))
+    tono = [(205, 160, 130), (190, 140, 110), (225, 180, 150), (170, 120, 95)][n % 4]
+    d.rectangle((60, 110, 340, 520), fill=(245, 245, 245), outline=(120, 120, 120), width=2)
+    d.ellipse((130, 170, 270, 340), fill=tono)  # cabeza
+    d.ellipse((90, 360, 310, 600), fill=(70, 90, 130))  # hombros
+    d.text((390, 140), f"Apellido: {persona.apellidos}", fill=(20, 20, 20))
+    d.text((390, 190), f"Nombres: {persona.nombres}", fill=(20, 20, 20))
+    d.text((390, 240), f"DNI: {persona.numero_documento or 'sin documento'}", fill=(20, 20, 20))
+    salida = io.BytesIO()
+    img.save(salida, "JPEG", quality=88)
+    return salida.getvalue()
 
 
 def _foto_demo(texto: str, color: tuple[int, int, int]) -> bytes:

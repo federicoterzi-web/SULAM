@@ -136,6 +136,7 @@ export interface PersonaResumen {
   fecha_nacimiento_aproximada: boolean;
   localidad: string | null;
   unificada_en_id: string | null;
+  tiene_foto?: boolean;
 }
 
 export interface PersonaDetalle extends PersonaResumen {
@@ -280,6 +281,7 @@ export interface TipoDocumental {
   tiene_vencimiento: boolean;
   vigencia_dias: number | null;
   usa_numero: boolean;
+  requerido_en_caso_abierto?: boolean;
   campos: { clave: string; etiqueta: string; tipo: "texto" | "fecha" | "numero" }[];
 }
 

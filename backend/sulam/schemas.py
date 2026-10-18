@@ -400,6 +400,7 @@ class TipoDocumentalIn(Entrada):
     tiene_vencimiento: bool = False
     vigencia_dias: int | None = Field(default=None, ge=1, le=36500)
     usa_numero: bool = False
+    requerido_en_caso_abierto: bool = False
     campos: list[CampoDocumentoIn] = Field(default_factory=list, max_length=12)
 
 
@@ -409,6 +410,7 @@ class TipoDocumentalPatch(Entrada):
     tiene_vencimiento: bool | None = None
     vigencia_dias: int | None = Field(default=None, ge=1, le=36500)
     usa_numero: bool | None = None
+    requerido_en_caso_abierto: bool | None = None
     campos: list[CampoDocumentoIn] | None = Field(default=None, max_length=12)
 
 

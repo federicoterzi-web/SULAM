@@ -25,6 +25,7 @@ AREAS = [
 
 # Documento de diseño, §6.2. Son administrables.
 TIPOS_DOCUMENTALES = [
+    "DNI (frente y dorso)",
     "Carátula",
     "Registro de demanda",
     "Informe socioambiental",
@@ -231,6 +232,8 @@ def _asegurar(db: Session, modelo, nombres: list[str]) -> None:
             obj = modelo(nombre=nombre)
             if modelo is TipoDocumental:
                 obj.orden = i
+                # El DNI se pide en todo caso abierto; el resto lo decide la Dirección desde Administración.
+                obj.requerido_en_caso_abierto = nombre.startswith("DNI")
             db.add(obj)
 
 

@@ -565,6 +565,8 @@ export function FormTipo({
   const [vence, setVence] = useState(inicial?.tiene_vencimiento ?? false);
   const [meses, setMeses] = useState(inicial?.vigencia_dias ? String(Math.round(inicial.vigencia_dias / MESES_A_DIAS)) : "");
   const [numero, setNumero] = useState(inicial?.usa_numero ?? false);
+  const [requerido, setRequerido] = useState(inicial?.requerido_en_caso_abierto ?? false);
+  const { puede: puedeAdministrar } = useSesion();
   const [campos, setCampos] = useState<{ clave?: string; etiqueta: string; tipo: "texto" | "fecha" | "numero" }[]>(inicial?.campos ?? []);
   const { enviando, error, ejecutar } = useEnvio();
 
@@ -575,6 +577,7 @@ export function FormTipo({
       tiene_vencimiento: vence,
       vigencia_dias: vence && meses ? Math.round(Number(meses.replace(",", ".")) * MESES_A_DIAS) : null,
       usa_numero: numero,
+      ...(puedeAdministrar("administracion", "administrar") ? { requerido_en_caso_abierto: requerido } : {}),
       campos: campos.filter((c) => c.etiqueta.trim()),
     };
     const t = await ejecutar(() =>
@@ -608,6 +611,11 @@ export function FormTipo({
         <label className="campo campo-casilla">
           <input type="checkbox" checked={numero} onChange={(e) => setNumero(e.target.checked)} /> Lleva número o código
         </label>
+        {puedeAdministrar("administracion", "administrar") && (
+          <label className="campo campo-casilla">
+            <input type="checkbox" checked={requerido} onChange={(e) => setRequerido(e.target.checked)} /> Se exige en todo caso abierto (el legajo avisa si falta)
+          </label>
+        )}
       </div>
       <div className="band-campos">
         <strong>Otros datos a registrar</strong>

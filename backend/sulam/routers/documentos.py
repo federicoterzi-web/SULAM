@@ -253,6 +253,8 @@ def _clave_de(etiqueta: str, usadas: set[str]) -> str:
 def crear_tipo_documental(datos: TipoDocumentalIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
     """Tipo de documento nuevo, con su plantilla (vencimiento, número y campos propios) para los próximos documentos."""
     ctx.requerir("documentos", "crear")
+    if datos.requerido_en_caso_abierto:
+        ctx.requerir("administracion", "administrar")
     nombre = " ".join(datos.nombre.split())
     ya = db.execute(select(TipoDocumental).where(func.lower(TipoDocumental.nombre) == nombre.lower())).scalar_one_or_none()
     if ya is not None:
@@ -264,6 +266,7 @@ def crear_tipo_documental(datos: TipoDocumentalIn, ctx: Contexto = Depends(conte
         tiene_vencimiento=datos.tiene_vencimiento,
         vigencia_dias=datos.vigencia_dias if datos.tiene_vencimiento else None,
         usa_numero=datos.usa_numero,
+        requerido_en_caso_abierto=datos.requerido_en_caso_abierto,
         campos=[{"clave": _clave_de(c.etiqueta, usadas), "etiqueta": c.etiqueta.strip(), "tipo": c.tipo} for c in datos.campos],
         creado_por=ctx.id,
         orden=1000,
@@ -302,6 +305,9 @@ def modificar_tipo_documental(
         t.vigencia_dias = pedido.get("vigencia_dias") if t.tiene_vencimiento else None
     if pedido.get("usa_numero") is not None:
         t.usa_numero = pedido["usa_numero"]
+    if pedido.get("requerido_en_caso_abierto") is not None and pedido["requerido_en_caso_abierto"] != t.requerido_en_caso_abierto:
+        ctx.requerir("administracion", "administrar")  # decide qué se exige en todos los legajos
+        t.requerido_en_caso_abierto = pedido["requerido_en_caso_abierto"]
     if pedido.get("campos") is not None:
         actuales = {c["clave"]: c for c in t.campos or []}
         nuevos, usadas = [], set(actuales)

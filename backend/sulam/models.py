@@ -26,6 +26,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     SmallInteger,
     String,
@@ -35,7 +36,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 
 from .db import Base
 
@@ -73,6 +74,8 @@ class TipoDocumental(Base):
     tiene_vencimiento: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     vigencia_dias: Mapped[int | None] = mapped_column(Integer)  # sugiere la fecha de vencimiento desde la emisión
     usa_numero: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # Si la persona tiene un caso abierto, el legajo muestra si este documento está o falta.
+    requerido_en_caso_abierto: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     # [{"clave": "emisor", "etiqueta": "Emisor", "tipo": "texto"|"fecha"|"numero"}]
     campos: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
     creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
@@ -240,6 +243,12 @@ class Persona(Base):
 
     unificada_en_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("personas.id"))
     unificada_fecha: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Foto recortada del DNI (JPEG chico). Se carga aparte para no traerla en cada consulta.
+    foto: Mapped[bytes | None] = deferred(mapped_column(LargeBinary))
+    foto_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    foto_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    foto_documento_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))  # sin FK: evita la dependencia circular con documentos
 
     creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
     creado_en: Mapped[datetime] = _ts()

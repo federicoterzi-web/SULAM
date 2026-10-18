@@ -4981,3 +4981,49 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
   padding: 13px 14px;
   font-size: 17px;
 }
+
+/* Foto de la persona y recorte desde el DNI */
+.foto-persona {
+  width: 84px;
+  height: 104px;
+  flex: none;
+  object-fit: cover;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  background: var(--primario-claro);
+}
+
+.foto-persona-vacia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primario);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.recorte-zona {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  touch-action: none;
+  cursor: crosshair;
+  user-select: none;
+  border: 1px solid var(--borde-fuerte);
+  line-height: 0;
+}
+
+.recorte-zona img {
+  width: 100%;
+  height: auto;
+  display: block;
+  pointer-events: none;
+}
+
+.recorte-caja {
+  position: absolute;
+  border: 2px solid var(--acento);
+  background: rgb(46 125 107 / 18%);
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 35%);
+  pointer-events: none;
+}

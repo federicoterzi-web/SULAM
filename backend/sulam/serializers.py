@@ -34,6 +34,7 @@ def persona_resumen(p: Persona) -> dict:
         "fecha_nacimiento_aproximada": p.fecha_nacimiento_aproximada,
         "localidad": p.localidad,
         "unificada_en_id": str(p.unificada_en_id) if p.unificada_en_id else None,
+        "tiene_foto": p.foto_en is not None,
     }
 
 
@@ -217,6 +218,7 @@ def tipo_documental_out(t) -> dict:
         "tiene_vencimiento": t.tiene_vencimiento,
         "vigencia_dias": t.vigencia_dias,
         "usa_numero": t.usa_numero,
+        "requerido_en_caso_abierto": t.requerido_en_caso_abierto,
         "campos": t.campos or [],
     }
 
