@@ -3,6 +3,7 @@ import { api, type Caso, type PersonaResumen } from "../api";
 import { Aviso, Campo, Cargando, Modal, Vacio, useDatos, useEnvio, useSesion } from "../comun";
 import { BuscarLegajo } from "./bandeja";
 import { DetalleEvento } from "./participacion";
+import { RecorridoSalida } from "./recorrido";
 
 export interface Actividad {
   id: string;
@@ -492,6 +493,7 @@ function DetalleComun({ actividad: base, alCerrar, alCambiar }: { actividad: Act
               </>
             )}
           </dl>
+          {a.tipo === "salida" && modo === "ver" && <RecorridoSalida actividadId={a.id} />}
           {a.estado === "programado" && a.puedo_modificar && modo === "ver" && (
             <div className="fila-botones fila-izquierda">
               <button className="boton boton-primario" onClick={() => setModo("resultado")}>
@@ -801,6 +803,17 @@ export function FormActividad({
 
 // ---------------------------------------------------------------- salida desde el mapa
 
+/** UUID para unir las paradas de una salida (``crypto.randomUUID`` solo existe en páginas seguras: https o localhost). */
+function nuevoId(): string {
+  const c: Crypto = crypto;
+  if (typeof c.randomUUID === "function") return c.randomUUID();
+  const b = c.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 /** Agenda una salida con los casos elegidos en el mapa: una actividad por caso, para registrar el resultado de cada visita. */
 export function ProgramarSalida({
   casos,
@@ -820,6 +833,7 @@ export function ProgramarSalida({
   const guardar = async (e: FormEvent) => {
     e.preventDefault();
     const ok = await ejecutar(async () => {
+      const salidaId = nuevoId(); // une las paradas: así se puede volver a ver el recorrido
       for (let i = 0; i < casos.length; i++) {
         await api.post("/agenda", {
           tipo: "salida",
@@ -830,6 +844,8 @@ export function ProgramarSalida({
           persona_id: casos[i].persona_id,
           caso_id: casos[i].caso_id,
           participantes: quienes,
+          salida_id: salidaId,
+          salida_orden: i + 1,
         });
       }
       return true;

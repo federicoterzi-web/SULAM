@@ -207,6 +207,7 @@ Alcance del documento de diseño §13.1, más los agregados de la revisión.
 | Registrar resultado (realizada / no realizada con motivo / cancelada); si hay caso queda en su evolución | ✅ |
 | Pendientes de resultado resaltados | ✅ |
 | Agendar una salida con los casos elegidos en el mapa (una actividad por caso) | ✅ |
+| Una salida agendada conserva su recorrido: desde la actividad se vuelve a ver en Google Maps e imprimir la hoja de salida (también las salidas agendadas antes) | ✅ |
 | Aviso del navegador solo para lo agendado en que participa la persona | ✅ |
 | Versión para celular (lista) | ✅ |
 | Reprogramar con historial de cambios (quién, cuándo, motivo, antes y después) | ✅ |

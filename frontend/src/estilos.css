@@ -4911,3 +4911,7 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 .part-resultados { list-style: none; margin: 2px 0 0; padding: 0; border: 1px solid var(--borde, #d0d7de); border-radius: 6px; background: var(--fondo, #fff); max-height: 220px; overflow-y: auto; }
 .part-resultados button { width: 100%; text-align: left; border: 0; background: transparent; color: inherit; padding: 8px 10px; cursor: pointer; font: inherit; min-height: 40px; }
 .part-resultados button:hover, .part-resultados button:focus { background: color-mix(in srgb, #2563eb 10%, transparent); }
+
+.recorrido-salida { margin: 12px 0; padding: 10px 12px; border: 1px solid var(--borde, #d0d7de); border-radius: 6px; }
+.recorrido-salida h3 { margin: 0 0 6px; font-size: 1em; }
+.recorrido-actual { font-weight: 600; }

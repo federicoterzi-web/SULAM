@@ -613,6 +613,9 @@ class EventoAgenda(Base):
     # Actividades repetidas: todas las de una serie comparten ``serie_id``; cada una tiene su propio resultado.
     serie_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
     repeticion: Mapped[str | None] = mapped_column(String(12))
+    # Salidas de visita: las paradas de una misma salida comparten ``salida_id`` y llevan su orden en el recorrido.
+    salida_id: Mapped[uuid.UUID | None] = mapped_column(index=True)
+    salida_orden: Mapped[int | None] = mapped_column(SmallInteger)
 
     area: Mapped[Area | None] = relationship(lazy="joined")
     participantes: Mapped[list["ParticipanteAgenda"]] = relationship(cascade="all, delete-orphan", lazy="selectin")

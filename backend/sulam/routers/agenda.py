@@ -185,9 +185,13 @@ class EventoIn(Entrada):
     caso_id: uuid.UUID | None = None
     participantes: list[uuid.UUID] | None = None
     repetir: "Repeticion | None" = None
+    salida_id: uuid.UUID | None = None  # paradas de una misma salida de visita
+    salida_orden: int | None = Field(default=None, ge=1, le=500)
 
     @model_validator(mode="after")
     def _coherencia(self):
+        if (self.salida_id is not None or self.salida_orden is not None) and (self.tipo != "salida" or self.repetir):
+            raise ValueError("Solo las salidas de visita (sin repetición) se agrupan en un recorrido.")
         if self.tipo not in TIPOS:
             raise ValueError("Tipo de actividad inválido.")
         if self.fin is not None and self.fin < self.inicio:
@@ -352,6 +356,7 @@ def crear_actividades(db: Session, ctx: Contexto, datos: EventoIn) -> list[Event
             todo_el_dia=datos.todo_el_dia, lugar=datos.lugar, area_id=area_id,
             persona_id=persona.id if persona else None, caso_id=caso.id if caso else None, creado_por=ctx.id,
             serie_id=serie, repeticion=datos.repetir.frecuencia if datos.repetir else None,
+            salida_id=datos.salida_id, salida_orden=datos.salida_orden,
         )
         e.participantes = [ParticipanteAgenda(usuario_id=u.id) for u in participantes]
         db.add(e)
@@ -362,6 +367,36 @@ def crear_actividades(db: Session, ctx: Contexto, datos: EventoIn) -> list[Event
         {"tipo": datos.tipo, "inicio": creados[0].inicio.isoformat(), "participantes": len(participantes), "repeticiones": len(creados) if serie else None},
     )
     return creados
+
+
+def _paradas_de_la_salida(db: Session, e: EventoAgenda) -> list[EventoAgenda]:
+    """Las paradas de la salida a la que pertenece ``e``, en orden. Las salidas guardadas antes de que existiera el
+    recorrido se reconocen por haberse agendado juntas (mismo autor, mismo horario)."""
+    if e.salida_id is not None:
+        q = select(EventoAgenda).where(EventoAgenda.salida_id == e.salida_id)
+    else:
+        q = select(EventoAgenda).where(
+            EventoAgenda.tipo == "salida", EventoAgenda.salida_id.is_(None), EventoAgenda.creado_por == e.creado_por, EventoAgenda.inicio == e.inicio
+        )
+    return list(db.execute(q.order_by(EventoAgenda.salida_orden.nulls_last(), EventoAgenda.creado_en, EventoAgenda.id)).scalars())
+
+
+@router.get("/agenda/{evento_id}/salida")
+def recorrido_de_la_salida(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """Las paradas de una salida guardada, para volver a ver el recorrido o imprimir la hoja de salida."""
+    e = _evento(db, ctx, evento_id, "consultar")
+    if e.tipo != "salida":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "La actividad no es una salida.")
+    paradas = []
+    for i, p in enumerate(_paradas_de_la_salida(db, e), 1):
+        if not _en_alcance(db, ctx, p, ctx.requerir("agenda", "consultar")):
+            continue
+        s = _salida(db, ctx, p)
+        paradas.append({
+            "orden": i, "evento_id": s["id"], "estado": s["estado"], "caso_id": p.caso_id and str(p.caso_id),
+            "persona": s["persona"]["nombre"] if s["persona"] else None, "actual": p.id == e.id,
+        })
+    return {"inicio": e.inicio.isoformat(), "paradas": paradas}
 
 
 @router.post("/agenda", status_code=201)

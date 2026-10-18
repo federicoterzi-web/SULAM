@@ -199,3 +199,28 @@ def test_superpuestos_vencimientos_y_ausencias(admin, cliente, db):
     v = admin.get("/api/agenda/superpuestos", params={**rango, "ambito": "todos"}).json()["vencimientos"]
     assert len(v) == 1 and v[0]["tipo"] == tipo.nombre and v[0]["persona"]["id"] == p["id"]
     assert o.get("/api/agenda/superpuestos", params={**rango, "ambito": "area"}).json()["vencimientos"] == []
+
+
+def test_salida_guardada_conserva_su_recorrido(admin):
+    import uuid
+
+    personas = [nueva_persona(admin, numero_documento=str(2000000 + i), apellidos=["GOMEZ", "LOPEZ", "BENITEZ"][i], nombres=["Rosa", "Hector", "Ines"][i]) for i in range(3)]
+    casos = [nuevo_caso(admin, p["id"]) for p in personas]
+    sid, hora = str(uuid.uuid4()), _cuando(30)
+    # El recorrido se guarda con el orden elegido (el 3.º, el 1.º, el 2.º).
+    ids = []
+    for orden, i in enumerate((2, 0, 1), 1):
+        r = _ev(admin, tipo="salida", titulo="Salida a domicilio", inicio=hora, persona_id=personas[i]["id"], caso_id=casos[i]["id"], salida_id=sid, salida_orden=orden)
+        assert r.status_code == 201, r.text
+        ids.append(r.json()["id"])
+    s = admin.get(f"/api/agenda/{ids[1]}/salida").json()
+    assert [p["caso_id"] for p in s["paradas"]] == [casos[2]["id"], casos[0]["id"], casos[1]["id"]]
+    assert [p["actual"] for p in s["paradas"]] == [False, True, False]
+    # Una actividad que no es salida no tiene recorrido, y el agrupamiento solo vale para salidas.
+    otra = _ev(admin).json()["id"]
+    assert admin.get(f"/api/agenda/{otra}/salida").status_code == 400
+    assert _ev(admin, tipo="reunion", titulo="Reunión", salida_id=sid).status_code == 422
+    # Las salidas guardadas antes de esta mejora (sin identificador) se reconocen por agendarse juntas.
+    viejas = [_ev(admin, tipo="salida", titulo="Salida a domicilio", inicio=_cuando(60), persona_id=personas[i]["id"], caso_id=casos[i]["id"]).json()["id"] for i in (1, 0)]
+    s = admin.get(f"/api/agenda/{viejas[0]}/salida").json()
+    assert [p["caso_id"] for p in s["paradas"]] == [casos[1]["id"], casos[0]["id"]]
