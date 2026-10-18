@@ -4915,3 +4915,12 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 .recorrido-salida { margin: 12px 0; padding: 10px 12px; border: 1px solid var(--borde, #d0d7de); border-radius: 6px; }
 .recorrido-salida h3 { margin: 0 0 6px; font-size: 1em; }
 .recorrido-actual { font-weight: 600; }
+
+/* Solapas de un grupo del menú */
+.subnav { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 1rem; border-bottom: 1px solid var(--borde); }
+.subnav a { padding: 0.5rem 1rem; color: var(--texto); text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.subnav a:hover { background: var(--primario-claro); }
+.subnav a.activo { border-bottom-color: var(--primario); font-weight: 600; color: var(--primario-oscuro); }
+@media print { .subnav { display: none; } }
+
+.menu-insignias { display: inline-flex; gap: 4px; margin-left: 6px; vertical-align: middle; }

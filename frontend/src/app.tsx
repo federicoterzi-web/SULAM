@@ -206,30 +206,80 @@ export function CambioPassword({
   return obligatorio ? <main className="pantalla-acceso">{formulario}</main> : formulario;
 }
 
-const MENU: { ruta: string; texto: string; permiso?: [string, string] }[] = [
-  { ruta: "/", texto: "Tablero" },
-  { ruta: "/novedades", texto: "Novedades" },
-  { ruta: "/pases", texto: "Pases de carpetas" },
-  { ruta: "/mi-asistencia", texto: "Mi asistencia" },
-  { ruta: "/personal", texto: "Personal", permiso: ["personal", "consultar"] },
-  { ruta: "/legajos", texto: "Legajos", permiso: ["personas", "consultar"] },
-  { ruta: "/agenda", texto: "Agenda", permiso: ["agenda", "consultar"] },
-  { ruta: "/participacion", texto: "Participación y Sensibilización", permiso: ["participacion", "consultar"] },
-  { ruta: "/casos", texto: "Casos", permiso: ["casos", "consultar"] },
-  { ruta: "/imprimir-caratulas", texto: "Imprimir carátulas", permiso: ["casos", "consultar"] },
-  { ruta: "/visitas", texto: "Mapa de casos y salidas", permiso: ["casos", "consultar"] },
-  { ruta: "/recursos", texto: "Recursos y mapa", permiso: ["recursos", "consultar"] },
-  { ruta: "/contactos", texto: "Contactos", permiso: ["recursos", "consultar"] },
-  { ruta: "/mesa", texto: "Mesa de Entrada", permiso: ["mesa_entrada", "consultar"] },
-  { ruta: "/expedientes", texto: "Expedientes", permiso: ["expedientes", "consultar"] },
-  { ruta: "/bandeja", texto: "Digitalización de documentos", permiso: ["documentos", "crear"] },
-  { ruta: "/buscar-documentos", texto: "Buscar en documentos", permiso: ["documentos", "consultar"] },
-  { ruta: "/fichas", texto: "Fichas en papel" },
-  { ruta: "/plantillas", texto: "Plantillas de informes", permiso: ["plantillas", "modificar"] },
-  { ruta: "/estadisticas", texto: "Estadísticas", permiso: ["estadisticas", "consultar"] },
-  { ruta: "/auditoria", texto: "Auditoría", permiso: ["auditoria", "consultar"] },
-  { ruta: "/admin", texto: "Administración", permiso: ["administracion", "administrar"] },
+interface ItemMenu {
+  ruta: string;
+  texto: string;
+  permiso?: [string, string];
+}
+
+/** El menú lateral muestra una entrada por grupo; las pantallas del grupo se ven como solapas arriba del contenido. */
+const GRUPOS: { texto: string; miembros: ItemMenu[] }[] = [
+  { texto: "Tablero", miembros: [{ ruta: "/", texto: "Tablero" }] },
+  { texto: "Novedades", miembros: [{ ruta: "/novedades", texto: "Novedades" }] },
+  {
+    texto: "Legajos y casos",
+    miembros: [
+      { ruta: "/legajos", texto: "Legajos", permiso: ["personas", "consultar"] },
+      { ruta: "/casos", texto: "Casos", permiso: ["casos", "consultar"] },
+      { ruta: "/imprimir-caratulas", texto: "Imprimir carátulas", permiso: ["casos", "consultar"] },
+    ],
+  },
+  {
+    texto: "Mesa y expedientes",
+    miembros: [
+      { ruta: "/mesa", texto: "Mesa de Entrada", permiso: ["mesa_entrada", "consultar"] },
+      { ruta: "/expedientes", texto: "Expedientes", permiso: ["expedientes", "consultar"] },
+      { ruta: "/pases", texto: "Pases de carpetas" },
+    ],
+  },
+  {
+    texto: "Agenda y salidas",
+    miembros: [
+      { ruta: "/agenda", texto: "Agenda", permiso: ["agenda", "consultar"] },
+      { ruta: "/visitas", texto: "Mapa de casos y salidas", permiso: ["casos", "consultar"] },
+    ],
+  },
+  { texto: "Participación y Sensibilización", miembros: [{ ruta: "/participacion", texto: "Participación y Sensibilización", permiso: ["participacion", "consultar"] }] },
+  {
+    texto: "Documentos",
+    miembros: [
+      { ruta: "/bandeja", texto: "Digitalización", permiso: ["documentos", "crear"] },
+      { ruta: "/buscar-documentos", texto: "Buscar en documentos", permiso: ["documentos", "consultar"] },
+      { ruta: "/fichas", texto: "Fichas en papel" },
+    ],
+  },
+  {
+    texto: "Red de recursos",
+    miembros: [
+      { ruta: "/recursos", texto: "Recursos y mapa", permiso: ["recursos", "consultar"] },
+      { ruta: "/contactos", texto: "Contactos", permiso: ["recursos", "consultar"] },
+    ],
+  },
+  {
+    texto: "Personal y asistencia",
+    miembros: [
+      { ruta: "/personal", texto: "Personal", permiso: ["personal", "consultar"] },
+      { ruta: "/mi-asistencia", texto: "Mi asistencia" },
+    ],
+  },
+  { texto: "Estadísticas", miembros: [{ ruta: "/estadisticas", texto: "Estadísticas", permiso: ["estadisticas", "consultar"] }] },
+  {
+    texto: "Administración",
+    miembros: [
+      { ruta: "/admin", texto: "Administración", permiso: ["administracion", "administrar"] },
+      { ruta: "/plantillas", texto: "Plantillas de informes", permiso: ["plantillas", "modificar"] },
+      { ruta: "/auditoria", texto: "Auditoría", permiso: ["auditoria", "consultar"] },
+    ],
+  },
 ];
+
+function Insignia({ ruta, de }: { ruta: string; de: string }) {
+  if (de === "/novedades") return <InsigniaNovedades ruta={ruta} />;
+  if (de === "/pases") return <InsigniaPases ruta={ruta} />;
+  if (de === "/mi-asistencia") return <InsigniaPersonal ruta={ruta} cual="para_aprobar" />;
+  if (de === "/personal") return <InsigniaPersonal ruta={ruta} cual="para_registrar" />;
+  return null;
+}
 
 function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void; alActualizar: (y: Yo) => void }) {
   const ruta = useRuta();
@@ -270,6 +320,10 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
   };
 
   const seccion = "/" + (ruta.split("?")[0].split("/")[1] ?? "");
+  // Grupos del menú con lo que el rol permite ver; la pantalla actual pertenece a uno de ellos (o a ninguno).
+  const visible = (m: ItemMenu) => !m.permiso || puede(...m.permiso) || (m.ruta === "/estadisticas" && puede("personal", "consultar"));
+  const grupos = GRUPOS.map((g) => ({ ...g, miembros: g.miembros.filter(visible) })).filter((g) => g.miembros.length > 0);
+  const grupo = grupos.find((g) => g.miembros.some((m) => m.ruta === seccion)) ?? null;
 
   // Enlace del QR de la carátula: abre el caso en la versión que corresponde al dispositivo.
   if (ruta.startsWith("/c/")) {
@@ -337,13 +391,14 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
       </header>
       <div className="cuerpo">
         <nav className={`menu ${menuAbierto ? "abierto" : ""}`} aria-label="Secciones">
-          {MENU.filter((m) => !m.permiso || puede(...m.permiso) || (m.ruta === "/estadisticas" && puede("personal", "consultar"))).map((m) => (
-            <Enlace key={m.ruta} a={m.ruta} className={seccion === m.ruta ? "activo" : ""}>
-              {m.texto}
-              {m.ruta === "/novedades" && <InsigniaNovedades ruta={ruta} />}
-              {m.ruta === "/pases" && <InsigniaPases ruta={ruta} />}
-              {m.ruta === "/mi-asistencia" && <InsigniaPersonal ruta={ruta} cual="para_aprobar" />}
-              {m.ruta === "/personal" && <InsigniaPersonal ruta={ruta} cual="para_registrar" />}
+          {grupos.map((g) => (
+            <Enlace key={g.texto} a={g.miembros[0].ruta} className={grupo === g ? "activo" : ""}>
+              {g.texto}
+              <span className="menu-insignias">
+                {g.miembros.map((m) => (
+                  <Insignia key={m.ruta} ruta={ruta} de={m.ruta} />
+                ))}
+              </span>
             </Enlace>
           ))}
           <Enlace a="/m" className="menu-celular">
@@ -354,6 +409,16 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
           </div>
         </nav>
         <main id="contenido" tabIndex={-1} className="contenido">
+          {grupo && grupo.miembros.length > 1 && (
+            <nav className="subnav" aria-label={grupo.texto}>
+              {grupo.miembros.map((m) => (
+                <Enlace key={m.ruta} a={m.ruta} className={seccion === m.ruta ? "activo" : ""}>
+                  {m.texto}
+                  <Insignia ruta={ruta} de={m.ruta} />
+                </Enlace>
+              ))}
+            </nav>
+          )}
           <Rutas ruta={ruta} />
         </main>
       </div>
