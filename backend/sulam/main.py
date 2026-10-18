@@ -41,7 +41,7 @@ def crear_app() -> FastAPI:
         respuesta = await call_next(request)
         respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
         respuesta.headers.setdefault("X-Frame-Options", "DENY")
-        respuesta.headers.setdefault("Referrer-Policy", "same-origin")
+        respuesta.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         respuesta.headers.setdefault("Permissions-Policy", "camera=(self), geolocation=(self), microphone=()")
         if request.url.path.startswith(API):
             respuesta.headers.setdefault("Cache-Control", "no-store")
