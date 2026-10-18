@@ -96,6 +96,10 @@ def casos_en_el_mapa(
 TESELAS_PROPIAS = "/api/mapa/teselas/{z}/{x}/{y}.png"
 USER_AGENT = "SULAM/0.1 (Direccion de Adultos Mayores de Tucuman; direccionadultosmayores@gmail.com)"
 _DIAS_CACHE = 30
+RESPALDOS = [
+    "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",  # datos de OpenStreetMap, estilo de CARTO
+    "https://tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+]
 
 
 def teselas_para_el_navegador() -> str:
@@ -126,17 +130,23 @@ def tesela(z: int, x: int, y: int, ctx: Contexto = Depends(contexto)):
             return Response(archivo.read_bytes(), media_type="image/png", headers=cabeceras)
     except OSError:
         pass
-    origen = cfg.mapa_teselas.replace("{z}", str(z)).replace("{x}", str(x)).replace("{y}", str(y)).replace("{s}", "a")
-    try:
-        with urlopen(Pedido(origen, headers={"User-Agent": USER_AGENT, "Referer": "https://sulam.local/"}), timeout=8) as r:
-            datos = r.read(1_000_000)
-            tipo = r.headers.get_content_type()
-    except Exception:
+    # Se prueba el servidor configurado y, si responde "acceso bloqueado" u otro error, los de respaldo (todos de OpenStreetMap).
+    candidatos = [cfg.mapa_teselas] + ([u for u in RESPALDOS if u != cfg.mapa_teselas] if "SULAM_MAPA_TESELAS" not in os.environ else [])
+    datos = tipo = None
+    for plantilla in candidatos:
+        origen = plantilla.replace("{z}", str(z)).replace("{x}", str(x)).replace("{y}", str(y)).replace("{s}", "a")
+        try:
+            with urlopen(Pedido(origen, headers={"User-Agent": USER_AGENT}), timeout=8) as r:
+                datos, tipo = r.read(1_000_000), r.headers.get_content_type()
+            if tipo.startswith("image/"):
+                break
+        except Exception:
+            pass
+        datos = tipo = None
+    if datos is None:
         # Sin internet o bloqueada: se usa la copia vieja si existe.
         if archivo.is_file():
             return Response(archivo.read_bytes(), media_type="image/png", headers={"Cache-Control": "no-store"})
-        raise HTTPException(502, "No se pudo obtener el mapa.")
-    if not tipo.startswith("image/"):
         raise HTTPException(502, "No se pudo obtener el mapa.")
     try:
         archivo.parent.mkdir(parents=True, exist_ok=True)

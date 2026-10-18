@@ -299,3 +299,25 @@ def test_teselas_del_mapa_pasan_por_el_servidor(admin, monkeypatch):
     admin.get("/api/mapa/teselas/12/1300/2500.png")
     assert len(pedidos) == 1  # la segunda sale del disco
     assert admin.get("/api/mapa/teselas/40/1/1.png").status_code == 404
+
+
+def test_teselas_con_acceso_bloqueado_usan_el_respaldo(admin, monkeypatch):
+    from urllib.error import HTTPError
+
+    vistos = []
+
+    class Resp:
+        headers = type("H", (), {"get_content_type": lambda s: "image/png"})()
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self, n=-1): return b"\x89PNG-respaldo"
+
+    def falso(pedido, timeout=0):
+        vistos.append(pedido.full_url)
+        if "openstreetmap.org" in pedido.full_url:
+            raise HTTPError(pedido.full_url, 403, "Access blocked", {}, None)
+        return Resp()
+
+    monkeypatch.setattr("urllib.request.urlopen", falso)
+    r = admin.get("/api/mapa/teselas/11/650/1250.png")
+    assert r.status_code == 200 and r.content == b"\x89PNG-respaldo" and len(vistos) == 2
