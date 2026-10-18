@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")"
 command -v docker >/dev/null || { echo "Falta Docker Desktop: https://www.docker.com/products/docker-desktop/"; exit 1; }
 docker info >/dev/null 2>&1 || { echo "Abrí Docker Desktop, esperá a que arranque y volvé a ejecutar este archivo."; exit 1; }
-[ -f .env ] || { cp .env.example .env; echo "Se creó .env con la configuración de prueba."; }
+[ -f .env ] || { cp .env.example .env; printf "\nSULAM_ESCUCHA=0.0.0.0\n" >> .env; echo "Se creó .env con la configuración de prueba."; }
 echo "Preparando SULAM. La primera vez tarda entre 5 y 15 minutos..."
 docker compose up -d --build
 printf "Esperando que SULAM arranque"

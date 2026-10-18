@@ -26,6 +26,8 @@ if errorlevel 1 (
 
 if not exist .env (
   copy .env.example .env >nul
+  echo.>> .env
+  echo SULAM_ESCUCHA=0.0.0.0>> .env
   echo  Se creo el archivo .env con la configuracion de prueba.
 )
 

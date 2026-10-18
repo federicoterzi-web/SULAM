@@ -42,7 +42,7 @@ services:
     volumes:
       - archivos:/datos
     ports:
-      - "127.0.0.1:8000:8000"
+      - "${SULAM_ESCUCHA:-127.0.0.1}:8000:8000"
 
   https:
     image: caddy:2

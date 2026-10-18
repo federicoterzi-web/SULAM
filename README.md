@@ -25,7 +25,7 @@ Sirve para recorrer SULAM desde todos los roles con datos **inventados**. No hac
 
 Para **apagarlo**: en la carpeta, clic derecho → *Abrir en Terminal* y escribir `docker compose down` (los datos quedan para la próxima). Para **empezar de cero** con datos nuevos: `docker compose down -v` y volver a abrir `probar-en-casa.bat`.
 
-**Desde el celular, en la misma wifi**: en el archivo `.env` (se crea en la carpeta al iniciar) agregar `SULAM_URL_PUBLICA=http://IP-DE-LA-COMPUTADORA:8000`, en `docker-compose.yml` cambiar `"127.0.0.1:8000:8000"` por `"8000:8000"`, y volver a iniciar. La IP se ve en Windows con `ipconfig` (dirección IPv4).
+**Desde el celular, en la misma wifi**: en el archivo `.env` (se crea en la carpeta al iniciar) agregar `SULAM_URL_PUBLICA=http://IP-DE-LA-COMPUTADORA:8000`, y agregar la línea `SULAM_ESCUCHA=0.0.0.0` (el iniciador de prueba ya la pone), y volver a iniciar. La IP se ve en Windows con `ipconfig` (dirección IPv4).
 
 Los datos de prueba incluyen unas 30 personas con casos repartidos en el año (indicadores, registros de demanda, evoluciones, reiteraciones), recursos y contactos en el mapa, ingresos de Mesa de Entrada, novedades, carpetas en papel con pases pendientes, negativas de ANSES (una vencida), un informe en borrador, tres semanas del reloj con incidencias, y pedidos de licencia, comisión y cambio de horario en todos los estados.
 
@@ -95,7 +95,7 @@ SULAM tiene una versión para celular en la misma dirección: al ingresar desde 
 
 **Dirección oficial.** Conviene fijarla en `.env` con `SULAM_URL_PUBLICA` (por ejemplo `http://192.168.0.20:8000`): es la que llevan los QR de las carátulas impresas, así funcionan aunque se imprima desde la máquina donde corre SULAM. Con Docker es necesaria; con `SULAM_DOMINIO` no hace falta.
 
-**Dentro de la oficina** alcanza con que el celular esté en la misma red wifi que la computadora donde corre SULAM: hay que iniciarlo escuchando en la red (`python -m sulam.cli servidor --host 0.0.0.0`, o en Docker cambiar el puerto a `"8000:8000"`) y abrir `http://IP-DE-LA-COMPUTADORA:8000`. Sin HTTPS la cámara funciona, pero no se puede instalar como app.
+**Dentro de la oficina** alcanza con que el celular esté en la misma red wifi que la computadora donde corre SULAM: hay que iniciarlo escuchando en la red (`python -m sulam.cli servidor --host 0.0.0.0`, o en Docker poner `SULAM_ESCUCHA=0.0.0.0` en `.env`) y abrir `http://IP-DE-LA-COMPUTADORA:8000`. Sin HTTPS la cámara funciona, pero no se puede instalar como app.
 
 **Fuera de la oficina (datos móviles)** SULAM tiene que estar publicado con HTTPS. Es una decisión del área informática (D-012, D-020). Con Docker:
 
