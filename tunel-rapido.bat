@@ -27,5 +27,14 @@ if errorlevel 1 (
 echo  Buscando la direccion... Aparece abajo, una linea que termina en .trycloudflare.com
 echo  Copiala y abrila en el celular. Para cortarla, cerra esta ventana (o Ctrl+C).
 echo.
-docker run --rm --dns 1.1.1.1 --dns 8.8.8.8 cloudflare/cloudflared:latest tunnel --no-autoupdate --protocol http2 --url http://host.docker.internal:8000
+set CID=
+for /f %%i in ('docker compose ps -q app') do set CID=%%i
+set RED=
+for /f %%n in ('docker inspect -f "{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}" %CID%') do set RED=%%n
+if "%RED%"=="" (
+  echo  No pude encontrar la red de SULAM. Mandale este mensaje a Federico.
+  pause
+  exit /b 1
+)
+docker run --rm --network %RED% --dns 1.1.1.1 --dns 8.8.8.8 cloudflare/cloudflared:latest tunnel --no-autoupdate --protocol http2 --url http://app:8000
 pause
