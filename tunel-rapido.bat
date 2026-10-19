@@ -36,5 +36,5 @@ if "%RED%"=="" (
   pause
   exit /b 1
 )
-docker run --rm --network %RED% --dns 1.1.1.1 --dns 8.8.8.8 cloudflare/cloudflared:latest tunnel --no-autoupdate --protocol http2 --url http://app:8000
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tunel-actualiza.ps1"
 pause

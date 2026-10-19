@@ -34,6 +34,20 @@ Una cuenta gratuita de Cloudflare alcanza; no hace falta dominio. Un «Worker» 
 1. Abrir `index.html` en GitHub (lápiz de editar), cambiar la línea `var DESTINO = "https://…"` por la dirección nueva y **Commit**.
 2. Esperar un minuto y probar escaneando un QR. (Si no cambia, refrescar sin caché: Ctrl+F5.)
 
+## Que se actualice sola (opcional)
+`tunel-rapido.bat` puede escribir la dirección nueva en la página de redirección apenas aparece, sin que entres a GitHub.
+Hace falta un permiso de GitHub **limitado a ese único repositorio**:
+1. GitHub › tu foto › **Settings › Developer settings › Personal access tokens › Fine-grained tokens › Generate new token**.
+2. Nombre `sulam-tunel`, vencimiento a elección, **Only select repositories › `sulam-acceso`**.
+3. En *Repository permissions* poné **Contents: Read and write** (nada más). **Generate token** y copialo (se ve una sola vez).
+4. En el `.env` de SULAM agregá (sin comillas):
+   `SULAM_GITHUB_TOKEN=el-token-copiado`
+   `SULAM_GITHUB_REPO=federicoterzi-web/sulam-acceso`
+5. Listo: al correr `tunel-rapido.bat` se ve «Redireccion actualizada…»; en un minuto los QR abren la dirección nueva.
+El token queda guardado en texto en el `.env` de esa computadora (no se sube al repositorio). Con ese permiso, quien lo tenga
+solo podría cambiar archivos de `sulam-acceso`: nada de SULAM. Si se pierde la computadora, borrá el token en GitHub.
+Sin esas dos líneas el túnel funciona igual y la dirección se cambia a mano, como arriba.
+
 ## Para tener en cuenta
 - Si la dirección real está caída o es vieja, quien escanee verá el error de esa dirección: la página no puede saberlo.
 - Cualquiera que escanee el QR llega a la pantalla de ingreso de SULAM: sin usuario y contraseña no ve nada.
