@@ -337,6 +337,9 @@ Los datos de cada documento (emisión, vencimiento, número, datos propios) se v
 | Mesa de Entrada | Ingresos y su vinculación; consulta de legajos; alta de expedientes; documentos propios |
 | Administrativo de Área | Consulta y carga documental limitada a los casos de su área |
 
+### Modo «Ver como» (debug)
+Administración › Ver como: quien administra elige un rol (y un área) y SULAM se muestra con los permisos, menú y tablero de ese rol, en solo lectura. Una banda roja avisa y permite salir. Ver D-048.
+
 ## 10. Auditoría
 
 1. Se registran **operaciones** (alta, modificación con valores anteriores y nuevos, cambios de estado, asignaciones, vinculaciones, unificaciones, bajas, cambios de permisos, ingresos y salidas del sistema) **y consultas** (apertura de legajos, casos e ingresos; búsquedas; descargas; consultas a la propia auditoría).

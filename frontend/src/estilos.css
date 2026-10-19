@@ -5372,3 +5372,7 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
 
 /* Digitalización: alta rápida de legajo */
 .band-alta { margin-top: 12px; padding: 12px; border: 1px dashed var(--borde, #c9c3b4); border-radius: 8px; display: grid; gap: 10px; }
+
+/* Modo debug «Ver como» */
+.banda-debug { position: sticky; top: 0; z-index: 50; background: #7a1f1f; color: #fff; padding: 6px 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.banda-debug .boton { margin-left: auto; }

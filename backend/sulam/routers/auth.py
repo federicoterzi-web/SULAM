@@ -29,10 +29,14 @@ router = APIRouter(prefix="/auth", tags=["autenticación"])
 CREDENCIALES_INVALIDAS = "Usuario o contraseña incorrectos."
 
 
-def _yo(usuario: Usuario, csrf: str, movil: bool = False) -> dict:
+def _yo(usuario: Usuario, csrf: str, movil: bool = False, ctx: Contexto | None = None) -> dict:
     cfg = get_settings()
-    permisos = permisos_efectivos(usuario)
+    simulado = ctx is not None and not isinstance(ctx.usuario, Usuario)
+    permisos = ctx.permisos if simulado else permisos_efectivos(usuario)
+    if simulado:
+        usuario = ctx.usuario
     return {
+        "ver_como": {"rol": usuario.roles[0].nombre} if simulado else None,
         "id": str(usuario.id),
         "usuario": usuario.usuario,
         "nombre_completo": usuario.nombre_completo,
@@ -115,7 +119,7 @@ def logout(response: Response, ctx: Contexto = Depends(contexto_sin_exigir_cambi
 
 @router.get("/me")
 def me(ctx: Contexto = Depends(contexto_sin_exigir_cambio)):
-    return _yo(ctx.usuario, ctx.sesion.csrf_token, ctx.sesion.movil)
+    return _yo(ctx.usuario, ctx.sesion.csrf_token, ctx.sesion.movil, ctx)
 
 
 @router.post("/password")

@@ -90,6 +90,15 @@ def inicios_disponibles(ctx: Contexto = Depends(_admin)):
     return [{"codigo": k, "nombre": v} for k, v in PERFILES.items()]
 
 
+@router.get("/ver-como")
+def opciones_ver_como(ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
+    """Roles y áreas disponibles para el modo debug «Ver como»."""
+    return {
+        "roles": [{"id": r.id, "nombre": r.nombre} for r in db.execute(select(Rol).where(Rol.activo).order_by(Rol.nombre)).scalars()],
+        "areas": [{"id": a.id, "nombre": a.nombre} for a in db.execute(select(Area).order_by(Area.nombre)).scalars()],
+    }
+
+
 @router.get("/roles")
 def listar_roles(ctx: Contexto = Depends(_admin), db: Session = Depends(get_db)):
     return [_rol_out(r) for r in db.execute(select(Rol).order_by(Rol.nombre)).scalars()]

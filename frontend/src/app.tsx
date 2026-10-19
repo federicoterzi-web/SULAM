@@ -9,7 +9,7 @@ import { PaginaBuscarDocumentos } from "./paginas/textos";
 import { BotonAvisos, useNotificaciones } from "./notificaciones";
 import { PaginaMiAsistencia, usePendientesPersonal } from "./paginas/miasistencia";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { ApiError, api, configurarSesion, type Catalogos, type Formularios, type Yo } from "./api";
+import { ApiError, api, configurarSesion, fijarVerComo, type Catalogos, type Formularios, type Yo } from "./api";
 import { Aviso, Cargando, Campo, Enlace, SesionCtx, esCelular, navegar, rutaActual, useEnvio, useRuta } from "./comun";
 import { Movil } from "./movil/movil";
 import { PaginaAdmin } from "./paginas/admin";
@@ -356,6 +356,14 @@ function Principal({ yo, alSalir, alActualizar }: { yo: Yo; alSalir: () => void;
 
   return (
     <SesionCtx.Provider value={{ yo, catalogos, formularios, puede, recargarCatalogos }}>
+      {yo.ver_como && (
+        <div className="banda-debug" role="status">
+          <strong>Modo «Ver como»:</strong> estás viendo SULAM como «{yo.ver_como.rol}» (solo lectura, no se puede guardar nada).
+          <button className="boton boton-chico" onClick={() => { fijarVerComo(null); window.location.reload(); }}>
+            Salir del modo
+          </button>
+        </div>
+      )}
       {ruta.startsWith("/imprimir/") ? (
         <Impresion ruta={ruta} />
       ) : ruta === "/m" || ruta.startsWith("/m/") ? (

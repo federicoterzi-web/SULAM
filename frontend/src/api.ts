@@ -9,6 +9,36 @@ export function configurarSesion(token: string, onExpira?: () => void) {
   if (onExpira) alExpirar = onExpira;
 }
 
+// Modo debug «Ver como»: quien administra ve SULAM con los permisos de otro rol (solo lectura).
+// Se guarda en la pestaña (sessionStorage): al cerrarla se vuelve a la vista normal.
+export interface VerComo {
+  rol: number;
+  area?: number;
+  nombre: string;
+}
+export function verComoActual(): VerComo | null {
+  try {
+    const t = sessionStorage.getItem("sulam-ver-como");
+    return t ? (JSON.parse(t) as VerComo) : null;
+  } catch {
+    return null;
+  }
+}
+export function fijarVerComo(v: VerComo | null) {
+  try {
+    if (v) sessionStorage.setItem("sulam-ver-como", JSON.stringify(v));
+    else sessionStorage.removeItem("sulam-ver-como");
+  } catch {
+    /* sin almacenamiento: el modo no se recuerda */
+  }
+}
+function cabecerasVerComo(h: Record<string, string>) {
+  const v = verComoActual();
+  if (!v) return;
+  h["X-Ver-Como"] = String(v.rol);
+  if (v.area) h["X-Ver-Como-Area"] = String(v.area);
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -34,6 +64,7 @@ function detalleValidacion(errores: any[]): string {
 async function pedir<T>(metodo: string, ruta: string, cuerpo?: unknown): Promise<T> {
   const init: RequestInit = { method: metodo, credentials: "same-origin", headers: {} };
   const headers = init.headers as Record<string, string>;
+  cabecerasVerComo(headers);
   if (metodo !== "GET") headers["X-CSRF-Token"] = csrf;
   if (cuerpo instanceof FormData) {
     init.body = cuerpo;
@@ -67,6 +98,8 @@ export function subirConProgreso<T>(ruta: string, datos: FormData, alAvanzar: (f
     xhr.open("POST", "/api" + ruta);
     xhr.withCredentials = true;
     xhr.setRequestHeader("X-CSRF-Token", csrf);
+    const vc = verComoActual();
+    if (vc) xhr.setRequestHeader("X-Ver-Como", String(vc.rol));
     xhr.upload.onprogress = (e) => e.lengthComputable && alAvanzar(e.loaded / e.total);
     xhr.onerror = () => rechazar(new ApiError(0, "Sin conexión: no se pudo enviar. Las fotos siguen en pantalla; reintente."));
     xhr.onload = () => {
@@ -115,6 +148,7 @@ export interface Yo {
   csrf_token: string;
   sesion_movil?: boolean;
   inactividad_minutos?: number;
+  ver_como?: { rol: string } | null;
 }
 
 export interface UsuarioBreve {
