@@ -256,3 +256,18 @@ def test_orden_de_comision_de_una_salida(admin, cliente):
     rec = _ev(admin, tipo="recordatorio", titulo="Llamar").json()["id"]
     assert admin.get(f"/api/agenda/{rec}/comision.docx").status_code == 400
     assert cliente("tec1").get(f"/api/agenda/{rec}/comision.docx").status_code == 403
+
+
+def test_orden_de_comision_sin_retorno_fuera_del_horario(admin):
+    import io
+
+    from docx import Document
+
+    def texto(**kw):
+        e = _ev(admin, tipo="salida", titulo="Salida", **kw).json()["id"]
+        return "\n".join(p.text for p in Document(io.BytesIO(admin.get(f"/api/agenda/{e}/comision.docx").content)).paragraphs)
+
+    # Martes 3/11/2026, hora de Tucumán: 09:00 a 12:00 vuelve en horario (turno por defecto hasta las 14:00); a las 17:00 no.
+    assert "regresar de esta comisión el 3 de noviembre de 2026 a Hs. 12:00" in texto(inicio="2026-11-03T12:00:00+00:00", fin="2026-11-03T15:00:00+00:00")
+    assert "regresar de esta comisión sin retorno" in texto(inicio="2026-11-05T12:00:00+00:00", fin="2026-11-05T20:00:00+00:00")
+    assert "regresar de esta comisión sin retorno" not in texto(inicio="2026-11-04T12:00:00+00:00")  # sin hora de fin: en blanco

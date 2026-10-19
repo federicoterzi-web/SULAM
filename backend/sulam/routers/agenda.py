@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
-from ..models import Agente, Area, EventoParticipacion, CambioAgenda, Caso, CasoEvolucion, Documento, EventoAgenda, ParticipanteAgenda, Persona, SolicitudPersonal, Usuario
+from ..models import Agente, Area, EventoParticipacion, Horario, CambioAgenda, Caso, CasoEvolucion, Documento, EventoAgenda, ParticipanteAgenda, Persona, SolicitudPersonal, Usuario
 from ..permissions import Contexto, filtro_personas, requerir_caso, requerir_persona
 from ..schemas import Entrada
 from ..security import ahora
@@ -422,7 +422,8 @@ def orden_de_comision(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), d
     if not ids:
         ids = [e.creado_por]
     usuarios = {u.id: u for u in db.execute(select(Usuario).where(Usuario.id.in_(ids))).scalars()}
-    tarjetas = {a.usuario_id: a.id_reloj for a in db.execute(select(Agente).where(Agente.usuario_id.in_(ids))).scalars()}
+    agentes = {a.usuario_id: a for a in db.execute(select(Agente).where(Agente.usuario_id.in_(ids))).scalars()}
+    tarjetas = {k: a.id_reloj for k, a in agentes.items()}
 
     destinos: list[str] = []
     departamentos: list[str] = []
@@ -460,13 +461,34 @@ def orden_de_comision(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), d
     fin = hora_local(max(fines)) if fines and not e.todo_el_dia else None
     emision = hora_local(ahora()).date()
     meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+    def _fin_de_turno(usuario_id) -> str:
+        """Hora en que termina el turno de esa persona el día de la comisión (14:00 si no tiene horario cargado)."""
+        a = agentes.get(usuario_id)
+        if a is not None:
+            h = db.execute(
+                select(Horario).where(Horario.agente_id == a.id, Horario.vigente_desde <= ini.date(), or_(Horario.vigente_hasta.is_(None), Horario.vigente_hasta >= ini.date()))
+                .order_by(Horario.vigente_desde.desc())
+            ).scalars().first()
+            if h is not None:
+                turno = h.semana.get(str(ini.weekday()))
+                return turno[1] if turno else "00:00"  # día sin turno: cualquier regreso queda fuera del horario
+        return "14:00"
+
+    def _regreso(usuario_id) -> str | None:
+        """«Sin retorno» si no vuelve dentro de su horario laboral; sin hora de fin no se puede saber y queda en blanco."""
+        if fin is None:
+            return None
+        if fin.date() != ini.date() or fin.strftime("%H:%M") > _fin_de_turno(usuario_id):
+            return "sin retorno"
+        return f"el {fin.day} de {meses[fin.month - 1]} de {fin.year} a Hs. {fin.strftime('%H:%M')}"
+
     ordenes = [
         {
             "nombre": usuarios[i].nombre_completo, "tarjeta": tarjetas.get(i), "emision": emision, "dia": ini.date(),
             "hora": None if e.todo_el_dia else ini.strftime("%H:%M"),
             "destino": "; ".join(destinos)[:300] or None, "departamento": ", ".join(departamentos)[:120] or None,
-            "objeto": objeto[:250],
-            "regreso": f"el {fin.day} de {meses[fin.month - 1]} de {fin.year} a Hs. {fin.strftime('%H:%M')}" if fin else None,
+            "objeto": objeto[:250], "regreso": _regreso(i),
         }
         for i in ids if i in usuarios
     ]
