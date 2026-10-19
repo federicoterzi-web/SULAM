@@ -543,7 +543,7 @@ export function BuscarLegajo({ alElegir }: { alElegir: (p: PersonaResumen) => vo
         </button>
       </div>
       <Aviso error={error} />
-      {r && (r.length === 0 ? <Vacio>No se encontraron legajos.</Vacio> : (
+      {r && (r.length === 0 ? <Vacio>No se encontraron legajos. Si la persona no tiene legajo, creala en <a href="#/legajos">Legajos</a>; las fotos quedan acá, en Digitalización, para guardarlas después.</Vacio> : (
         <ul className="band-resultados">
           {r.map((p) => (
             <li key={p.id}>
