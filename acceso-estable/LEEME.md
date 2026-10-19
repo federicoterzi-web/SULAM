@@ -11,7 +11,18 @@ impresos siguen funcionando. Más adelante, cuando haya un dominio definitivo, e
 La página no contiene ningún dato personal ni de casos: solo la dirección de destino. El QR tampoco: solo el número
 interno del caso.
 
-## Armarla (una sola vez, gratis, con GitHub Pages)
+## Opción A: con Cloudflare (sin repositorio público)
+Una cuenta gratuita de Cloudflare alcanza; no hace falta dominio. Un «Worker» te da una dirección fija tipo
+`https://sulam.TU-CUENTA.workers.dev` que redirige a la dirección actual del túnel.
+1. En el panel de Cloudflare: **Workers & Pages › Create › Create Worker**, nombre `sulam`, **Deploy**.
+2. **Edit code**, pegar el contenido de `worker.js` de esta carpeta y **Deploy**.
+3. **Settings › Variables and Secrets › Add**: tipo *Text*, nombre `DESTINO`, valor = la dirección del túnel actual
+   (`https://algo-raro.trycloudflare.com`). **Deploy**.
+4. En SULAM, `.env`: `SULAM_URL_PUBLICA=https://sulam.TU-CUENTA.workers.dev` y `docker compose up -d`.
+5. Cada túnel nuevo: cambiar el valor de `DESTINO` en ese mismo lugar. Los QR no cambian.
+(Los nombres de los menús de Cloudflare pueden variar un poco con el tiempo.)
+
+## Opción B: con GitHub Pages (una sola vez, gratis)
 1. En GitHub: **New repository**, nombre `sulam-acceso`, **Public** (no hay datos sensibles; GitHub Pages gratis lo pide público).
 2. **Add file › Upload files** y subí `index.html` de esta carpeta. **Commit**.
 3. **Settings › Pages**: *Source* = *Deploy from a branch*, rama `main`, carpeta `/ (root)`. **Save**. En un minuto aparece la dirección,
