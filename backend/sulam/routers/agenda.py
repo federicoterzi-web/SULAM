@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
-from ..models import Agente, Area, EventoParticipacion, Horario, CambioAgenda, Caso, CasoEvolucion, Documento, EventoAgenda, ParticipanteAgenda, Persona, SolicitudPersonal, Usuario
+from ..models import Agente, Area, EventoParticipacion, CambioAgenda, Caso, CasoEvolucion, Documento, EventoAgenda, ParticipanteAgenda, Persona, SolicitudPersonal, Usuario
 from ..permissions import Contexto, filtro_personas, requerir_caso, requerir_persona
 from ..schemas import Entrada
 from ..security import ahora
@@ -401,11 +401,18 @@ def recorrido_de_la_salida(evento_id: uuid.UUID, ctx: Contexto = Depends(context
 
 
 @router.get("/agenda/{evento_id}/comision.docx")
-def orden_de_comision(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+def orden_de_comision(
+    evento_id: uuid.UUID,
+    regreso: str | None = Query(None, pattern=r"^(sin_retorno|([01]\d|2[0-3]):[0-5]\d)$"),
+    ctx: Contexto = Depends(contexto),
+    db: Session = Depends(get_db),
+):
     """Orden de salida en comisión (Word, sobre el formulario oficial) para quienes participan de la actividad.
 
     En una salida de visitas se arma una sola orden por persona con todos los domicilios del recorrido. El objeto
     es genérico (sin nombres de las personas visitadas); el destino sale del domicilio del legajo si se puede ver.
+    El regreso lo decide quien descarga, en el momento: ``regreso=HH:MM`` (el mismo día), ``regreso=sin_retorno`` o,
+    sin el parámetro, queda en blanco para escribirlo a mano.
     """
     from ..comision import hora_local, ordenes_docx
 
@@ -457,38 +464,22 @@ def orden_de_comision(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), d
     elif e.tipo in ("salida", "visita") and visitas:
         objeto = "Visita domiciliaria a persona adulta mayor" if visitas == 1 else f"Visitas domiciliarias a personas adultas mayores ({visitas})"
     ini = hora_local(min(p.inicio for p in paradas))
-    fines = [p.fin for p in paradas if p.fin]
-    fin = hora_local(max(fines)) if fines and not e.todo_el_dia else None
     emision = hora_local(ahora()).date()
     meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
-    def _fin_de_turno(usuario_id) -> str:
-        """Hora en que termina el turno de esa persona el día de la comisión (14:00 si no tiene horario cargado)."""
-        a = agentes.get(usuario_id)
-        if a is not None:
-            h = db.execute(
-                select(Horario).where(Horario.agente_id == a.id, Horario.vigente_desde <= ini.date(), or_(Horario.vigente_hasta.is_(None), Horario.vigente_hasta >= ini.date()))
-                .order_by(Horario.vigente_desde.desc())
-            ).scalars().first()
-            if h is not None:
-                turno = h.semana.get(str(ini.weekday()))
-                return turno[1] if turno else "00:00"  # día sin turno: cualquier regreso queda fuera del horario
-        return "14:00"
-
-    def _regreso(usuario_id) -> str | None:
-        """«Sin retorno» si no vuelve dentro de su horario laboral; sin hora de fin no se puede saber y queda en blanco."""
-        if fin is None:
-            return None
-        if fin.date() != ini.date() or fin.strftime("%H:%M") > _fin_de_turno(usuario_id):
-            return "sin retorno"
-        return f"el {fin.day} de {meses[fin.month - 1]} de {fin.year} a Hs. {fin.strftime('%H:%M')}"
+    if regreso == "sin_retorno":
+        texto_regreso = "sin retorno"
+    elif regreso:
+        texto_regreso = f"el {ini.day} de {meses[ini.month - 1]} de {ini.year} a Hs. {regreso}"
+    else:
+        texto_regreso = None
 
     ordenes = [
         {
             "nombre": usuarios[i].nombre_completo, "tarjeta": tarjetas.get(i), "emision": emision, "dia": ini.date(),
             "hora": None if e.todo_el_dia else ini.strftime("%H:%M"),
             "destino": "; ".join(destinos)[:300] or None, "departamento": ", ".join(departamentos)[:120] or None,
-            "objeto": objeto[:250], "regreso": _regreso(i),
+            "objeto": objeto[:250], "regreso": texto_regreso,
         }
         for i in ids if i in usuarios
     ]

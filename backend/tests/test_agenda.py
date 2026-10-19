@@ -258,16 +258,19 @@ def test_orden_de_comision_de_una_salida(admin, cliente):
     assert cliente("tec1").get(f"/api/agenda/{rec}/comision.docx").status_code == 403
 
 
-def test_orden_de_comision_sin_retorno_fuera_del_horario(admin):
+def test_orden_de_comision_regreso_lo_decide_quien_descarga(admin):
     import io
 
     from docx import Document
 
-    def texto(**kw):
-        e = _ev(admin, tipo="salida", titulo="Salida", **kw).json()["id"]
-        return "\n".join(p.text for p in Document(io.BytesIO(admin.get(f"/api/agenda/{e}/comision.docx").content)).paragraphs)
+    e = _ev(admin, tipo="salida", titulo="Salida", inicio="2026-11-03T12:00:00+00:00", fin="2026-11-03T15:00:00+00:00").json()["id"]
 
-    # Martes 3/11/2026, hora de Tucumán: 09:00 a 12:00 vuelve en horario (turno por defecto hasta las 14:00); a las 17:00 no.
-    assert "regresar de esta comisión el 3 de noviembre de 2026 a Hs. 12:00" in texto(inicio="2026-11-03T12:00:00+00:00", fin="2026-11-03T15:00:00+00:00")
-    assert "regresar de esta comisión sin retorno" in texto(inicio="2026-11-05T12:00:00+00:00", fin="2026-11-05T20:00:00+00:00")
-    assert "regresar de esta comisión sin retorno" not in texto(inicio="2026-11-04T12:00:00+00:00")  # sin hora de fin: en blanco
+    def texto(q=""):
+        r = admin.get(f"/api/agenda/{e}/comision.docx{q}")
+        assert r.status_code == 200, r.text
+        return "\n".join(p.text for p in Document(io.BytesIO(r.content)).paragraphs)
+
+    assert "regresar de esta comisión el 3 de noviembre de 2026 a Hs. 13:30" in texto("?regreso=13:30")
+    assert "regresar de esta comisión sin retorno" in texto("?regreso=sin_retorno")
+    assert "sin retorno" not in texto() and "regresar de esta comisión………" in texto()  # en blanco, aunque la actividad tenga fin
+    assert admin.get(f"/api/agenda/{e}/comision.docx?regreso=25:99").status_code == 422

@@ -5364,3 +5364,8 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
   padding: 0 0.35rem;
   line-height: 1.25;
 }
+
+/* Orden de salida en comisión: elección del regreso */
+.fila-opcion { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.fila-opcion input[type="radio"] { width: auto; flex: none; }
+.fila-opcion input[type="time"] { width: auto; }

@@ -506,9 +506,7 @@ function DetalleComun({ actividad: base, alCerrar, alCambiar }: { actividad: Act
           )}
           {modo === "ver" && a.tipo !== "recordatorio" && (
             <div className="fila-botones fila-izquierda">
-              <a className="boton" href={`/api/agenda/${a.id}/comision.docx`} title="Formulario de la Dirección, completado con quienes participan">
-                Orden de salida en comisión (Word)
-              </a>
+              <BotonComision actividadId={a.id} fin={a.fin} />
             </div>
           )}
           {modo === "ver" && <HistorialCambios historial={a.historial} />}
@@ -516,6 +514,47 @@ function DetalleComun({ actividad: base, alCerrar, alCambiar }: { actividad: Act
         </>
       )}
     </Modal>
+  );
+}
+
+/** Descarga la orden de salida en comisión; el regreso se decide en el momento de descargarla. */
+export function BotonComision({ actividadId, fin }: { actividadId: string; fin?: string | null }) {
+  const [abierto, setAbierto] = useState(false);
+  const [regreso, setRegreso] = useState<"hora" | "sin_retorno" | "mano">("hora");
+  const [hora, setHora] = useState(() => (fin ? new Date(fin).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false }) : ""));
+  const valor = regreso === "sin_retorno" ? "sin_retorno" : regreso === "hora" && hora ? hora : "";
+  const enlace = `/api/agenda/${actividadId}/comision.docx${valor ? `?regreso=${encodeURIComponent(valor)}` : ""}`;
+  return (
+    <>
+      <button type="button" className="boton" onClick={() => setAbierto(true)} title="Formulario de la Dirección, completado con quienes participan">
+        Orden de salida en comisión (Word)
+      </button>
+      {abierto && (
+        <Modal titulo="Orden de salida en comisión" alCerrar={() => setAbierto(false)}>
+          <div className="formulario">
+            <p className="tenue">Se completa para cada persona que participa. ¿Cómo figura el regreso?</p>
+            <label className="fila-opcion">
+              <input type="radio" name="regreso" checked={regreso === "hora"} onChange={() => setRegreso("hora")} /> Vuelve hoy a las{" "}
+              <input type="time" value={hora} onChange={(ev) => { setHora(ev.target.value); setRegreso("hora"); }} />
+            </label>
+            <label className="fila-opcion">
+              <input type="radio" name="regreso" checked={regreso === "sin_retorno"} onChange={() => setRegreso("sin_retorno")} /> Sin retorno (no vuelve dentro del horario laboral)
+            </label>
+            <label className="fila-opcion">
+              <input type="radio" name="regreso" checked={regreso === "mano"} onChange={() => setRegreso("mano")} /> Lo completo a mano
+            </label>
+            <div className="fila-botones fila-izquierda">
+              <a className="boton boton-primario" href={enlace} onClick={() => setAbierto(false)}>
+                Descargar
+              </a>
+              <button type="button" className="boton" onClick={() => setAbierto(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 

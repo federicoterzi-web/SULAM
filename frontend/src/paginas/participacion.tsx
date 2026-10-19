@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api, subirConProgreso } from "../api";
 import { Aviso, Campo, Cargando, Modal, Vacio, fecha, useDatos, useEnvio, useSesion } from "../comun";
-import { AplicarA, FormResultado, HistorialCambios, ICONO, ESTADO, type Actividad } from "./agenda";
+import { AplicarA, BotonComision, FormResultado, HistorialCambios, ICONO, ESTADO, type Actividad } from "./agenda";
 
 // ---------------------------------------------------------------- tipos
 
@@ -438,9 +438,7 @@ export function DetalleEvento({ id, alCerrar, alCambiar }: { id: string; alCerra
           {modo === "ver" && <HistorialCambios historial={e.historial} />}
           {modo === "ver" && (
             <div className="fila-botones fila-izquierda">
-              <a className="boton" href={`/api/agenda/${e.id}/comision.docx`} title="Formulario de la Dirección, completado con quienes participan">
-                Orden de salida en comisión (Word)
-              </a>
+              <BotonComision actividadId={e.id} fin={e.fin} />
               <button className="boton" onClick={alCambiar}>
                 Cerrar
               </button>
