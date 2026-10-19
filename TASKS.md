@@ -233,6 +233,10 @@ Surgen de lo conversado con la Dirección y del documento de diseño inicial (§
 - [ ] Chat en tiempo real (hoy consulta cada pocos segundos) y avisos con la aplicación cerrada: requiere Web Push (HTTPS).
 - [ ] Novedades: dirigirlas a personas puntuales (hoy: Dirección, área o rol).
 
+### Acceso desde el celular fuera de la oficina
+- [x] `tunel-rapido.bat`: dirección temporal con HTTPS (Cloudflare, modo rápido) para la demostración. Sin probar en Windows todavía.
+- [ ] Decidir alojamiento definitivo (ver arriba): túnel permanente con control de acceso o servidor del Ministerio.
+
 ### Orden de salida en comisión (D-047)
 - [x] Descarga en Word, sobre el formulario oficial, para quienes participan de una salida, visita o evento (Agenda y Participación).
 - [ ] Confirmar con la Dirección que «Tarjeta Nº» es el ID del reloj; si no, agregar el campo a la ficha de personal.
