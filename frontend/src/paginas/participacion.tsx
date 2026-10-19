@@ -438,6 +438,9 @@ export function DetalleEvento({ id, alCerrar, alCambiar }: { id: string; alCerra
           {modo === "ver" && <HistorialCambios historial={e.historial} />}
           {modo === "ver" && (
             <div className="fila-botones fila-izquierda">
+              <a className="boton" href={`/api/agenda/${e.id}/comision.docx`} title="Formulario de la Dirección, completado con quienes participan">
+                Orden de salida en comisión (Word)
+              </a>
               <button className="boton" onClick={alCambiar}>
                 Cerrar
               </button>

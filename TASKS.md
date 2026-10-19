@@ -233,6 +233,11 @@ Surgen de lo conversado con la Dirección y del documento de diseño inicial (§
 - [ ] Chat en tiempo real (hoy consulta cada pocos segundos) y avisos con la aplicación cerrada: requiere Web Push (HTTPS).
 - [ ] Novedades: dirigirlas a personas puntuales (hoy: Dirección, área o rol).
 
+### Orden de salida en comisión (D-047)
+- [x] Descarga en Word, sobre el formulario oficial, para quienes participan de una salida, visita o evento (Agenda y Participación).
+- [ ] Confirmar con la Dirección que «Tarjeta Nº» es el ID del reloj; si no, agregar el campo a la ficha de personal.
+- [ ] Mejoras posibles: pedir el vehículo/viáticos en la misma orden, descargar todas las órdenes del día, versión desde el celular.
+
 ## Convenciones de trabajo
 - Cada cambio de esquema va en una migración nueva de Alembic (`backend/alembic/versions`), nunca editando una existente.
 - Cada regla funcional nueva se documenta en FUNCTIONAL_SPEC.md y, si implica una elección, en DECISIONS.md.

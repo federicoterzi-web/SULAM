@@ -224,3 +224,35 @@ def test_salida_guardada_conserva_su_recorrido(admin):
     viejas = [_ev(admin, tipo="salida", titulo="Salida a domicilio", inicio=_cuando(60), persona_id=personas[i]["id"], caso_id=casos[i]["id"]).json()["id"] for i in (1, 0)]
     s = admin.get(f"/api/agenda/{viejas[0]}/salida").json()
     assert [p["caso_id"] for p in s["paradas"]] == [casos[1]["id"], casos[0]["id"]]
+
+
+def test_orden_de_comision_de_una_salida(admin, cliente):
+    import io
+    import uuid
+
+    from docx import Document
+
+    crear_usuario("tec1", "Técnico", AREA_ADMISION)
+    crear_usuario("tec2", "Técnico", AREA_ADMISION)
+    u1 = admin.get("/api/agenda/participantes").json()
+    ids = {x["nombre"]: x["id"] for x in u1}
+    personas = [
+        nueva_persona(admin, numero_documento=str(3000000 + i), domicilio=f"Calle Ficticia {100 + i}", localidad="Yerba Buena", departamento="Yerba Buena", apellidos=["SECRETOVEGA", "SECRETORIOS"][i], nombres=["Rosa", "Hector"][i])
+        for i in range(2)
+    ]
+    sid, hora = str(uuid.uuid4()), "2026-11-03T12:00:00+00:00"  # 09:00 en Tucumán
+    paradas = [
+        _ev(admin, tipo="salida", titulo="Salida a domicilio", inicio=hora, persona_id=p["id"], salida_id=sid, salida_orden=n, participantes=[ids["Tec1"], ids["Tec2"]]).json()["id"]
+        for n, p in enumerate(personas, 1)
+    ]
+    r = admin.get(f"/api/agenda/{paradas[0]}/comision.docx")
+    assert r.status_code == 200 and "wordprocessingml" in r.headers["content-type"]
+    texto = "\n".join(p.text for p in Document(io.BytesIO(r.content)).paragraphs)
+    assert "SEÑOR/A Tec1" in texto and "SEÑOR/A Tec2" in texto
+    assert "Calle Ficticia 100, Yerba Buena; Calle Ficticia 101, Yerba Buena" in texto and "Departamento Yerba Buena" in texto
+    assert "Visitas domiciliarias a personas adultas mayores (2)" in texto and "3 de noviembre de 2026 a Hs. 09:00" in texto
+    assert "SECRETO" not in texto and "Rosa" not in texto  # el objeto no lleva nombres de las personas visitadas
+    # Un recordatorio no lleva orden; quien no ve la actividad no la descarga.
+    rec = _ev(admin, tipo="recordatorio", titulo="Llamar").json()["id"]
+    assert admin.get(f"/api/agenda/{rec}/comision.docx").status_code == 400
+    assert cliente("tec1").get(f"/api/agenda/{rec}/comision.docx").status_code == 403

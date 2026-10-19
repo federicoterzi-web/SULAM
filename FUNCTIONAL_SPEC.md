@@ -146,6 +146,9 @@ Contactos y recursos registran **cómo se obtuvo el dato**: relevamiento de la D
 - **Salida**: se eligen los casos a visitar; SULAM sugiere el orden (vecino más cercano y mejora 2-opt, en línea recta desde el punto de partida `SULAM_PUNTO_PARTIDA`, o desde la ubicación del celular), muestra los kilómetros aproximados, abre el recorrido en Google Maps (en tramos si son más de 10 paradas) e imprime la **hoja de salida** (orden, persona, domicilio, teléfono, caso, responsables y espacio para hora y observaciones).
 - Los casos sin ubicación se listan para completarlos.
 
+## 5 decies bis. Orden de salida en comisión
+Desde el detalle de una actividad de la Agenda (o de un evento de Participación) se descarga en Word la **orden de salida en comisión**, completada sobre el formulario oficial de la Dirección: una orden por persona que participa (tres por hoja oficio). Lleva fecha de emisión, nombre, tarjeta (ID del reloj de la ficha de personal), día y hora, destino, departamento, objeto y regreso; lo que no se conoce queda con los puntos para completar a mano, y las firmas son en papel. En una salida de visitas, cada orden incluye todos los domicilios del recorrido. El objeto es genérico, sin nombres de personas visitadas, y el domicilio solo aparece si quien descarga puede ver el legajo. Cada descarga se audita. Ver D-047.
+
 ## 5 septies. Página de inicio por rol
 
 Cada rol tiene una página de inicio (se elige en *Administración › Roles*). Quien tiene varios roles puede cambiar de inicio; SULAM recuerda el último elegido en ese navegador. Todo respeta el alcance de consulta de cada rol.

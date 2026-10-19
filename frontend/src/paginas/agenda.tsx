@@ -504,6 +504,13 @@ function DetalleComun({ actividad: base, alCerrar, alCambiar }: { actividad: Act
               </button>
             </div>
           )}
+          {modo === "ver" && a.tipo !== "recordatorio" && (
+            <div className="fila-botones fila-izquierda">
+              <a className="boton" href={`/api/agenda/${a.id}/comision.docx`} title="Formulario de la Dirección, completado con quienes participan">
+                Orden de salida en comisión (Word)
+              </a>
+            </div>
+          )}
           {modo === "ver" && <HistorialCambios historial={a.historial} />}
           {modo === "resultado" && <FormResultado actividadId={a.id} siguientes={siguientes} alGuardar={alCambiar} alVolver={() => setModo("ver")} />}
         </>

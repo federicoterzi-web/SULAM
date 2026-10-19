@@ -11,8 +11,9 @@ from __future__ import annotations
 import calendar
 import uuid
 from datetime import date, datetime, timedelta
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import Field, model_validator
 from sqlalchemy import and_, exists, func, or_, select, true
 from sqlalchemy.orm import Session
@@ -20,7 +21,7 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto
-from ..models import Agente, Area, CambioAgenda, Caso, CasoEvolucion, Documento, EventoAgenda, ParticipanteAgenda, Persona, SolicitudPersonal, Usuario
+from ..models import Agente, Area, EventoParticipacion, CambioAgenda, Caso, CasoEvolucion, Documento, EventoAgenda, ParticipanteAgenda, Persona, SolicitudPersonal, Usuario
 from ..permissions import Contexto, filtro_personas, requerir_caso, requerir_persona
 from ..schemas import Entrada
 from ..security import ahora
@@ -397,6 +398,85 @@ def recorrido_de_la_salida(evento_id: uuid.UUID, ctx: Contexto = Depends(context
             "persona": s["persona"]["nombre"] if s["persona"] else None, "actual": p.id == e.id,
         })
     return {"inicio": e.inicio.isoformat(), "paradas": paradas}
+
+
+@router.get("/agenda/{evento_id}/comision.docx")
+def orden_de_comision(evento_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    """Orden de salida en comisión (Word, sobre el formulario oficial) para quienes participan de la actividad.
+
+    En una salida de visitas se arma una sola orden por persona con todos los domicilios del recorrido. El objeto
+    es genérico (sin nombres de las personas visitadas); el destino sale del domicilio del legajo si se puede ver.
+    """
+    from ..comision import hora_local, ordenes_docx
+
+    e = _evento(db, ctx, evento_id, "consultar")
+    if e.tipo == "recordatorio":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Un recordatorio no lleva orden de salida.")
+    alc = ctx.requerir("agenda", "consultar")
+    paradas = [p for p in (_paradas_de_la_salida(db, e) if e.tipo == "salida" else [e]) if _en_alcance(db, ctx, p, alc)] or [e]
+    ids: list[uuid.UUID] = []
+    for p in paradas:
+        for q in p.participantes:
+            if q.usuario_id not in ids:
+                ids.append(q.usuario_id)
+    if not ids:
+        ids = [e.creado_por]
+    usuarios = {u.id: u for u in db.execute(select(Usuario).where(Usuario.id.in_(ids))).scalars()}
+    tarjetas = {a.usuario_id: a.id_reloj for a in db.execute(select(Agente).where(Agente.usuario_id.in_(ids))).scalars()}
+
+    destinos: list[str] = []
+    departamentos: list[str] = []
+
+    def _suma(lista: list[str], texto: str | None) -> None:
+        texto = (texto or "").strip()
+        if texto and texto not in lista:
+            lista.append(texto)
+
+    visitas = 0
+    for p in paradas:
+        if p.persona_id:
+            visitas += 1
+            pers = db.get(Persona, p.persona_id)
+            try:
+                requerir_persona(db, ctx, pers, "personas", "consultar")
+                domicilio = ", ".join(x.strip() for x in (pers.domicilio, pers.localidad) if x and x.strip())
+                _suma(destinos, p.lugar if p.lugar and not domicilio else domicilio)
+                _suma(departamentos, pers.departamento)
+                continue
+            except HTTPException:
+                pass
+        _suma(destinos, p.lugar)
+    objeto = e.titulo
+    if e.tipo == TIPO_EVENTO:
+        x = db.get(EventoParticipacion, e.id)
+        if x is not None:
+            for r in x.recursos:
+                _suma(departamentos, r.departamento)
+            objeto = f"{x.tipo.nombre}: {e.titulo}"
+    elif e.tipo in ("salida", "visita") and visitas:
+        objeto = "Visita domiciliaria a persona adulta mayor" if visitas == 1 else f"Visitas domiciliarias a personas adultas mayores ({visitas})"
+    ini = hora_local(min(p.inicio for p in paradas))
+    fines = [p.fin for p in paradas if p.fin]
+    fin = hora_local(max(fines)) if fines and not e.todo_el_dia else None
+    emision = hora_local(ahora()).date()
+    meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+    ordenes = [
+        {
+            "nombre": usuarios[i].nombre_completo, "tarjeta": tarjetas.get(i), "emision": emision, "dia": ini.date(),
+            "hora": None if e.todo_el_dia else ini.strftime("%H:%M"),
+            "destino": "; ".join(destinos)[:300] or None, "departamento": ", ".join(departamentos)[:120] or None,
+            "objeto": objeto[:250],
+            "regreso": f"el {fin.day} de {meses[fin.month - 1]} de {fin.year} a Hs. {fin.strftime('%H:%M')}" if fin else None,
+        }
+        for i in ids if i in usuarios
+    ]
+    audit.registrar(db, ctx, "comision_exportada", "agenda_evento", e.id, None, {"personas": len(ordenes)})
+    db.commit()
+    nombre = f"comision-{ini.date().isoformat()}.docx"
+    return Response(
+        ordenes_docx(ordenes), media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(nombre)}", "Cache-Control": "no-store"},
+    )
 
 
 @router.post("/agenda", status_code=201)
