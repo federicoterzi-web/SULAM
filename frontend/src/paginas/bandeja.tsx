@@ -521,6 +521,8 @@ export function BuscarLegajo({ alElegir }: { alElegir: (p: PersonaResumen) => vo
   const [q, setQ] = useState("");
   const [r, setR] = useState<PersonaResumen[] | null>(null);
   const { error, enviando, ejecutar } = useEnvio();
+  const { puede } = useSesion();
+  const [altaAbierta, setAltaAbierta] = useState(false);
   const buscar = async (e: FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -543,7 +545,7 @@ export function BuscarLegajo({ alElegir }: { alElegir: (p: PersonaResumen) => vo
         </button>
       </div>
       <Aviso error={error} />
-      {r && (r.length === 0 ? <Vacio>No se encontraron legajos. Si la persona no tiene legajo, creala en <a href="#/legajos">Legajos</a>; las fotos quedan acá, en Digitalización, para guardarlas después.</Vacio> : (
+      {r && (r.length === 0 ? <Vacio>No se encontraron legajos. Si la persona no tiene, podés crearlo acá abajo.</Vacio> : (
         <ul className="band-resultados">
           {r.map((p) => (
             <li key={p.id}>
@@ -557,6 +559,91 @@ export function BuscarLegajo({ alElegir }: { alElegir: (p: PersonaResumen) => vo
           ))}
         </ul>
       ))}
+      {puede("personas", "crear") && (
+        altaAbierta ? (
+          <AltaRapida inicial={q} alCrear={alElegir} />
+        ) : (
+          <button type="button" className="boton boton-chico" onClick={() => setAltaAbierta(true)}>
+            ¿No tiene legajo? Crearlo con apellido, nombre y DNI
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+/** Alta rápida de un legajo con lo mínimo (apellido, nombre y DNI) cuando la persona todavía no existe. */
+function AltaRapida({ inicial, alCrear }: { inicial: string; alCrear: (p: PersonaResumen) => void }) {
+  const esNumero = /^[\d.\s]+$/.test(inicial.trim());
+  const [apellidos, setApellidos] = useState(esNumero ? "" : inicial.trim());
+  const [nombres, setNombres] = useState("");
+  const [dni, setDni] = useState(esNumero ? inicial.replace(/\D/g, "") : "");
+  const [parecidos, setParecidos] = useState<{ nivel: string; motivos: string[]; persona: PersonaResumen }[]>([]);
+  const [bloqueante, setBloqueante] = useState(false);
+  const { error, enviando, ejecutar } = useEnvio();
+  const crear = async (confirmar: boolean) => {
+    const r = await ejecutar(async () => {
+      try {
+        return await api.post<PersonaResumen>("/personas", {
+          apellidos: apellidos.trim(),
+          nombres: nombres.trim(),
+          tipo_documento: "DNI",
+          numero_documento: dni.replace(/\D/g, ""),
+          confirmar_posible_duplicado: confirmar,
+          motivo_confirmacion: confirmar ? "Alta desde Digitalización: se revisaron los legajos parecidos y es otra persona." : undefined,
+        });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409 && err.detalle?.coincidencias) {
+          setParecidos(err.detalle.coincidencias);
+          setBloqueante(Boolean(err.detalle.bloqueante) || err.detalle.coincidencias.some((c: { nivel: string }) => c.nivel === "bloqueante"));
+          return null;
+        }
+        throw err;
+      }
+    });
+    if (r) alCrear(r);
+  };
+  const listo = apellidos.trim() && nombres.trim() && dni.replace(/\D/g, "").length >= 6;
+  return (
+    <div className="band-alta">
+      <strong>Crear el legajo</strong>
+      <div className="grilla">
+        <Campo etiqueta="Apellido *">
+          <input value={apellidos} maxLength={200} onChange={(e) => { setApellidos(e.target.value); setParecidos([]); }} />
+        </Campo>
+        <Campo etiqueta="Nombre *">
+          <input value={nombres} maxLength={200} onChange={(e) => { setNombres(e.target.value); setParecidos([]); }} />
+        </Campo>
+        <Campo etiqueta="DNI *">
+          <input value={dni} inputMode="numeric" maxLength={12} onChange={(e) => { setDni(e.target.value); setParecidos([]); }} />
+        </Campo>
+      </div>
+      <Aviso error={error} />
+      {parecidos.length > 0 && (
+        <div className="aviso aviso-info" role="status">
+          <p>{bloqueante ? "Ya existe un legajo con ese documento. Usá ese:" : "Hay legajos parecidos. Si es la misma persona, usá el que ya existe:"}</p>
+          <ul className="band-resultados">
+            {parecidos.map((c) => (
+              <li key={c.persona.id}>
+                <button type="button" onClick={() => alCrear(c.persona)}>
+                  <strong>{nombre(c.persona)}</strong>
+                  <small>{docPersona(c.persona)} · Legajo {c.persona.numero_legajo} · {c.motivos.join("; ")}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {!bloqueante && (
+            <button type="button" className="boton boton-chico" disabled={enviando} onClick={() => crear(true)}>
+              Es otra persona: crear el legajo igual
+            </button>
+          )}
+        </div>
+      )}
+      {parecidos.length === 0 && (
+        <button type="button" className="boton boton-primario" disabled={enviando || !listo} onClick={() => crear(false)}>
+          {enviando ? "Creando…" : "Crear legajo y usarlo"}
+        </button>
+      )}
     </div>
   );
 }
