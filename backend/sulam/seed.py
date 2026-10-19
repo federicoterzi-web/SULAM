@@ -240,6 +240,7 @@ def _asegurar(db: Session, modelo, nombres: list[str]) -> None:
 # Todos los roles pueden buscar antecedentes (nombre, documento, fecha de carátula y responsable, nada más).
 for _d in ROLES.values():
     _d["permisos"].append(("antecedentes", "consultar", T))
+    _d["permisos"].append(("chat", "usar", T))  # el chat interno es para todos los roles
 
 
 def inicializar_catalogos(db: Session) -> None:
@@ -264,7 +265,7 @@ def inicializar_catalogos(db: Session) -> None:
 
 # Módulos agregados después de la primera instalación: sus permisos se suman UNA vez a los roles ya existentes
 # (si después alguien los quita desde Administración, no se vuelven a poner).
-MODULOS_NUEVOS = ("agenda", "participacion", "residencias", "subsidios", "antecedentes")
+MODULOS_NUEVOS = ("agenda", "participacion", "residencias", "subsidios", "antecedentes", "chat")
 
 
 def _permisos_de_modulos_nuevos(db: Session, roles_previos: set[str]) -> None:

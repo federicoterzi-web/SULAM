@@ -19,6 +19,7 @@ from ..models import RecursoDocumento, Caso, CasoAsignacion, CambioAgenda, Event
 from ..permissions import Contexto, filtro_casos
 from ..security import ahora
 from .archivo import _para_mi
+from .chat import avisos_chat
 from .novedades import _es_destinatario, _mis_confirmaciones, _visibles
 from .personal import _puede_aprobar
 
@@ -42,6 +43,9 @@ def avisos(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
         for n in db.execute(_visibles(ctx).where(Novedad.requiere_confirmacion)).scalars()
         if _es_destinatario(ctx, n) and n.id not in mias
     )
+
+    # Chat interno: una entrada por conversación con mensajes sin leer (sin el texto).
+    salida["chat"] = avisos_chat(db, ctx)
 
     # Carpetas físicas: para entregar y para recibir.
     entregar, recibir = _para_mi(db, ctx)

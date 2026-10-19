@@ -675,7 +675,14 @@ def comunicacion(db: Session, q: Consulta) -> dict:
     filas, pend_area = [], Counter()
     total_dest = total_leidas = 0
     for n in novedades:
-        dest = [u for u in usuarios if (n.area_id is None or u.area_id == n.area_id) and u.id != n.autor_id]
+        roles_n = {r.id for r in n.roles}
+        dest = [
+            u
+            for u in usuarios
+            if (n.area_id is None or u.area_id == n.area_id)
+            and u.id != n.autor_id
+            and (not roles_n or roles_n & {r.id for r in u.roles})
+        ]
         if q.area_id is not None:
             dest = [u for u in dest if u.area_id == q.area_id]
         leidas = sum(1 for u in dest if u.id in lecturas[n.id])
@@ -686,7 +693,7 @@ def comunicacion(db: Session, q: Consulta) -> dict:
                 if u.id not in lecturas[n.id]:
                     pend_area[u.area_id] += 1
         filas.append({
-            "etiqueta": n.titulo, "fecha": _local(n.publicada_en).isoformat(), "para": areas.get(n.area_id, "Toda la Dirección"),
+            "etiqueta": n.titulo, "fecha": _local(n.publicada_en).isoformat(), "para": areas.get(n.area_id, "Toda la Dirección") + (f" · {', '.join(sorted(r.nombre for r in n.roles))}" if n.roles else ""),
             "destinatarios": len(dest), "confirmaron": leidas if n.requiere_confirmacion else None,
             "pct": _pct(leidas, len(dest)) if n.requiere_confirmacion else None, "retirada": n.retirada_en is not None,
         })

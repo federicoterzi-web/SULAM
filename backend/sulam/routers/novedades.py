@@ -1,6 +1,8 @@
 """Novedades: circulares e información de la Dirección (para todos) y de cada área.
 
 - Ven: las generales y las de su área. Quien publica con alcance «todos» ve todas.
+- Se pueden dirigir además a uno o más roles: entonces solo las reciben (y ven) quienes
+  tienen alguno de esos roles, dentro de toda la Dirección o del área elegida.
 - Publican (módulo «novedades», acción «publicar»): con alcance «todos», para toda
   la Dirección o cualquier área; con «área», solo para la propia.
 - Confirmación de lectura: cada destinatario confirma una vez; quien gestiona la
@@ -14,7 +16,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from .. import audit
@@ -22,7 +24,7 @@ from ..config import get_settings
 from ..db import get_db
 from ..deps import contexto
 from ..informes import limpiar_html, texto_plano
-from ..models import Area, Novedad, NovedadLectura, Usuario
+from ..models import Area, Novedad, NovedadLectura, NovedadRol, Rol, Usuario, UsuarioRol
 from ..permissions import Contexto
 from ..security import ahora
 from ..serializers import usuario_breve
@@ -45,26 +47,37 @@ def _puede_gestionar(ctx: Contexto, n: Novedad) -> bool:
     return n.autor_id == ctx.id and alc is not None
 
 
+def _mis_roles(ctx: Contexto) -> list[int]:
+    return [r.id for r in ctx.usuario.roles]
+
+
 def _visibles(ctx: Contexto):
     q = select(Novedad).where(Novedad.retirada_en.is_(None))
     if _alcance(ctx) == "todos":
         return q
-    condiciones = [Novedad.area_id.is_(None), Novedad.autor_id == ctx.id]
+    area = [Novedad.area_id.is_(None)]
     if ctx.usuario.area_id is not None:
-        condiciones.append(Novedad.area_id == ctx.usuario.area_id)
-    return q.where(or_(*condiciones))
+        area.append(Novedad.area_id == ctx.usuario.area_id)
+    # Con roles elegidos, solo la ven quienes tienen alguno de ellos (y quien la publicó).
+    sin_roles = ~exists().where(NovedadRol.novedad_id == Novedad.id)
+    con_mi_rol = exists().where(NovedadRol.novedad_id == Novedad.id, NovedadRol.rol_id.in_(_mis_roles(ctx) or [-1]))
+    return q.where(or_(Novedad.autor_id == ctx.id, and_(or_(*area), or_(sin_roles, con_mi_rol))))
 
 
 def _es_destinatario(ctx: Contexto, n: Novedad) -> bool:
     if n.autor_id == ctx.id:
         return False
-    return n.area_id is None or n.area_id == ctx.usuario.area_id
+    if n.area_id is not None and n.area_id != ctx.usuario.area_id:
+        return False
+    return not n.roles or bool({r.id for r in n.roles} & set(_mis_roles(ctx)))
 
 
 def _destinatarios(db: Session, n: Novedad) -> list[Usuario]:
     q = select(Usuario).where(Usuario.activo.is_(True))
     if n.area_id is not None:
         q = q.where(Usuario.area_id == n.area_id)
+    if n.roles:
+        q = q.where(Usuario.id.in_(select(UsuarioRol.usuario_id).where(UsuarioRol.rol_id.in_([r.id for r in n.roles]))))
     if n.autor_id is not None:
         q = q.where(Usuario.id != n.autor_id)
     return list(db.execute(q.order_by(Usuario.nombre_completo)).scalars())
@@ -87,6 +100,7 @@ def _out(db: Session, ctx: Contexto, n: Novedad, mias: dict) -> dict:
         "titulo": n.titulo,
         "cuerpo": n.cuerpo,
         "area": {"id": n.area.id, "nombre": n.area.nombre} if n.area else None,
+        "roles": [{"id": r.id, "nombre": r.nombre} for r in sorted(n.roles, key=lambda r: r.nombre)],
         "requiere_confirmacion": n.requiere_confirmacion,
         "fijada": n.fijada,
         "archivo": (
@@ -147,6 +161,11 @@ def listar(
         "novedades": [_out(db, ctx, n, mias) for n in lista],
         "puede_publicar": bool(areas_publicables),
         "areas_publicables": areas_publicables,
+        "roles_publicables": (
+            [{"id": r.id, "nombre": r.nombre} for r in db.execute(select(Rol).where(Rol.activo).order_by(Rol.nombre)).scalars()]
+            if areas_publicables
+            else []
+        ),
     }
 
 
@@ -184,6 +203,7 @@ def publicar(
     titulo: str = Form(..., min_length=3, max_length=300),
     cuerpo: str = Form("", max_length=100_000),
     area_id: str | None = Form(None),
+    roles_ids: str | None = Form(None),
     requiere_confirmacion: bool = Form(True),
     fijada: bool = Form(False),
     archivo: UploadFile | None = File(None),
@@ -199,6 +219,15 @@ def publicar(
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, "Solo puede publicar para su área. Las novedades para todos las publica la Dirección."
             )
+    roles: list[Rol] = []
+    if roles_ids and roles_ids.strip():
+        try:
+            pedidos = {int(x) for x in roles_ids.split(",") if x.strip()}
+        except ValueError:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Roles inválidos.")
+        roles = list(db.execute(select(Rol).where(Rol.id.in_(pedidos), Rol.activo)).scalars())
+        if len(roles) != len(pedidos):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Hay roles inexistentes o dados de baja.")
     html = limpiar_html(cuerpo)
     if not texto_plano(html).strip() and archivo is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Escriba el texto de la novedad o adjunte la circular.")
@@ -210,6 +239,7 @@ def publicar(
         fijada=fijada,
         autor_id=ctx.id,
     )
+    n.roles = roles
     if archivo is not None and archivo.filename:
         cfg = get_settings()
         cabecera = archivo.file.read(16)
@@ -234,7 +264,13 @@ def publicar(
     db.flush()
     audit.registrar(
         db, ctx, "publicar", "novedad", n.id, None,
-        {"titulo": n.titulo, "area_id": aid, "archivo": n.archivo_nombre, "requiere_confirmacion": requiere_confirmacion},
+        {
+            "titulo": n.titulo,
+            "area_id": aid,
+            "roles": [r.nombre for r in roles],
+            "archivo": n.archivo_nombre,
+            "requiere_confirmacion": requiere_confirmacion,
+        },
     )
     db.commit()
     db.refresh(n)

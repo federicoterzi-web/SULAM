@@ -1162,6 +1162,63 @@ class Novedad(Base):
 
     area: Mapped[Area | None] = relationship(lazy="joined")
     autor: Mapped[Usuario | None] = relationship(foreign_keys=[autor_id], lazy="joined")
+    # Si tiene roles, solo la reciben quienes tengan alguno de ellos (dentro del área o de toda la Dirección).
+    roles: Mapped[list["Rol"]] = relationship(secondary="novedades_roles", lazy="selectin")
+
+
+class NovedadRol(Base):
+    """Rol destinatario de una novedad (sin filas: la reciben todos los del área o de la Dirección)."""
+
+    __tablename__ = "novedades_roles"
+    novedad_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("novedades.id", ondelete="CASCADE"), primary_key=True)
+    rol_id: Mapped[int] = mapped_column(ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True)
+
+
+# ---------------------------------------------------------------------------
+# Chat interno: conversaciones entre personas del sistema (1 a 1 o en grupo).
+# ---------------------------------------------------------------------------
+
+
+class ChatConversacion(Base):
+    __tablename__ = "chat_conversaciones"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    tipo: Mapped[str] = mapped_column(String(10))  # directo | grupo
+    titulo: Mapped[str | None] = mapped_column(String(120))
+    # Para las conversaciones 1 a 1: «<id menor>:<id mayor>», así no se duplican.
+    clave_directa: Mapped[str | None] = mapped_column(String(80), unique=True)
+    creada_por: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"))
+    creada_en: Mapped[datetime] = _ts()
+    ultimo_mensaje_en: Mapped[datetime] = _ts()
+
+    participantes: Mapped[list["ChatParticipante"]] = relationship(
+        back_populates="conversacion", cascade="all, delete-orphan", lazy="selectin"
+    )
+
+
+class ChatParticipante(Base):
+    __tablename__ = "chat_participantes"
+    conversacion_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("chat_conversaciones.id", ondelete="CASCADE"), primary_key=True
+    )
+    usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"), primary_key=True)
+    ultimo_leido_en: Mapped[datetime] = _ts()
+    agregado_en: Mapped[datetime] = _ts()
+
+    conversacion: Mapped[ChatConversacion] = relationship(back_populates="participantes")
+    usuario: Mapped[Usuario] = relationship(lazy="joined")
+
+
+class ChatMensaje(Base):
+    __tablename__ = "chat_mensajes"
+    __table_args__ = (Index("ix_chat_mensajes_conv_fecha", "conversacion_id", "creado_en"),)
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    conversacion_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("chat_conversaciones.id", ondelete="CASCADE"))
+    autor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"))
+    cuerpo: Mapped[str] = mapped_column(Text)
+    creado_en: Mapped[datetime] = _ts()
+    borrado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    autor: Mapped[Usuario] = relationship(lazy="joined")
 
 
 class NovedadLectura(Base):

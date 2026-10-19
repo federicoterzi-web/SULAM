@@ -9,6 +9,7 @@ import { CarpetaFisica, PaginaPases, PasesPendientes } from "../paginas/archivo"
 import { PaginaMiAsistencia, PedidosParaAprobar } from "../paginas/miasistencia";
 import { NovedadesPendientes, PaginaNovedades } from "../paginas/novedades";
 import { PaginaAntecedentes } from "../paginas/antecedentes";
+import { InsigniaChat, PaginaChat } from "../paginas/chat";
 import { PanelNegativa } from "../paginas/anses";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, type Caso, type Legajo, type PersonaResumen } from "../api";
@@ -74,6 +75,7 @@ export function Movil({ avisos, ruta, alSalir, alCambiarPassword }: { avisos: No
   const seccion = p[0] ?? "";
   // En los formularios se ocultan las pestañas: más lugar y sin toques accidentales.
   const enFormulario =
+    (p[0] === "chat" && !!p[1]) ||
     p[0] === "nuevo" || p[0] === "ingreso" || p[0] === "informe" || p.length > 2 || ((p[0] === "recursos" || p[0] === "contactos") && p[1] === "nuevo");
   return (
     <div className={`m-app ${enFormulario ? "m-app-formulario" : ""}`}>
@@ -96,6 +98,7 @@ export function Movil({ avisos, ruta, alSalir, alCambiarPassword }: { avisos: No
             <MenuUsuario />
             {puede("agenda", "consultar") && <a href="#/m/agenda">Agenda</a>}
             {puede("participacion", "consultar") && <a href="#/m/participacion">Participación y Sensibilización</a>}
+            {puede("chat", "usar") && <a href="#/m/chat">Chat</a>}
             {puede("antecedentes", "consultar") && <a href="#/m/antecedentes">Antecedentes</a>}
             <a href="#/m/novedades">Novedades</a>
             <a href="#/m/pases">Pases de carpetas</a>
@@ -121,6 +124,7 @@ export function Movil({ avisos, ruta, alSalir, alCambiarPassword }: { avisos: No
           <span aria-hidden>⌕</span>Buscar
         </a>
         <PestanaNuevo activo={seccion === "nuevo"} />
+        <PestanaChat activo={seccion === "chat"} ruta={ruta} />
         <PestanaRecursos activo={seccion === "recursos"} />
       </nav>
       )}
@@ -134,6 +138,17 @@ function PestanaNuevo({ activo }: { activo: boolean }) {
   return (
     <a href="#/m/nuevo" className={activo ? "activo" : ""}>
       <span aria-hidden>＋</span>Nuevo caso
+    </a>
+  );
+}
+
+function PestanaChat({ activo, ruta }: { activo: boolean; ruta: string }) {
+  const { puede } = useSesion();
+  if (!puede("chat", "usar")) return null;
+  return (
+    <a href="#/m/chat" className={activo ? "activo" : ""}>
+      <span aria-hidden>✉</span>Chat
+      <InsigniaChat ruta={ruta} />
     </a>
   );
 }
@@ -175,6 +190,8 @@ function titulo(p: string[]): string {
       return "Novedades";
     case "antecedentes":
       return "Antecedentes";
+    case "chat":
+      return "Chat";
     case "pases":
       return "Pases de carpetas";
     case "mi-asistencia":
@@ -226,6 +243,7 @@ function equivalenteCompleto(p: string[]): string {
   if (p[0] === "ingreso") return "/mesa";
   if (p[0] === "novedades") return "/novedades";
   if (p[0] === "antecedentes") return "/antecedentes";
+  if (p[0] === "chat") return p[1] ? `/chat/${p[1]}` : "/chat";
   if (p[0] === "pases") return "/pases";
   if (p[0] === "mi-asistencia") return "/mi-asistencia";
   if (p[0] === "bandeja") return "/bandeja";
@@ -258,6 +276,8 @@ function Pantalla({ p, ruta }: { p: string[]; ruta: string }) {
       return <PaginaNovedades movil />;
     case "antecedentes":
       return <PaginaAntecedentes />;
+    case "chat":
+      return <PaginaChat id={p[1]} movil key={p[1] ?? "lista"} />;
     case "pases":
       return <PaginaPases movil />;
     case "mi-asistencia":

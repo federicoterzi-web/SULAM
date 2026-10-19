@@ -5027,3 +5027,340 @@ mark.txt-actual { outline: 3px solid #1d4ed8; outline-offset: 1px; }
   box-shadow: 0 0 0 9999px rgb(0 0 0 / 35%);
   pointer-events: none;
 }
+
+/* ---------------------------------------------------------------- novedades por rol */
+
+.novedad-roles {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primario-oscuro);
+  background: var(--primario-claro);
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+}
+
+.campo-roles {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.6rem 0.8rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.roles-elegir {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.4rem;
+  margin: 0.3rem 0;
+}
+
+.roles-elegir .casilla {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+}
+
+.roles-elegir .casilla input {
+  width: auto;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- chat interno */
+
+.chat {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+  height: calc(100vh - 8.5rem);
+  min-height: 420px;
+}
+
+.chat-lista,
+.chat-conversacion {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.chat-lista header {
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--borde);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.chat-lista header h1 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.chat-lista ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.chat-lista li a {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.65rem 0.8rem;
+  text-decoration: none;
+  color: var(--texto);
+  border-bottom: 1px solid var(--borde);
+}
+
+.chat-lista li a:hover,
+.chat-lista li a.activa {
+  background: var(--primario-claro);
+}
+
+.chat-lista li a.sin-leer strong {
+  font-weight: 800;
+}
+
+.chat-avatar {
+  flex: none;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 50%;
+  background: var(--primario);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+
+.chat-resumen {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-resumen small {
+  color: var(--texto-tenue);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-meta {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  color: var(--texto-tenue);
+}
+
+.chat-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.chat-cabecera > div:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-cabecera h2 {
+  margin: 0;
+}
+
+.chat-cabecera small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-acciones {
+  display: flex;
+  gap: 0.4rem;
+  flex: none;
+}
+
+.chat-volver {
+  font-size: 2rem;
+  line-height: 1;
+  text-decoration: none;
+  color: var(--primario);
+  padding: 0 0.4rem;
+}
+
+.chat-mensajes {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--fondo);
+}
+
+.chat-burbuja {
+  max-width: min(75%, 40rem);
+  align-self: flex-start;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px 12px 12px 2px;
+  padding: 0.4rem 0.75rem;
+}
+
+.chat-burbuja.mio {
+  align-self: flex-end;
+  background: var(--primario-claro);
+  border-color: #b9cde1;
+  border-radius: 12px 12px 2px 12px;
+}
+
+.chat-burbuja strong {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--primario);
+}
+
+.chat-burbuja p {
+  margin: 0.1rem 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-burbuja.borrado p {
+  font-style: italic;
+  color: var(--texto-tenue);
+}
+
+.chat-burbuja small {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  color: var(--texto-tenue);
+  font-size: 0.75rem;
+}
+
+.chat-borrar {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--texto-tenue);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.chat-escribir {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.7rem;
+  border-top: 1px solid var(--borde);
+  align-items: flex-end;
+}
+
+.chat-escribir textarea {
+  flex: 1;
+  resize: none;
+  font: inherit;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+}
+
+.chat-selector ul,
+.chat-personas {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+.chat-selector input[type="text"],
+.chat-selector > input,
+.chat-nueva > input {
+  width: 100%;
+}
+
+.chat-personas button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--borde);
+  padding: 0.55rem 0.4rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.chat-personas button:hover {
+  background: var(--primario-claro);
+}
+
+.chat-personas small {
+  color: var(--texto-tenue);
+}
+
+/* En el celular: o la lista o la conversación, a pantalla completa. */
+.chat-movil {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 9rem);
+  min-height: 0;
+  gap: 0;
+}
+
+.chat-movil .chat-lista,
+.chat-movil .chat-conversacion {
+  flex: 1;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+}
+
+.m-app-formulario .chat-movil {
+  height: calc(100dvh - 4.2rem);
+}
+
+.chat-movil .chat-burbuja {
+  max-width: 88%;
+}
+
+.chat-movil .chat-escribir {
+  padding-bottom: calc(0.7rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 860px) {
+  .chat:not(.chat-movil) {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}
+
+.m-pestanas a {
+  position: relative;
+}
+
+.m-pestanas a .insignia {
+  position: absolute;
+  top: 0.2rem;
+  left: calc(50% + 0.55rem);
+  font-size: 0.7rem;
+  padding: 0 0.35rem;
+  line-height: 1.25;
+}

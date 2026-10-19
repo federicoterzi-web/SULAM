@@ -39,6 +39,9 @@ from .models import (
     Agente,
     Area,
     Articulacion,
+    ChatConversacion,
+    ChatMensaje,
+    ChatParticipante,
     Caso,
     CasoAsignacion,
     CasoEstadoHistorial,
@@ -54,6 +57,7 @@ from .models import (
     Novedad,
     NovedadLectura,
     Pase,
+    Rol,
     Persona,
     PersonaVinculada,
     PlantillaInforme,
@@ -496,6 +500,20 @@ def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], c
             for clave in ("direccion", "jefa_admision", "jefe_promocion", "carga", "mesa"):
                 db.add(NovedadLectura(novedad_id=n.id, usuario_id=U[clave].id, confirmada_en=_dt(hoy - timedelta(days=dias - 1), 10)))
 
+    # Una novedad para toda la Dirección pero solo para las jefaturas (dirigida por rol).
+    rol_jefaturas = db.execute(select(Rol).where(Rol.nombre == "Jefe/a de departamento")).scalar_one_or_none()
+    if rol_jefaturas is not None:
+        n = Novedad(
+            titulo="Reunión de jefaturas: lunes 9 h (ficticia)",
+            cuerpo="<p>Revisamos las líneas de trabajo y los procesos de cada departamento. Traer el circuito descrito, paso a paso.</p>",
+            requiere_confirmacion=True, autor_id=U["directora"].id, publicada_en=_dt(hoy - timedelta(days=1), 9),
+        )
+        n.roles = [rol_jefaturas]
+        db.add(n)
+
+    # ------------------------------------------------------------ chat interno
+    _chat(db, U, hoy)
+
     # ------------------------------------------------------------ agenda: salidas, visitas y reuniones
     _agenda(db, U, tecnicos_area, casos + nuevos, areas, rnd, hoy)
 
@@ -504,6 +522,46 @@ def cargar(db: Session, usuarios: dict[str, Usuario], personas: list[Persona], c
 
     # ------------------------------------------------------------ personal: reloj, pedidos y quién no está hoy
     _personal(db, U, areas, almacen, rnd, hoy)
+
+
+def _chat(db: Session, U: dict[str, Usuario], hoy: date) -> None:
+    """Conversaciones ficticias: una entre dos personas y un grupo; algunos mensajes quedan sin leer."""
+
+    def conversacion(tipo, titulo, creador, miembros, mensajes, leido_hasta):
+        c = ChatConversacion(tipo=tipo, titulo=titulo, creada_por=U[creador].id, creada_en=_dt(hoy - timedelta(days=2), 8))
+        if tipo == "directo":
+            c.clave_directa = ":".join(sorted(str(U[k].id) for k in miembros))
+        db.add(c)
+        db.flush()
+        partes = {}
+        for k in miembros:
+            partes[k] = ChatParticipante(conversacion_id=c.id, usuario_id=U[k].id, agregado_en=_dt(hoy - timedelta(days=2), 8), ultimo_leido_en=_dt(hoy - timedelta(days=2), 8))
+            db.add(partes[k])
+        ultimo = None
+        for i, (autor, texto) in enumerate(mensajes):
+            ultimo = _dt(hoy - timedelta(days=1), 9 + i // 2, 10 * (i % 2) * 3)
+            db.add(ChatMensaje(conversacion_id=c.id, autor_id=U[autor].id, cuerpo=texto, creado_en=ultimo))
+        c.ultimo_mensaje_en = ultimo
+        for k, hasta in leido_hasta.items():
+            partes[k].ultimo_leido_en = hasta  # el resto de los participantes tiene mensajes sin leer
+
+    conversacion(
+        "directo", None, "directora", ("directora", "jefa_admision"),
+        [
+            ("directora", "Buen día. ¿Pudiste revisar los casos sin responsable de la semana pasada?"),
+            ("jefa_admision", "Sí, quedaron dos sin asignar; los reparto hoy."),
+            ("directora", "Perfecto. El lunes los vemos en la reunión de jefaturas."),
+        ],
+        {"directora": _dt(hoy, 7)},
+    )
+    conversacion(
+        "grupo", "Jefaturas (ficticio)", "directora", ("directora", "jefa_admision", "jefe_promocion", "jefa_cuidados"),
+        [
+            ("directora", "Armamos este grupo para coordinar la presentación del lunes."),
+            ("jefe_promocion", "Yo llevo el circuito de Promoción descrito."),
+        ],
+        {"directora": _dt(hoy, 7), "jefe_promocion": _dt(hoy, 7)},
+    )
 
 
 def _agenda(db: Session, U: dict[str, Usuario], tecnicos_area: dict[str, list[Usuario]], casos: list[Caso], areas: dict[str, Area], rnd: random.Random, hoy: date) -> None:

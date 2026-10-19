@@ -12,6 +12,7 @@ const TEXTOS: Record<string, { uno: string; varios: (n: number) => string; ruta:
   residencias_documentos: { uno: "Hay documentación de una residencia vencida o por vencer", varios: (n) => `Hay ${n} documentos de residencias vencidos o por vencer`, ruta: "/residencias" },
   casos_asignados: { uno: "Te asignaron un caso", varios: (n) => `Te asignaron ${n} casos`, ruta: "/casos" },
   casos_sin_asignar: { uno: "Hay un caso para asignar", varios: (n) => `Hay ${n} casos para asignar`, ruta: "/casos" },
+  chat: { uno: "Tenés un mensaje nuevo en el chat", varios: (n) => `Tenés mensajes nuevos en ${n} conversaciones del chat`, ruta: "/chat" },
   novedades: { uno: "Hay una novedad para confirmar", varios: (n) => `Hay ${n} novedades para confirmar`, ruta: "/novedades" },
   pases_entregar: { uno: "Hay una carpeta para entregar", varios: (n) => `Hay ${n} carpetas para entregar`, ruta: "/pases" },
   pases_recibir: { uno: "Hay una carpeta para recibir", varios: (n) => `Hay ${n} carpetas para recibir`, ruta: "/pases" },

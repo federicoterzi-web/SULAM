@@ -22,6 +22,7 @@ import { PaginaColaImpresion } from "./paginas/cola";
 import { PaginaRecurso, PaginaRecursos } from "./paginas/recursos";
 import { PaginaResidencias } from "./paginas/residencias";
 import { PaginaAntecedentes } from "./paginas/antecedentes";
+import { InsigniaChat, PaginaChat } from "./paginas/chat";
 import { PaginaSubsidio, PaginaSubsidios } from "./paginas/subsidios";
 import { PaginaContactos } from "./paginas/contactos";
 import { PaginaInforme } from "./paginas/informes";
@@ -242,6 +243,7 @@ const GRUPOS: { texto: string; miembros: ItemMenu[] }[] = [
       { ruta: "/visitas", texto: "Mapa de casos y salidas", permiso: ["casos", "consultar"] },
     ],
   },
+  { texto: "Chat", miembros: [{ ruta: "/chat", texto: "Chat", permiso: ["chat", "usar"] }] },
   { texto: "Antecedentes", miembros: [{ ruta: "/antecedentes", texto: "Antecedentes", permiso: ["antecedentes", "consultar"] }] },
   { texto: "Subsidios", miembros: [{ ruta: "/subsidios", texto: "Subsidios", permiso: ["subsidios", "consultar"] }] },
   { texto: "Participación y Sensibilización", miembros: [{ ruta: "/participacion", texto: "Participación y Sensibilización", permiso: ["participacion", "consultar"] }] },
@@ -281,6 +283,7 @@ const GRUPOS: { texto: string; miembros: ItemMenu[] }[] = [
 
 function Insignia({ ruta, de }: { ruta: string; de: string }) {
   if (de === "/novedades") return <InsigniaNovedades ruta={ruta} />;
+  if (de === "/chat") return <InsigniaChat ruta={ruta} />;
   if (de === "/pases") return <InsigniaPases ruta={ruta} />;
   if (de === "/mi-asistencia") return <InsigniaPersonal ruta={ruta} cual="para_aprobar" />;
   if (de === "/personal") return <InsigniaPersonal ruta={ruta} cual="para_registrar" />;
@@ -480,6 +483,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return <PaginaResidencias />;
     case "antecedentes":
       return <PaginaAntecedentes />;
+    case "chat":
+      return <PaginaChat id={p[1]} key={p[1] ?? "lista"} />;
     case "recursos":
       return p[1] ? <PaginaRecurso id={p[1]} key={p[1]} /> : <PaginaRecursos />;
     case "imprimir-caratulas":

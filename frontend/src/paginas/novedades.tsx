@@ -10,6 +10,7 @@ export interface Novedad {
   titulo: string;
   cuerpo: string;
   area: { id: number; nombre: string } | null;
+  roles: { id: number; nombre: string }[];
   requiere_confirmacion: boolean;
   fijada: boolean;
   archivo: { nombre: string; mime: string; tamano: number } | null;
@@ -25,6 +26,7 @@ interface Listado {
   novedades: Novedad[];
   puede_publicar: boolean;
   areas_publicables: { id: number | null; nombre: string }[];
+  roles_publicables: { id: number; nombre: string }[];
 }
 
 export interface Pendientes {
@@ -105,6 +107,7 @@ export function PaginaNovedades({ movil }: { movil?: boolean }) {
         <Modal titulo="Publicar novedad" alCerrar={() => setNueva(false)} ancho>
           <FormNovedad
             areas={d.areas_publicables}
+            roles={d.roles_publicables}
             alPublicar={() => {
               setNueva(false);
               lista.recargar();
@@ -128,6 +131,7 @@ function TarjetaNovedad({ n, alCambiar, alVerLecturas }: { n: Novedad; alCambiar
     <article className={`novedad ${pendiente ? "novedad-pendiente" : ""} ${n.fijada ? "novedad-fijada" : ""}`}>
       <header>
         <span className={`novedad-origen ${n.area ? "" : "novedad-direccion"}`}>{n.area ? corta(n.area.nombre) : "Dirección · para todos"}</span>
+        {n.roles.length > 0 && <span className="novedad-roles">Para: {n.roles.map((r) => r.nombre).join(", ")}</span>}
         {n.fijada && <span className="novedad-fija">Fijada</span>}
         <h2>{n.titulo}</h2>
         <p className="tenue">
@@ -218,11 +222,20 @@ function Lecturas({ id }: { id: string }) {
   );
 }
 
-function FormNovedad({ areas, alPublicar }: { areas: { id: number | null; nombre: string }[]; alPublicar: () => void }) {
+function FormNovedad({
+  areas,
+  roles,
+  alPublicar,
+}: {
+  areas: { id: number | null; nombre: string }[];
+  roles: { id: number; nombre: string }[];
+  alPublicar: () => void;
+}) {
   const { yo } = useSesion();
   const [titulo, setTitulo] = useState("");
   const [cuerpo, setCuerpo] = useState("");
   const [area, setArea] = useState<string>(areas.length ? String(areas[0].id) : "");
+  const [rolesElegidos, setRolesElegidos] = useState<number[]>([]);
   const [confirmacion, setConfirmacion] = useState(true);
   const [fijada, setFijada] = useState(false);
   const [archivo, setArchivo] = useState<File | null>(null);
@@ -235,6 +248,7 @@ function FormNovedad({ areas, alPublicar }: { areas: { id: number | null; nombre
     fd.append("titulo", titulo);
     fd.append("cuerpo", cuerpo);
     if (area && area !== "null") fd.append("area_id", area);
+    if (rolesElegidos.length) fd.append("roles_ids", rolesElegidos.join(","));
     fd.append("requiere_confirmacion", String(confirmacion));
     fd.append("fijada", String(fijada));
     if (archivo) fd.append("archivo", archivo);
@@ -263,6 +277,28 @@ function FormNovedad({ areas, alPublicar }: { areas: { id: number | null; nombre
         </select>
         {areas.length === 1 && yo.area && <span className="campo-ayuda">Publica para su área. Las novedades para todos las publica la Dirección.</span>}
       </label>
+      {roles.length > 0 && (
+        <fieldset className="campo campo-roles">
+          <legend className="campo-etiqueta">Solo para quienes tengan el rol (opcional)</legend>
+          <div className="roles-elegir">
+            {roles.map((r) => (
+              <label key={r.id} className="casilla">
+                <input
+                  type="checkbox"
+                  checked={rolesElegidos.includes(r.id)}
+                  onChange={(e) => setRolesElegidos((prev) => (e.target.checked ? [...prev, r.id] : prev.filter((x) => x !== r.id)))}
+                />{" "}
+                {r.nombre}
+              </label>
+            ))}
+          </div>
+          <span className="campo-ayuda">
+            {rolesElegidos.length === 0
+              ? "Sin roles marcados, la reciben todas las personas del destino elegido."
+              : `La reciben solo quienes tengan ${rolesElegidos.length === 1 ? "ese rol" : "alguno de esos roles"}${destino && destino.id !== null ? ` en ${corta(destino.nombre)}` : " en toda la Dirección"}.`}
+          </span>
+        </fieldset>
+      )}
       <label className="campo">
         <span className="campo-etiqueta">Título *</span>
         <input required minLength={3} value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej.: Circular 3/2026 — Nuevo horario de atención" />
@@ -285,7 +321,9 @@ function FormNovedad({ areas, alPublicar }: { areas: { id: number | null; nombre
       <Aviso error={error} />
       <div className="fila-botones">
         <button className="boton boton-primario" disabled={enviando}>
-          {enviando ? "Publicando…" : `Publicar para ${destino ? (destino.id === null ? "toda la Dirección" : corta(destino.nombre)) : "…"}`}
+          {enviando
+            ? "Publicando…"
+            : `Publicar para ${destino ? (destino.id === null ? "toda la Dirección" : corta(destino.nombre)) : "…"}${rolesElegidos.length ? ` (${rolesElegidos.length === 1 ? "1 rol" : `${rolesElegidos.length} roles`})` : ""}`}
         </button>
       </div>
     </form>

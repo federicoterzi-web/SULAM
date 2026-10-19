@@ -225,6 +225,14 @@ Surgen de lo conversado con la Dirección y del documento de diseño inicial (§
 - [ ] Proponer la foto sola al cargar un DNI y recortar en tanda los DNI ya cargados (después de calibrar).
 - [ ] Mostrar la foto también en la versión para celular.
 
+### Chat interno y novedades por rol (D-045, D-046)
+- [x] Novedades dirigidas a roles (toda la Dirección o un área), con lectura, avisos y estadísticas solo para esos destinatarios.
+- [x] Chat interno 1 a 1 y en grupos, escritorio y celular, con no leídos en el menú y aviso del navegador.
+- [ ] Decidir con la Dirección: conservación y auditoría de los mensajes del chat.
+- [ ] Chat: adjuntar imágenes/documentos, mencionar un legajo (hoy no, a propósito), silenciar conversaciones, buscar en los mensajes.
+- [ ] Chat en tiempo real (hoy consulta cada pocos segundos) y avisos con la aplicación cerrada: requiere Web Push (HTTPS).
+- [ ] Novedades: dirigirlas a personas puntuales (hoy: Dirección, área o rol).
+
 ## Convenciones de trabajo
 - Cada cambio de esquema va en una migración nueva de Alembic (`backend/alembic/versions`), nunca editando una existente.
 - Cada regla funcional nueva se documenta en FUNCTIONAL_SPEC.md y, si implica una elección, en DECISIONS.md.
