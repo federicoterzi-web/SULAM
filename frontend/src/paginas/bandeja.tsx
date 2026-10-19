@@ -489,6 +489,19 @@ function ClasificarHojas({
           )}
 
           <Aviso error={error} />
+          {(!persona || !tipo || nuevoTipo) && (
+            <p className="aviso aviso-info" role="status">
+              Para poder guardar falta:{" "}
+              {[
+                !persona && "elegir el legajo (buscá por apellido o documento y tocá a la persona)",
+                !tipo && !nuevoTipo && "elegir el tipo de documento",
+                nuevoTipo && "terminar de crear el tipo nuevo, o elegir uno de la lista",
+              ]
+                .filter(Boolean)
+                .join("; ")}
+              .
+            </p>
+          )}
           <div className="fila-botones">
             <button className="boton boton-primario" disabled={enviando || !persona || !tipo || nuevoTipo}>
               {enviando ? "Guardando…" : "Guardar en el legajo"}
