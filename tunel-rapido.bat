@@ -27,5 +27,5 @@ if errorlevel 1 (
 echo  Buscando la direccion... Aparece abajo, una linea que termina en .trycloudflare.com
 echo  Copiala y abrila en el celular. Para cortarla, cerra esta ventana (o Ctrl+C).
 echo.
-docker run --rm cloudflare/cloudflared:latest tunnel --no-autoupdate --url http://host.docker.internal:8000
+docker run --rm --dns 1.1.1.1 --dns 8.8.8.8 cloudflare/cloudflared:latest tunnel --no-autoupdate --protocol http2 --url http://host.docker.internal:8000
 pause
