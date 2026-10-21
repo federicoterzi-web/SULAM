@@ -5,7 +5,9 @@
   "use strict";
   const P = globalThis.SulamParser;
   const LOTE = 25;
-  const SIMULTANEOS = 3;
+  // El Sistema de Expedientes del Ministerio guarda en la sesión «cuál es el expediente actual»:
+  // si se piden dos a la vez, uno puede volver con los datos del otro. Se lee de a uno.
+  const SIMULTANEOS = 1;
   const AUTO_CADA_MS = 15 * 60 * 1000;
 
   // ------------------------------------------------------------------ utilidades
@@ -174,10 +176,21 @@
 
       // 2. El detalle (datos y pases) de cada expediente.
       let leidos = 0;
+      const sinLeer = [];
       const expedientes = await enParalelo(lista, SIMULTANEOS, async (f) => {
         try {
-          const exp = P.expediente(await P.traer(f.url), location.href);
-          return exp ? { clave: exp.clave, url: exp.url, en_bandeja: true, bandeja: f.bandeja, detalle: exp.detalle, movimientos: exp.movimientos } : null;
+          let exp = null;
+          for (let intento = 0; intento < 3; intento++) {
+            exp = P.expediente(await P.traer(f.url), location.href);
+            if (exp && exp.clave === f.clave) break; // la página es del expediente pedido
+            exp = null;
+            await espera(400);
+          }
+          if (!exp) {
+            sinLeer.push(f.clave);
+            return { clave: f.clave, url: f.url, en_bandeja: true, bandeja: f.bandeja, movimientos: [] };
+          }
+          return { clave: exp.clave, url: exp.url, en_bandeja: true, bandeja: f.bandeja, detalle: exp.detalle, movimientos: exp.movimientos };
         } catch (e) {
           if (/sesión/i.test(e.message)) throw e;
           return { clave: f.clave, url: f.url, en_bandeja: true, bandeja: f.bandeja, movimientos: [] };
@@ -220,14 +233,17 @@
       const resumen =
         `Listo: ${validos.length} expedientes leídos` +
         (creados ? `, ${creados} ingreso${creados === 1 ? "" : "s"} nuevo${creados === 1 ? "" : "s"} en Mesa de Entrada (${nuevos.slice(0, 5).join(", ")}${nuevos.length > 5 ? "…" : ""}).` : ". No había pases nuevos.");
+      const avisoSinLeer = sinLeer.length
+        ? ` No se pudo leer el detalle de ${sinLeer.length} (${sinLeer.slice(0, 5).join(", ")}${sinLeer.length > 5 ? "…" : ""}); se guardó solo lo que muestra la bandeja.`
+        : "";
       if (faltan.length) {
         ui.texto(
           `${resumen} Atención: SULAM no guardó ${faltan.length} (${faltan.slice(0, 6).join(", ")}${faltan.length > 6 ? "…" : ""}). ` +
-            `Se leyeron ${lista.length} en la bandeja, se enviaron ${validos.length} y SULAM respondió por ${Object.keys(estadoPorClave).length}.`,
+            `Se leyeron ${lista.length} en la bandeja, se enviaron ${validos.length} y SULAM respondió por ${Object.keys(estadoPorClave).length}.${avisoSinLeer}`,
           "error",
         );
       } else {
-        ui.texto(`${resumen} Verificado: todos están en SULAM.`, "exito");
+        ui.texto(`${resumen} Verificado: todos están en SULAM.${avisoSinLeer}`, sinLeer.length ? "error" : "exito");
       }
     } catch (e) {
       ui.texto(e.message, "error");
