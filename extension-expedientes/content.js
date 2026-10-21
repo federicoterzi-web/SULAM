@@ -213,12 +213,22 @@
         }
       }
       await pedir({ tipo: "marcarSincronizado" });
-      marcarFilas(conf, b0.filas, estadoPorClave);
-      ui.texto(
+      // 4. Verificación: se le pregunta a SULAM qué quedó guardado, en vez de suponerlo.
+      const guardado = await estados(validos.map((x) => x.clave));
+      const faltan = validos.map((x) => x.clave).filter((c) => !guardado[c]);
+      marcarFilas(conf, b0.filas, guardado);
+      const resumen =
         `Listo: ${validos.length} expedientes leídos` +
-          (creados ? `, ${creados} ingreso${creados === 1 ? "" : "s"} nuevo${creados === 1 ? "" : "s"} en Mesa de Entrada (${nuevos.slice(0, 5).join(", ")}${nuevos.length > 5 ? "…" : ""}).` : ". No había pases nuevos."),
-        "exito",
-      );
+        (creados ? `, ${creados} ingreso${creados === 1 ? "" : "s"} nuevo${creados === 1 ? "" : "s"} en Mesa de Entrada (${nuevos.slice(0, 5).join(", ")}${nuevos.length > 5 ? "…" : ""}).` : ". No había pases nuevos.");
+      if (faltan.length) {
+        ui.texto(
+          `${resumen} Atención: SULAM no guardó ${faltan.length} (${faltan.slice(0, 6).join(", ")}${faltan.length > 6 ? "…" : ""}). ` +
+            `Se leyeron ${lista.length} en la bandeja, se enviaron ${validos.length} y SULAM respondió por ${Object.keys(estadoPorClave).length}.`,
+          "error",
+        );
+      } else {
+        ui.texto(`${resumen} Verificado: todos están en SULAM.`, "exito");
+      }
     } catch (e) {
       ui.texto(e.message, "error");
     } finally {
