@@ -290,6 +290,7 @@ export interface Expediente {
   persona_id: string;
   caso_id: string | null;
   observaciones: string | null;
+  expediente_ministerio_id?: string | null;
   creado_en: string;
   persona?: PersonaResumen;
 }

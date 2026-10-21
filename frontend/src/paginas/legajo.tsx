@@ -374,7 +374,9 @@ export function TablaExpedientes({ expedientes, casos = [] }: { expedientes: Exp
           <Fragment key={x.id}>
           <tr>
             <td>
-              <strong>{x.numero}</strong>
+              <strong>
+                <Enlace a={`/expedientes/${x.id}`}>{x.numero}</Enlace>
+              </strong>
             </td>
             <td>{x.tipo === "judicial" ? "Judicial" : "Administrativo"}</td>
             <td>{x.organismo ?? "—"}</td>

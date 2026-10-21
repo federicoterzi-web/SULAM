@@ -130,3 +130,41 @@ def test_token_revocado_y_sin_permiso(admin):
     assert _extension("sulam_inventado").get("/api/integracion/yo").status_code == 401
     # La clave no sirve para la API normal (que usa la sesión).
     assert _extension(token).get("/api/ingresos").status_code == 401
+
+
+def test_vincular_expediente_del_ministerio_a_un_legajo(admin):
+    persona = nueva_persona(admin, numero_documento="14961387")
+    ext = _extension(_token(admin))
+    ext.post("/api/integracion/ministerio/sincronizar", json={"expedientes": [_expediente()]})
+    em = admin.get("/api/ministerio/expedientes").json()[0]
+    assert em["expediente_id"] is None
+
+    r = admin.post(f"/api/ministerio/expedientes/{em['id']}/vincular", json={"persona_id": persona["id"]})
+    assert r.status_code == 201, r.text
+    exp = r.json()
+    assert exp["numero"] == "21768/425-AM-2026"
+    assert exp["expediente_ministerio_id"] == em["id"]
+
+    # No se puede vincular dos veces.
+    r = admin.post(f"/api/ministerio/expedientes/{em['id']}/vincular", json={"persona_id": persona["id"]})
+    assert r.status_code == 409
+
+    # La lista del Ministerio ahora apunta al expediente de SULAM.
+    assert admin.get("/api/ministerio/expedientes").json()[0]["expediente_id"] == exp["id"]
+
+    # La ficha del expediente trae lo que dice el Ministerio, con los pases.
+    ficha = admin.get(f"/api/expedientes/{exp['id']}").json()
+    assert ficha["ministerio"]["oficina_actual"] == "DIRECCION DE ADULTOS MAYORES"
+    assert len(ficha["ministerio"]["movimientos"]) == 2
+    assert ficha["documentos"] == [] and ficha["persona"]["id"] == persona["id"]
+
+
+def test_vincular_sin_permiso_sobre_el_legajo(admin):
+    persona = nueva_persona(admin)
+    ext = _extension(_token(admin))
+    ext.post("/api/integracion/ministerio/sincronizar", json={"expedientes": [_expediente(dni=None)]})
+    em = admin.get("/api/ministerio/expedientes").json()[0]
+    crear_usuario("tec2", "Técnico", AREA_ADMISION)
+    tec = Cliente("tec2")
+    r = tec.post(f"/api/ministerio/expedientes/{em['id']}/vincular", json={"persona_id": persona["id"]})
+    assert r.status_code in (403, 404)

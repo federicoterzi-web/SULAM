@@ -2,6 +2,7 @@
 // Expedientes del Ministerio de Desarrollo Social, y las claves para conectarla.
 import { useState, type FormEvent } from "react";
 import { api, type PersonaResumen } from "../api";
+import { SelectorPersona } from "./legajos";
 import {
   Aviso,
   Cargando,
@@ -56,6 +57,7 @@ export interface ExpedienteMinisterio {
   oficina_actual: string | null;
   en_bandeja: boolean;
   ultima_sincronizacion_en: string;
+  expediente_id?: string | null;
   ingresos?: { id: string; numero: string; fecha_ingreso: string; vinculado: boolean }[];
   persona?: PersonaResumen | null;
   persona_sugerida?: PersonaResumen | null;
@@ -196,10 +198,56 @@ function Legajo({ e }: { e: ExpedienteMinisterio }) {
 }
 
 function DetalleExpediente({ id }: { id: string }) {
-  const { datos: e, error } = useDatos(() => api.get<ExpedienteMinisterio>(`/ministerio/expedientes/${id}`), [id]);
+  const { datos: e, error, recargar } = useDatos(() => api.get<ExpedienteMinisterio>(`/ministerio/expedientes/${id}`), [id]);
   if (error) return <Aviso error={error} />;
   if (!e) return <Cargando />;
-  return <DatosExpedienteMinisterio e={e} />;
+  return (
+    <>
+      <VincularExpediente e={e} alCambiar={recargar} />
+      <DatosExpedienteMinisterio e={e} />
+    </>
+  );
+}
+
+/** Une el expediente del Ministerio con el expediente de un legajo en SULAM. */
+function VincularExpediente({ e, alCambiar }: { e: ExpedienteMinisterio; alCambiar: () => void }) {
+  const { puede } = useSesion();
+  const envio = useEnvio();
+  const [elegir, setElegir] = useState(false);
+  if (e.expediente_id)
+    return (
+      <p>
+        <span className="insignia">Ya está en SULAM</span>{" "}
+        <Enlace a={`/expedientes/${e.expediente_id}`}>Abrir el expediente (pases internos, carpeta y documentos)</Enlace>
+      </p>
+    );
+  if (!puede("expedientes", "crear")) return null;
+  const crear = async (p: PersonaResumen) => {
+    const r = await envio.ejecutar(() => api.post<{ id: string }>(`/ministerio/expedientes/${e.id}/vincular`, { persona_id: p.id }));
+    if (r) {
+      alCambiar();
+      window.location.hash = `/expedientes/${r.id}`;
+    }
+  };
+  const sugerida = e.persona ?? e.persona_sugerida;
+  return (
+    <div className="aviso">
+      <strong>Todavía no tiene expediente propio en SULAM.</strong> Al crearlo se pueden hacer los pases internos,
+      llevar la carpeta en papel y guardar los documentos digitales.
+      <Aviso error={envio.error} />
+      <div className="acciones">
+        {sugerida && (
+          <button className="boton" disabled={envio.enviando} onClick={() => crear(sugerida)}>
+            Crearlo en el legajo de {nombre(sugerida)}
+          </button>
+        )}
+        <button className="boton" onClick={() => setElegir(!elegir)}>
+          {elegir ? "Cancelar" : sugerida ? "Elegir otro legajo" : "Elegir el legajo"}
+        </button>
+      </div>
+      {elegir && <SelectorPersona alElegir={crear} />}
+    </div>
+  );
 }
 
 export function DatosExpedienteMinisterio({ e }: { e: ExpedienteMinisterio }) {

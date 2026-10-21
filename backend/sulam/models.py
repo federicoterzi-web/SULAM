@@ -501,6 +501,10 @@ class Expediente(Base):
     persona_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("personas.id"), index=True)
     caso_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("casos.id"), index=True)
     observaciones: Mapped[str | None] = mapped_column(Text)
+    # Si es un expediente del Sistema de Expedientes del Ministerio, cuál es.
+    expediente_ministerio_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("expedientes_ministerio.id"), unique=True
+    )
     creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
     creado_en: Mapped[datetime] = _ts()
 

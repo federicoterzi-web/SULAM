@@ -16,7 +16,7 @@ import { PaginaAdmin } from "./paginas/admin";
 import { PaginaAuditoria } from "./paginas/auditoria";
 import { PaginaBuscar } from "./paginas/buscar";
 import { PaginaCaso, PaginaCasos } from "./paginas/casos";
-import { PaginaExpedientes } from "./paginas/expedientes";
+import { PaginaExpediente, PaginaExpedientes } from "./paginas/expedientes";
 import { PaginaFichas } from "./paginas/fichas";
 import { PaginaColaImpresion } from "./paginas/cola";
 import { PaginaRecurso, PaginaRecursos } from "./paginas/recursos";
@@ -460,7 +460,7 @@ function Rutas({ ruta }: { ruta: string }) {
     case "mesa":
       return p[1] ? <PaginaIngreso id={p[1]} key={p[1]} /> : <PaginaMesa />;
     case "expedientes":
-      return <PaginaExpedientes />;
+      return p[1] ? <PaginaExpediente id={p[1]} key={p[1]} /> : <PaginaExpedientes />;
     case "ministerio":
       return <PaginaMinisterio />;
     case "visitas":

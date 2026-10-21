@@ -310,5 +310,7 @@ Surgen de lo conversado con la Dirección y del documento de diseño inicial (§
 | Extensión de Chrome: lectura de la Bandeja de Entrada y de cada expediente, franja de SULAM con estado por fila | ✅ (probada con pantallas de prueba y lectura real de la bandeja, sin enviar datos) |
 | API de integración con clave personal revocable; ingresos de Mesa de Entrada por pase, sin duplicar | ✅ (pruebas en `tests/test_ministerio.py`) |
 | Pantalla «Expedientes del Ministerio» y datos del expediente en el ingreso | ✅ |
-| Completar la «Solicitud de Alta de Expediente» del Ministerio desde SULAM | ⏳ |
+| Ficha del expediente en SULAM, vinculada al expediente del Ministerio (pases internos, carpeta, documentos) | ✅ (D-050) |
+| Extensión: precargar el Pase del Ministerio desde SULAM (fojas, nota, oficina; confirma la persona) | ⏳ |
+| Extensión: precargar la «Solicitud de Alta de Expediente» desde SULAM | ⏳ |
 | Pedir a Informática del Ministerio API o acceso de lectura | ⏳ |

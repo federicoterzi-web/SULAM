@@ -179,6 +179,7 @@ def expediente_out(e: Expediente) -> dict:
         "persona_id": str(e.persona_id),
         "caso_id": str(e.caso_id) if e.caso_id else None,
         "observaciones": e.observaciones,
+        "expediente_ministerio_id": str(e.expediente_ministerio_id) if e.expediente_ministerio_id else None,
         "creado_en": e.creado_en.isoformat(),
     }
 

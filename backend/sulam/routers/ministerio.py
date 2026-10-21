@@ -29,13 +29,13 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto, ip_cliente
-from ..models import ExpedienteMinisterio, Ingreso, Persona, TipoDocumental, TokenIntegracion
+from ..models import Expediente, ExpedienteMinisterio, Ingreso, Persona, TipoDocumental, TokenIntegracion
 from ..numbering import numero_ingreso
-from ..permissions import Contexto, permisos_efectivos
+from ..permissions import Contexto, permisos_efectivos, requerir_persona
 from ..security import ahora
-from ..serializers import persona_resumen
+from ..serializers import expediente_out, persona_resumen
 from ..textutil import escapar_like, normalizar, normalizar_documento
-from ._comun import no_encontrado
+from ._comun import no_encontrado, obtener_persona, registrar_actividad_caso, validar_pertenencia
 
 router = APIRouter(tags=["expedientes del ministerio"])
 
@@ -407,9 +407,13 @@ def _estado_expediente(db: Session, em: ExpedienteMinisterio, personas: dict[str
             vinculada = db.get(Persona, i.persona_id)
             break
     sugerida = personas.get(em.documento_beneficiario) if em.documento_beneficiario else None
+    propio = db.execute(select(Expediente).where(Expediente.expediente_ministerio_id == em.id)).scalar_one_or_none()
+    if propio is not None and vinculada is None:
+        vinculada = db.get(Persona, propio.persona_id)
     return {
         "clave": em.clave,
         "id": str(em.id),
+        "expediente_id": str(propio.id) if propio else None,
         "ingresos": [
             {"id": str(i.id), "numero": i.numero, "fecha_ingreso": i.fecha_ingreso.isoformat(), "vinculado": bool(i.persona_id)}
             for i in ingresos
@@ -570,3 +574,56 @@ def ver_expediente_ministerio(expediente_id: uuid.UUID, ctx: Contexto = Depends(
     audit.registrar(db, ctx, "consultar", "expediente_ministerio", em.id, None, {"clave": em.clave})
     db.commit()
     return r
+
+
+class VincularExpedienteIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    persona_id: uuid.UUID
+    caso_id: uuid.UUID | None = None
+
+
+@router.post("/ministerio/expedientes/{expediente_id}/vincular", status_code=201)
+def vincular_expediente_ministerio(
+    expediente_id: uuid.UUID,
+    datos: VincularExpedienteIn,
+    ctx: Contexto = Depends(contexto),
+    db: Session = Depends(get_db),
+):
+    """Crea el expediente del legajo que corresponde a este expediente del Ministerio.
+
+    Desde ahí se manejan sus pases internos, la carpeta en papel y los documentos digitales.
+    """
+    ctx.requerir("mesa_entrada", "consultar")
+    em = db.get(ExpedienteMinisterio, expediente_id)
+    if em is None:
+        raise no_encontrado("Expediente del Ministerio")
+    persona = obtener_persona(db, datos.persona_id)
+    requerir_persona(db, ctx, persona, "expedientes", "crear")
+    existente = db.execute(select(Expediente).where(Expediente.expediente_ministerio_id == em.id)).scalar_one_or_none()
+    if existente is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Este expediente ya está vinculado a un legajo.")
+    caso, _ = validar_pertenencia(db, persona.id, datos.caso_id, None)
+    exp = Expediente(
+        numero=em.clave,
+        tipo="administrativo",
+        organismo="Ministerio de Desarrollo Social",
+        caratula=em.asunto[:2000] if em.asunto else None,
+        persona_id=persona.id,
+        caso_id=caso.id if caso else None,
+        expediente_ministerio_id=em.id,
+        creado_por=ctx.id,
+    )
+    db.add(exp)
+    db.flush()
+    if caso:
+        registrar_actividad_caso(caso)
+    # Los ingresos de Mesa de Entrada que ya estaban en este legajo quedan ligados al expediente.
+    for i in db.execute(select(Ingreso).where(Ingreso.expediente_ministerio_id == em.id)).scalars():
+        if i.persona_id == persona.id and i.expediente_id is None:
+            i.expediente_id = exp.id
+    audit.registrar(
+        db, ctx, "crear", "expediente", exp.id, persona.id,
+        {"numero": exp.numero, "tipo": exp.tipo, "caso_id": exp.caso_id, "origen": "ministerio"},
+    )
+    db.commit()
+    return expediente_out(exp)

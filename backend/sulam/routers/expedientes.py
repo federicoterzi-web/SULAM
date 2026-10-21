@@ -9,10 +9,10 @@ from sqlalchemy.orm import Session
 from .. import audit, filtros
 from ..db import get_db
 from ..deps import contexto
-from ..models import Expediente, Persona
+from ..models import Documento, Expediente, ExpedienteMinisterio, Ingreso, Persona, Usuario
 from ..permissions import Contexto, filtro_personas, requerir_persona
 from ..schemas import ExpedienteIn, ExpedientePatch
-from ..serializers import expediente_out, persona_resumen
+from ..serializers import documento_out, expediente_out, ingreso_out, persona_resumen
 from ..textutil import escapar_like
 from ._comun import (
     obtener_expediente,
@@ -74,7 +74,28 @@ def ver_expediente(expediente_id: uuid.UUID, ctx: Contexto = Depends(contexto), 
     exp = obtener_expediente(db, expediente_id)
     persona = db.get(Persona, exp.persona_id)
     requerir_persona(db, ctx, persona, "expedientes", "consultar")
-    return {**expediente_out(exp), "persona": persona_resumen(persona)}
+    resultado = {**expediente_out(exp), "persona": persona_resumen(persona), "ministerio": None}
+    em = db.get(ExpedienteMinisterio, exp.expediente_ministerio_id) if exp.expediente_ministerio_id else None
+    if em is not None:
+        from .ministerio import expediente_ministerio_out
+
+        resultado["ministerio"] = {**expediente_ministerio_out(em), "movimientos": em.movimientos}
+    resultado["documentos"] = []
+    if ctx.tiene("documentos", "consultar"):
+        q = (
+            select(Documento, Usuario)
+            .outerjoin(Usuario, Usuario.id == Documento.cargado_por)
+            .where(Documento.expediente_id == exp.id, Documento.eliminado_en.is_(None))
+            .order_by(Documento.cargado_en.desc())
+        )
+        resultado["documentos"] = [documento_out(d, u) for d, u in db.execute(q).all()]
+    resultado["ingresos"] = [
+        ingreso_out(i)
+        for i in db.execute(
+            select(Ingreso).where(Ingreso.expediente_id == exp.id).order_by(Ingreso.fecha_ingreso.desc())
+        ).scalars()
+    ]
+    return resultado
 
 
 @router.patch("/expedientes/{expediente_id}")
