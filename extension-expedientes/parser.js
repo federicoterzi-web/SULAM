@@ -64,8 +64,10 @@
 
   /** «21768/425-AM-2026» o parámetros del enlace → partes y clave normalizada. */
   function clave(numero, codigo, letra, anio) {
+    // El Ministerio guarda la letra con espacios de relleno («S » en vez de «S»).
+    letra = String(letra || "").replace(/\s+/g, "");
     if (!numero || !codigo || !letra || !anio) return null;
-    return `${parseInt(numero, 10)}/${parseInt(codigo, 10)}-${String(letra).toUpperCase()}-${anio}`;
+    return `${parseInt(numero, 10)}/${parseInt(codigo, 10)}-${letra.toUpperCase()}-${String(anio).trim()}`;
   }
 
   function claveDeTexto(t) {
