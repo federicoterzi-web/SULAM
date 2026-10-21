@@ -29,7 +29,16 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..deps import contexto, ip_cliente
-from ..models import Expediente, ExpedienteMinisterio, Ingreso, Persona, TipoDocumental, TokenIntegracion
+from ..models import (
+    Expediente,
+    ExpedienteMinisterio,
+    Ingreso,
+    OficinaMinisterio,
+    PaseMinisterio,
+    Persona,
+    TipoDocumental,
+    TokenIntegracion,
+)
 from ..numbering import numero_ingreso
 from ..permissions import Contexto, permisos_efectivos, requerir_persona
 from ..security import ahora
@@ -329,7 +338,26 @@ def _guardar_expediente(db: Session, ctx: Contexto, e: ExpedienteIn, clave: str,
     em.ultima_sincronizacion_en = ahora()
     em.sincronizado_por = ctx.id
     db.flush()
+    _resolver_pases(db, em, e)
     return em, nuevo
+
+
+def _resolver_pases(db: Session, em: ExpedienteMinisterio, e: ExpedienteIn) -> None:
+    """Un pase preparado pasa a «hecho» cuando el Ministerio ya muestra el movimiento hacia esa oficina."""
+    pendientes = db.execute(
+        select(PaseMinisterio).where(
+            PaseMinisterio.expediente_ministerio_id == em.id, PaseMinisterio.estado == "preparado"
+        )
+    ).scalars().all()
+    for pase in pendientes:
+        for mov in e.movimientos:
+            if not _es_oficina(mov.oficina, pase.oficina_destino) or not (mov.ingreso and mov.ingreso.fecha):
+                continue
+            if _a_local(mov.ingreso.fecha) >= _a_local(pase.creado_en):
+                pase.estado = "hecho"
+                pase.resuelto_en = ahora()
+                pase.resuelto_detalle = (mov.ingreso.texto or mov.ingreso.fecha.isoformat())[:300]
+                break
 
 
 def _crear_ingresos(
@@ -627,3 +655,151 @@ def vincular_expediente_ministerio(
     )
     db.commit()
     return expediente_out(exp)
+
+
+# ---------------------------------------------------------------------------
+# Pases preparados en SULAM (la extensión los precarga; los confirma una persona)
+# ---------------------------------------------------------------------------
+
+
+class PaseIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    oficina_destino: str = Field(..., min_length=1, max_length=300)
+    fojas: int | None = Field(None, ge=0, le=100000)
+    nota: str | None = Field(None, max_length=2000)
+
+
+class OficinasIn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    nombres: list[str] = Field(..., max_length=1000)
+
+
+def _pase_out(p: PaseMinisterio) -> dict:
+    return {
+        "id": str(p.id),
+        "oficina_destino": p.oficina_destino,
+        "fojas": p.fojas,
+        "nota": p.nota,
+        "estado": p.estado,
+        "creado_por": p.creador.nombre_completo if p.creador else None,
+        "creado_en": p.creado_en.isoformat(),
+        "resuelto_en": p.resuelto_en.isoformat() if p.resuelto_en else None,
+        "resuelto_detalle": p.resuelto_detalle,
+    }
+
+
+def _persona_del_expediente(db: Session, em: ExpedienteMinisterio) -> Persona:
+    exp = db.execute(select(Expediente).where(Expediente.expediente_ministerio_id == em.id)).scalar_one_or_none()
+    if exp is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Primero vincule este expediente a un legajo para poder prepararle pases."
+        )
+    return db.get(Persona, exp.persona_id)
+
+
+@router.get("/ministerio/oficinas")
+def oficinas_ministerio(ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    ctx.requerir("expedientes", "consultar")
+    return [o.nombre for o in db.execute(select(OficinaMinisterio).order_by(OficinaMinisterio.nombre)).scalars()]
+
+
+@router.get("/ministerio/expedientes/{expediente_id}/pases")
+def listar_pases(expediente_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    em = db.get(ExpedienteMinisterio, expediente_id)
+    if em is None:
+        raise no_encontrado("Expediente del Ministerio")
+    requerir_persona(db, ctx, _persona_del_expediente(db, em), "expedientes", "consultar")
+    filas = db.execute(
+        select(PaseMinisterio)
+        .where(PaseMinisterio.expediente_ministerio_id == em.id)
+        .order_by(PaseMinisterio.creado_en.desc())
+    ).scalars()
+    return [_pase_out(p) for p in filas]
+
+
+@router.post("/ministerio/expedientes/{expediente_id}/pases", status_code=201)
+def preparar_pase(
+    expediente_id: uuid.UUID, datos: PaseIn, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)
+):
+    """Deja preparado el pase: la extensión lo precarga en el formulario del Ministerio."""
+    em = db.get(ExpedienteMinisterio, expediente_id)
+    if em is None:
+        raise no_encontrado("Expediente del Ministerio")
+    persona = _persona_del_expediente(db, em)
+    requerir_persona(db, ctx, persona, "expedientes", "modificar")
+    ya = db.execute(
+        select(PaseMinisterio.id).where(
+            PaseMinisterio.expediente_ministerio_id == em.id, PaseMinisterio.estado == "preparado"
+        )
+    ).first()
+    if ya:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Ya hay un pase preparado para este expediente. Cancélelo para preparar otro."
+        )
+    pase = PaseMinisterio(
+        expediente_ministerio_id=em.id,
+        oficina_destino=datos.oficina_destino,
+        fojas=datos.fojas,
+        nota=datos.nota or None,
+        creado_por=ctx.id,
+    )
+    db.add(pase)
+    db.flush()
+    audit.registrar(
+        db, ctx, "preparar_pase", "expediente_ministerio", em.id, persona.id,
+        {"clave": em.clave, "destino": pase.oficina_destino, "fojas": pase.fojas},
+    )
+    db.commit()
+    db.refresh(pase)
+    return _pase_out(pase)
+
+
+@router.delete("/ministerio/pases/{pase_id}")
+def cancelar_pase(pase_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Session = Depends(get_db)):
+    pase = db.get(PaseMinisterio, pase_id)
+    if pase is None:
+        raise no_encontrado("Pase")
+    em = db.get(ExpedienteMinisterio, pase.expediente_ministerio_id)
+    persona = _persona_del_expediente(db, em)
+    requerir_persona(db, ctx, persona, "expedientes", "modificar")
+    if pase.estado != "preparado":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Solo se puede cancelar un pase que sigue preparado.")
+    pase.estado = "cancelado"
+    pase.resuelto_en = ahora()
+    audit.registrar(db, ctx, "cancelar_pase", "expediente_ministerio", em.id, persona.id, {"clave": em.clave})
+    db.commit()
+    return _pase_out(pase)
+
+
+@router.get("/integracion/ministerio/pases")
+def pases_para_la_extension(
+    clave: str = Query(..., max_length=60),
+    ctx: Contexto = Depends(contexto_integracion),
+    db: Session = Depends(get_db),
+):
+    """Pase preparado para un expediente, para que la extensión lo precargue."""
+    ctx.requerir("expedientes", "modificar")
+    nombre, *_ = separar_clave(clave)
+    em = db.execute(select(ExpedienteMinisterio).where(ExpedienteMinisterio.clave == nombre)).scalar_one_or_none()
+    db.commit()
+    if em is None:
+        return []
+    filas = db.execute(
+        select(PaseMinisterio).where(
+            PaseMinisterio.expediente_ministerio_id == em.id, PaseMinisterio.estado == "preparado"
+        )
+    ).scalars()
+    return [_pase_out(p) for p in filas]
+
+
+@router.post("/integracion/ministerio/oficinas")
+def guardar_oficinas(datos: OficinasIn, ctx: Contexto = Depends(contexto_integracion), db: Session = Depends(get_db)):
+    """Las oficinas destino que la extensión ve en el formulario de pase (para ofrecerlas en SULAM)."""
+    ctx.requerir("expedientes", "modificar")
+    nombres = {" ".join(n.split())[:300] for n in datos.nombres if n and n.strip()}
+    existentes = set(db.execute(select(OficinaMinisterio.nombre)).scalars())
+    nuevas = nombres - existentes
+    for n in sorted(nuevas):
+        db.add(OficinaMinisterio(nombre=n))
+    db.commit()
+    return {"nuevas": len(nuevas), "total": len(existentes | nombres)}

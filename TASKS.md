@@ -311,6 +311,6 @@ Surgen de lo conversado con la Dirección y del documento de diseño inicial (§
 | API de integración con clave personal revocable; ingresos de Mesa de Entrada por pase, sin duplicar | ✅ (pruebas en `tests/test_ministerio.py`) |
 | Pantalla «Expedientes del Ministerio» y datos del expediente en el ingreso | ✅ |
 | Ficha del expediente en SULAM, vinculada al expediente del Ministerio (pases internos, carpeta, documentos) | ✅ (D-050) |
-| Extensión: precargar el Pase del Ministerio desde SULAM (fojas, nota, oficina; confirma la persona) | ⏳ |
+| Extensión: precargar el Pase del Ministerio desde SULAM (fojas, nota, oficina; confirma la persona) | ✅ (D-051; falta probarlo con un pase real) |
 | Extensión: precargar la «Solicitud de Alta de Expediente» desde SULAM | ⏳ |
 | Pedir a Informática del Ministerio API o acceso de lectura | ⏳ |

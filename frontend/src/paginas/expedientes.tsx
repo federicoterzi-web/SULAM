@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { BarraFiltros, parametroF, useFiltrosUrl } from "./filtros";
 import { api, type Documento, type Expediente, type Ingreso } from "../api";
-import { Aviso, Cargando, Enlace, Vacio, fecha, nombre, useDatos } from "../comun";
+import { Aviso, Cargando, Enlace, Vacio, fecha, fechaHora, nombre, useDatos, useEnvio, useSesion } from "../comun";
 import { CarpetaFisica } from "./archivo";
 import { TablaDocumentos } from "./documentos";
 import { DatosExpedienteMinisterio, type ExpedienteMinisterio } from "./ministerio";
@@ -135,11 +135,151 @@ export function PaginaExpediente({ id }: { id: string }) {
         </>
       )}
 
+      {x.ministerio && <PasesMinisterio expedienteMinisterioId={x.ministerio.id} />}
+
       <h2>En el Sistema de Expedientes del Ministerio</h2>
       {x.ministerio ? (
         <DatosExpedienteMinisterio e={x.ministerio} />
       ) : (
         <Vacio>Este expediente no está vinculado al del Ministerio.</Vacio>
+      )}
+    </>
+  );
+}
+
+interface PaseMinisterioPreparado {
+  id: string;
+  oficina_destino: string;
+  fojas: number | null;
+  nota: string | null;
+  estado: "preparado" | "hecho" | "cancelado";
+  creado_por: string | null;
+  creado_en: string;
+  resuelto_en: string | null;
+  resuelto_detalle: string | null;
+}
+
+const ESTADO_PASE: Record<PaseMinisterioPreparado["estado"], string> = {
+  preparado: "Preparado, falta darlo en el Ministerio",
+  hecho: "Hecho en el Ministerio",
+  cancelado: "Cancelado",
+};
+
+/** Prepara el pase del Ministerio: la extensión de Chrome lo precarga y la persona lo confirma allá. */
+function PasesMinisterio({ expedienteMinisterioId }: { expedienteMinisterioId: string }) {
+  const { puede } = useSesion();
+  const { datos: pases, error, recargar } = useDatos(
+    () => api.get<PaseMinisterioPreparado[]>(`/ministerio/expedientes/${expedienteMinisterioId}/pases`),
+    [expedienteMinisterioId],
+  );
+  const { datos: oficinas } = useDatos(() => api.get<string[]>("/ministerio/oficinas"), []);
+  const envio = useEnvio();
+  const [destino, setDestino] = useState("");
+  const [fojas, setFojas] = useState("");
+  const [nota, setNota] = useState("");
+  const pendiente = pases?.find((p) => p.estado === "preparado");
+
+  const preparar = async (ev: FormEvent) => {
+    ev.preventDefault();
+    const r = await envio.ejecutar(() =>
+      api.post(`/ministerio/expedientes/${expedienteMinisterioId}/pases`, {
+        oficina_destino: destino,
+        fojas: fojas === "" ? null : Number(fojas),
+        nota: nota || null,
+      }),
+    );
+    if (r) {
+      setDestino("");
+      setFojas("");
+      setNota("");
+      recargar();
+    }
+  };
+  const cancelar = async (p: PaseMinisterioPreparado) => {
+    if (!confirm("¿Cancelar el pase preparado?")) return;
+    await envio.ejecutar(() => api.delete(`/ministerio/pases/${p.id}`));
+    recargar();
+  };
+
+  return (
+    <>
+      <h2>Pase en el Sistema de Expedientes del Ministerio</h2>
+      <p className="tenue">
+        SULAM deja el pase preparado. Al abrir el expediente en el Ministerio, la extensión ofrece «Abrir el pase
+        precargado» y completa el formulario; <strong>usted revisa y toca «Pasar» en el Ministerio</strong>. SULAM nunca lo
+        da por usted. Cuando el Ministerio muestra el movimiento, el pase queda como hecho.
+      </p>
+      <Aviso error={error ?? envio.error} />
+      {puede("expedientes", "modificar") &&
+        (pendiente ? (
+          <p>
+            Ya hay un pase preparado. Cancélelo para preparar otro.
+          </p>
+        ) : (
+          <form className="formulario" onSubmit={preparar}>
+            <label>
+              Oficina destino
+              <input list="oficinas-ministerio" value={destino} onChange={(e) => setDestino(e.target.value)} required />
+              <datalist id="oficinas-ministerio">
+                {(oficinas ?? []).map((o) => (
+                  <option key={o} value={o} />
+                ))}
+              </datalist>
+              {oficinas && oficinas.length === 0 && (
+                <span className="tenue">
+                  Todavía no hay lista de oficinas: se completa sola la primera vez que se abre un pase en el Ministerio con la
+                  extensión. Mientras tanto, escriba el nombre tal como figura allá.
+                </span>
+              )}
+            </label>
+            <label>
+              Fojas
+              <input type="number" min={0} value={fojas} onChange={(e) => setFojas(e.target.value)} />
+            </label>
+            <label>
+              Nota de ingreso
+              <textarea value={nota} onChange={(e) => setNota(e.target.value)} maxLength={2000} />
+            </label>
+            <button className="boton" disabled={envio.enviando}>
+              Preparar el pase
+            </button>
+          </form>
+        ))}
+      {pases && pases.length > 0 && (
+        <table className="tabla">
+          <thead>
+            <tr>
+              <th>Destino</th>
+              <th>Fojas</th>
+              <th>Nota</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {pases.map((p) => (
+              <tr key={p.id}>
+                <td>{p.oficina_destino}</td>
+                <td>{p.fojas ?? "—"}</td>
+                <td>{p.nota ?? "—"}</td>
+                <td>
+                  {ESTADO_PASE[p.estado]}
+                  <div className="tenue">
+                    Preparado por {p.creado_por ?? "—"} el {fechaHora(p.creado_en)}
+                    {p.resuelto_detalle && <> · {p.resuelto_detalle}</>}
+                  </div>
+                </td>
+                <td>
+                  {p.estado === "preparado" && puede("expedientes", "modificar") && (
+                    <button className="boton boton-chico" onClick={() => cancelar(p)}>
+                      Cancelar
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </>
   );

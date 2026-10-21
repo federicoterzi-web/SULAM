@@ -1501,3 +1501,35 @@ class ExpedienteMinisterio(Base):
     primera_sincronizacion_en: Mapped[datetime] = _ts()
     ultima_sincronizacion_en: Mapped[datetime] = _ts()
     sincronizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+
+
+class OficinaMinisterio(Base):
+    """Oficina destino que la extensión vio en el formulario de pase del Ministerio."""
+
+    __tablename__ = "oficinas_ministerio"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nombre: Mapped[str] = mapped_column(String(300), unique=True)
+    visto_en: Mapped[datetime] = _ts()
+
+
+class PaseMinisterio(Base):
+    """Pase preparado en SULAM. La extensión lo precarga; la persona lo confirma en el Ministerio."""
+
+    __tablename__ = "pases_ministerio"
+    __table_args__ = (
+        CheckConstraint("estado IN ('preparado','hecho','cancelado')", name="ck_pases_ministerio_estado"),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    expediente_ministerio_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("expedientes_ministerio.id"), index=True
+    )
+    oficina_destino: Mapped[str] = mapped_column(String(300))
+    fojas: Mapped[int | None] = mapped_column(Integer)
+    nota: Mapped[str | None] = mapped_column(Text)
+    estado: Mapped[str] = mapped_column(String(12), default="preparado", server_default="preparado")
+    creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
+    creado_en: Mapped[datetime] = _ts()
+    resuelto_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    resuelto_detalle: Mapped[str | None] = mapped_column(String(300))
+
+    creador: Mapped[Usuario | None] = relationship(lazy="joined")

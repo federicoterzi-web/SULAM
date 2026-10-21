@@ -168,3 +168,68 @@ def test_vincular_sin_permiso_sobre_el_legajo(admin):
     tec = Cliente("tec2")
     r = tec.post(f"/api/ministerio/expedientes/{em['id']}/vincular", json={"persona_id": persona["id"]})
     assert r.status_code in (403, 404)
+
+
+def _vinculado(admin, dni="14961387"):
+    persona = nueva_persona(admin, numero_documento=dni)
+    ext = _extension(_token(admin))
+    ext.post("/api/integracion/ministerio/sincronizar", json={"expedientes": [_expediente(dni=dni)]})
+    em = admin.get("/api/ministerio/expedientes").json()[0]
+    assert admin.post(f"/api/ministerio/expedientes/{em['id']}/vincular", json={"persona_id": persona["id"]}).status_code == 201
+    return ext, em, persona
+
+
+def test_pase_preparado_la_extension_lo_ve_y_se_da_por_hecho_con_el_movimiento(admin):
+    ext, em, _ = _vinculado(admin)
+    r = admin.post(
+        f"/api/ministerio/expedientes/{em['id']}/pases",
+        json={"oficina_destino": "JEFATURA ADMISION", "fojas": 14, "nota": "Para su conocimiento"},
+    )
+    assert r.status_code == 201, r.text
+    # Solo uno preparado a la vez.
+    assert admin.post(f"/api/ministerio/expedientes/{em['id']}/pases", json={"oficina_destino": "OTRA"}).status_code == 409
+
+    vistos = ext.get("/api/integracion/ministerio/pases", params={"clave": "21768/425-AM-2026"}).json()
+    assert [(p["oficina_destino"], p["fojas"], p["nota"]) for p in vistos] == [("JEFATURA ADMISION", 14, "Para su conocimiento")]
+
+    # Sincronizar sin que el Ministerio muestre el pase no lo da por hecho.
+    ext.post("/api/integracion/ministerio/sincronizar", json={"expedientes": [_expediente()]})
+    assert admin.get(f"/api/ministerio/expedientes/{em['id']}/pases").json()[0]["estado"] == "preparado"
+
+    # Cuando aparece el movimiento hacia esa oficina, queda hecho.
+    exp = _expediente()
+    exp["movimientos"].append(
+        {
+            "ingreso": {"fecha": "2099-01-01T10:00:00-03:00", "usuario": "YO", "texto": "01/01/2099-1000-YO"},
+            "fojas_ingreso": 14,
+            "oficina_origen": "DIRECCION DE ADULTOS MAYORES",
+            "nota": "Para su conocimiento",
+            "oficina": "Jefatura Admisión",
+            "estado": "PENDIENTE",
+        }
+    )
+    ext.post("/api/integracion/ministerio/sincronizar", json={"expedientes": [exp]})
+    pase = admin.get(f"/api/ministerio/expedientes/{em['id']}/pases").json()[0]
+    assert pase["estado"] == "hecho" and pase["resuelto_detalle"] == "01/01/2099-1000-YO"
+    assert ext.get("/api/integracion/ministerio/pases", params={"clave": "21768/425-AM-2026"}).json() == []
+
+
+def test_cancelar_pase_y_pedir_vinculo_previo(admin):
+    ext, em, _ = _vinculado(admin)
+    pid = admin.post(f"/api/ministerio/expedientes/{em['id']}/pases", json={"oficina_destino": "X"}).json()["id"]
+    assert admin.delete(f"/api/ministerio/pases/{pid}").json()["estado"] == "cancelado"
+    assert admin.delete(f"/api/ministerio/pases/{pid}").status_code == 409
+    assert ext.get("/api/integracion/ministerio/pases", params={"clave": "21768/425-AM-2026"}).json() == []
+
+    # Sin legajo vinculado no se pueden preparar pases.
+    ext.post("/api/integracion/ministerio/sincronizar", json={"expedientes": [_expediente(clave="5/425-AM-2026", dni=None)]})
+    otro = next(e for e in admin.get("/api/ministerio/expedientes").json() if e["clave"] == "5/425-AM-2026")
+    assert admin.post(f"/api/ministerio/expedientes/{otro['id']}/pases", json={"oficina_destino": "X"}).status_code == 409
+
+
+def test_oficinas_del_ministerio_las_manda_la_extension(admin):
+    ext = _extension(_token(admin))
+    r = ext.post("/api/integracion/ministerio/oficinas", json={"nombres": ["MESA DE ENTRADA - MDS", " JEFATURA  ADMISION ", ""]})
+    assert r.json() == {"nuevas": 2, "total": 2}
+    assert ext.post("/api/integracion/ministerio/oficinas", json={"nombres": ["MESA DE ENTRADA - MDS"]}).json()["nuevas"] == 0
+    assert admin.get("/api/ministerio/oficinas").json() == ["JEFATURA ADMISION", "MESA DE ENTRADA - MDS"]

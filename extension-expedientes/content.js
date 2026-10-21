@@ -308,8 +308,114 @@
     } catch (e) {
       ui.texto(e.message, "error");
     }
+    await ofrecerPasePreparado(conf, exp, ancla);
+  }
+
+  // ------------------------------------------------------------------ pase preparado en SULAM
+
+  const CLAVE_PASE = "sulamPasePreparado";
+
+  /** Si SULAM tiene un pase preparado para este expediente, ofrece abrir el formulario ya completo. */
+  async function ofrecerPasePreparado(conf, exp, ancla) {
+    let pases;
+    try {
+      pases = await pedir({ tipo: "api", ruta: "/integracion/ministerio/pases?clave=" + encodeURIComponent(exp.clave) });
+    } catch (e) {
+      return; // sin permiso o sin pase: no se molesta
+    }
+    if (!pases || !pases.length) return;
+    const p = pases[0];
+    const caja = el("div", { class: "sulam-panel sulam-pase" });
+    caja.append(
+      el("strong", {}, "PASE PREPARADO"),
+      el(
+        "span",
+        { class: "sulam-estado" },
+        `SULAM preparó este pase → ${p.oficina_destino}` +
+          (p.fojas != null ? ` · ${p.fojas} fojas` : "") +
+          (p.nota ? ` · «${p.nota}»` : "") +
+          ` (lo preparó ${p.creado_por || "alguien"}).`,
+      ),
+    );
+    const boton = el("button", { type: "button", class: "sulam-boton" }, "Abrir el pase precargado");
+    boton.addEventListener("click", () => {
+      try {
+        sessionStorage.setItem(CLAVE_PASE, JSON.stringify({ clave: exp.clave, pase: p }));
+      } catch (e) {
+        /* sin almacenamiento de sesión no se puede precargar */
+      }
+      // Es la misma pantalla a la que lleva el botón «Pasar»; el botón del Ministerio lo aprieta la persona.
+      const u = P.urlExpediente(exp.clave, location.href);
+      location.href = u.replace("expedienteVer.do", "tramitePasar.do");
+    });
+    caja.append(el("span", { class: "sulam-acciones" }, boton));
+    ancla.parentNode.insertBefore(caja, ancla);
+  }
+
+  const norm = (t) => P.sinTildes(String(t || "")).toUpperCase().replace(/\s+/g, " ").trim();
+
+  /** En el formulario de pase del Ministerio: completa lo que SULAM preparó. No aprieta «Pasar». */
+  async function iniciarPase() {
+    const form = document.querySelector('form[action*="tramitePaseOK"]');
+    const select = form && form.querySelector('select[name="oficinaDestino"]');
+    if (!form || !select) return;
+    const ancla = form;
+    const ui = crearPanel(ancla);
+    let conf;
+    try {
+      conf = await pedir({ tipo: "config" });
+    } catch (e) {
+      ui.texto(e.message, "error");
+      return;
+    }
+    if (!conf.configurada) return;
+    // Las oficinas destino se mandan a SULAM para ofrecerlas al preparar el pase.
+    const nombres = Array.from(select.options).map((o) => o.text.trim()).filter((t) => t && !/^seleccione/i.test(t));
+    pedir({ tipo: "api", metodo: "POST", ruta: "/integracion/ministerio/oficinas", cuerpo: { nombres } }).catch(() => {});
+
+    let guardado = null;
+    try {
+      guardado = JSON.parse(sessionStorage.getItem(CLAVE_PASE) || "null");
+    } catch (e) {
+      guardado = null;
+    }
+    const pedido = (document.body.textContent || "").match(/Expediente\s+(\d+\s*\/\s*\d+\s*-\s*[A-Za-z]+\s*-\s*\d{4})/);
+    const claveActual = pedido ? P.claveDeTexto(pedido[1]) : null;
+    if (!guardado || !claveActual || guardado.clave !== claveActual) {
+      ui.texto("No hay un pase preparado en SULAM para este expediente. Si quiere prepararlo, hágalo desde SULAM (ficha del expediente).", "aviso");
+      return;
+    }
+    const p = guardado.pase;
+    const fojas = form.querySelector('[name="fojas"]');
+    const nota = form.querySelector('[name="notaIngreso"]');
+    if (fojas && p.fojas != null) fojas.value = String(p.fojas);
+    if (nota && p.nota) nota.value = p.nota;
+    const buscada = norm(p.oficina_destino);
+    const opciones = Array.from(select.options).filter((o) => o.value);
+    let elegida = opciones.find((o) => norm(o.text) === buscada);
+    if (!elegida) {
+      const parecidas = opciones.filter((o) => norm(o.text).includes(buscada) || buscada.includes(norm(o.text)));
+      if (parecidas.length === 1) elegida = parecidas[0];
+    }
+    if (elegida) select.value = elegida.value;
+    for (const c of [fojas, nota, select]) if (c) c.dispatchEvent(new Event("change", { bubbles: true }));
+    sessionStorage.removeItem(CLAVE_PASE);
+    if (elegida) {
+      ui.texto(
+        `SULAM completó el formulario: destino «${elegida.text.trim()}»` +
+          (p.fojas != null ? `, ${p.fojas} fojas` : "") +
+          ". Revíselo y toque «Pasar» si está bien. SULAM no lo aprieta por usted.",
+        "exito",
+      );
+    } else {
+      ui.texto(`No se encontró la oficina «${p.oficina_destino}» en la lista del Ministerio. Elíjala usted y toque «Pasar».`, "error");
+    }
+    ui.acciones.append(
+      el("span", {}, "Después de pasar, abra el expediente y toque «Actualizar en SULAM» para que quede registrado."),
+    );
   }
 
   if (/tramitesList\.do/i.test(location.pathname)) iniciarBandeja();
   else if (/expedienteVer\.do/i.test(location.pathname)) iniciarExpediente();
+  else if (/tramitePasar\.do/i.test(location.pathname)) iniciarPase();
 })();

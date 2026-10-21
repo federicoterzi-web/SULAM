@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "SULAM · Expedientes del Ministerio",
   "short_name": "SULAM Expedientes",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Lee la Bandeja de Entrada del Sistema de Expedientes del Ministerio de Desarrollo Social de Tucumán y registra los pases en la Mesa de Entrada de SULAM.",
   "permissions": ["storage"],
   "host_permissions": ["http://www.desarrollosocialtuc.gob.ar/*", "https://www.desarrollosocialtuc.gob.ar/*"],
@@ -12,7 +12,8 @@
     {
       "matches": [
         "*://www.desarrollosocialtuc.gob.ar/seds/expe/tramitesList.do*",
-        "*://www.desarrollosocialtuc.gob.ar/seds/expe/expedienteVer.do*"
+        "*://www.desarrollosocialtuc.gob.ar/seds/expe/expedienteVer.do*",
+        "*://www.desarrollosocialtuc.gob.ar/seds/expe/tramitePasar.do*"
       ],
       "js": ["parser.js", "content.js"],
       "css": ["sulam.css"],

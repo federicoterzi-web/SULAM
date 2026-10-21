@@ -11,7 +11,7 @@ Lee la **Bandeja de Entrada** de la Dirección en el Sistema de Expedientes del 
 ## Qué hace y qué no
 
 - Usa la sesión que la persona ya tiene abierta en el Sistema de Expedientes: **solo lee lo que esa persona puede ver**.
-- **No recepciona, no da pases, no carga solicitudes** ni escribe nada en el Sistema de Expedientes.
+- **No recepciona, no archiva, no da pases ni carga solicitudes por su cuenta.** Lo único que hace sobre el formulario de pase del Ministerio es **completarlo** con un pase que se preparó en SULAM (fojas, nota y oficina); el botón «Pasar» lo toca siempre la persona.
 - No guarda la contraseña del Ministerio. La clave de SULAM queda en el almacenamiento local de la extensión y se puede
   revocar desde SULAM en cualquier momento.
 - Lee las páginas de a poco (3 a la vez, con pausas) para no cargar el servidor del Ministerio.
