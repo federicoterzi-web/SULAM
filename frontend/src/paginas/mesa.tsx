@@ -18,6 +18,7 @@ import {
   useSesion,
 } from "../comun";
 import { FormDocumento, TablaDocumentos } from "./documentos";
+import { DatosExpedienteMinisterio } from "./ministerio";
 import { FormCaso } from "./legajo";
 import { FormPersona, ListaPersonas, SelectorPersona } from "./legajos";
 
@@ -243,6 +244,13 @@ export function PaginaIngreso({ id }: { id: string }) {
           <dd className="texto-largo">{i.observaciones ?? "—"}</dd>
         </dl>
       </Seccion>
+
+      {i.expediente_ministerio && (
+        <Seccion titulo="Sistema de Expedientes del Ministerio">
+          <p className="tenue">Este ingreso lo cargó la extensión de Chrome a partir de un pase del Sistema de Expedientes.</p>
+          <DatosExpedienteMinisterio e={i.expediente_ministerio} />
+        </Seccion>
+      )}
 
       <Seccion titulo="Legajo">
         {i.persona ? (

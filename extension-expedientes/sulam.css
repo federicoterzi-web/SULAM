@@ -1,0 +1,76 @@
+.sulam-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 12px auto;
+  padding: 10px 14px;
+  max-width: 1100px;
+  border: 1px solid #1f6f5c;
+  border-left-width: 6px;
+  border-radius: 6px;
+  background: #eef7f4;
+  color: #12322a;
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.sulam-panel > strong {
+  color: #1f6f5c;
+  letter-spacing: 0.04em;
+}
+.sulam-estado {
+  flex: 1 1 280px;
+}
+.sulam-acciones {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sulam-aviso {
+  color: #7a4b00;
+}
+.sulam-error {
+  color: #a01c1c;
+  font-weight: 600;
+}
+.sulam-exito {
+  color: #1f6f5c;
+  font-weight: 600;
+}
+.sulam-boton {
+  font: inherit;
+  padding: 5px 12px;
+  border: 1px solid #1f6f5c;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f6f5c;
+  cursor: pointer;
+}
+.sulam-boton.sulam-primario {
+  background: #1f6f5c;
+  color: #fff;
+}
+.sulam-boton:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.sulam-insignia {
+  display: inline-block;
+  margin: 4px 0 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font: 12px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  white-space: nowrap;
+}
+.sulam-insignia a {
+  color: inherit;
+  text-decoration: underline;
+}
+.sulam-ok {
+  background: #d9efe8;
+  color: #12322a;
+}
+.sulam-nuevo {
+  background: #f1f1f1;
+  color: #555;
+}

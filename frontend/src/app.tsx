@@ -31,6 +31,7 @@ import { PaginaVisitas } from "./paginas/visitas";
 import { PaginaLegajo } from "./paginas/legajo";
 import { PaginaLegajos } from "./paginas/legajos";
 import { PaginaIngreso, PaginaMesa } from "./paginas/mesa";
+import { PaginaMinisterio } from "./paginas/ministerio";
 import { PaginaTablero } from "./paginas/tablero";
 import { Impresion } from "./paginas/impresion";
 
@@ -232,6 +233,7 @@ const GRUPOS: { texto: string; miembros: ItemMenu[] }[] = [
     texto: "Mesa y expedientes",
     miembros: [
       { ruta: "/mesa", texto: "Mesa de Entrada", permiso: ["mesa_entrada", "consultar"] },
+      { ruta: "/ministerio", texto: "Expedientes del Ministerio", permiso: ["mesa_entrada", "consultar"] },
       { ruta: "/expedientes", texto: "Expedientes", permiso: ["expedientes", "consultar"] },
       { ruta: "/pases", texto: "Pases de carpetas" },
     ],
@@ -459,6 +461,8 @@ function Rutas({ ruta }: { ruta: string }) {
       return p[1] ? <PaginaIngreso id={p[1]} key={p[1]} /> : <PaginaMesa />;
     case "expedientes":
       return <PaginaExpedientes />;
+    case "ministerio":
+      return <PaginaMinisterio />;
     case "visitas":
       return <PaginaVisitas />;
     case "contactos":

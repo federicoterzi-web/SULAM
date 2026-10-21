@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>SULAM · Expedientes del Ministerio</title>
+    <style>
+      body {
+        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        color: #12322a;
+        background: #f6f8f7;
+        margin: 0;
+        padding: 24px 16px;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+        background: #fff;
+        border: 1px solid #d5e2dd;
+        border-radius: 10px;
+        padding: 20px 24px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 4px;
+        color: #1f6f5c;
+      }
+      label {
+        display: block;
+        margin: 16px 0 4px;
+        font-weight: 600;
+      }
+      input[type="url"],
+      input[type="password"],
+      input[type="date"] {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        font: inherit;
+        border: 1px solid #b9c9c3;
+        border-radius: 6px;
+      }
+      .ayuda {
+        font-size: 13px;
+        color: #4d635b;
+        margin: 4px 0 0;
+      }
+      .casilla {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-weight: normal;
+      }
+      button {
+        margin-top: 20px;
+        font: inherit;
+        padding: 8px 18px;
+        border-radius: 999px;
+        border: 1px solid #1f6f5c;
+        background: #1f6f5c;
+        color: #fff;
+        cursor: pointer;
+      }
+      #estado {
+        margin-top: 16px;
+        padding: 10px 12px;
+        border-radius: 6px;
+        display: none;
+      }
+      #estado.ok {
+        display: block;
+        background: #d9efe8;
+      }
+      #estado.error {
+        display: block;
+        background: #fbe3e3;
+        color: #7d1414;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>SULAM · Expedientes del Ministerio</h1>
+      <p class="ayuda">
+        La extensión lee la Bandeja de Entrada del Sistema de Expedientes con su sesión (solo lo que usted ya puede ver)
+        y registra cada pase que llega a la Dirección como ingreso de Mesa de Entrada en SULAM. No recepciona ni da pases.
+      </p>
+      <form id="form">
+        <label for="url">Dirección de SULAM</label>
+        <input id="url" type="url" placeholder="http://localhost:8000" required />
+        <p class="ayuda">La misma que usa para entrar a SULAM, sin nada después del número de puerto.</p>
+
+        <label for="token">Clave de integración</label>
+        <input id="token" type="password" placeholder="sulam_…" autocomplete="off" required />
+        <p class="ayuda">Se genera en SULAM › Mesa y expedientes › Expedientes del Ministerio › «Conectar la extensión de Chrome».</p>
+
+        <label for="desde">Registrar como ingresos los pases que llegaron desde</label>
+        <input id="desde" type="date" />
+        <p class="ayuda">
+          Los pases anteriores igual se guardan en «Expedientes del Ministerio», pero no generan ingresos en Mesa de Entrada.
+        </p>
+
+        <label class="casilla"><input id="auto" type="checkbox" /> Sincronizar automáticamente al abrir la Bandeja de Entrada (como máximo cada 15 minutos)</label>
+
+        <button type="submit">Guardar y probar conexión</button>
+      </form>
+      <div id="estado" role="status"></div>
+    </main>
+    <script src="opciones.js"></script>
+  </body>
+</html>

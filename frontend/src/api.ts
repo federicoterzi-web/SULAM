@@ -362,6 +362,8 @@ export interface Ingreso {
   creado_en: string;
   documentos?: Documento[];
   sugerencias?: PersonaResumen[];
+  expediente_ministerio_id?: string | null;
+  expediente_ministerio?: import("./paginas/ministerio").ExpedienteMinisterio | null;
 }
 
 export interface Legajo extends PersonaDetalle {

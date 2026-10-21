@@ -206,6 +206,7 @@ def ingreso_out(i: Ingreso, persona: Persona | None = None) -> dict:
         "expediente_id": str(i.expediente_id) if i.expediente_id else None,
         "vinculado_en": i.vinculado_en.isoformat() if i.vinculado_en else None,
         "creado_en": i.creado_en.isoformat(),
+        "expediente_ministerio_id": str(i.expediente_ministerio_id) if i.expediente_ministerio_id else None,
     }
 
 

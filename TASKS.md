@@ -303,3 +303,12 @@ Surgen de lo conversado con la Dirección y del documento de diseño inicial (§
 | Cuidadores: horas por semana y pagos mensuales dentro del subsidio de cuidados | ✅ (falta revisar la documentación mensual con el área) |
 | Versión para celular de residencias e internaciones | ⏳ |
 | Residencias en estadísticas y en el tablero de la Dirección | ⏳ |
+
+## Sistema de Expedientes del Ministerio (D-049)
+| Tarea | Estado |
+|---|---|
+| Extensión de Chrome: lectura de la Bandeja de Entrada y de cada expediente, franja de SULAM con estado por fila | ✅ (probada con pantallas de prueba y lectura real de la bandeja, sin enviar datos) |
+| API de integración con clave personal revocable; ingresos de Mesa de Entrada por pase, sin duplicar | ✅ (pruebas en `tests/test_ministerio.py`) |
+| Pantalla «Expedientes del Ministerio» y datos del expediente en el ingreso | ✅ |
+| Completar la «Solicitud de Alta de Expediente» del Ministerio desde SULAM | ⏳ |
+| Pedir a Informática del Ministerio API o acceso de lectura | ⏳ |

@@ -527,6 +527,11 @@ class Ingreso(Base):
     vinculado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     creado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))
     creado_en: Mapped[datetime] = _ts()
+    # Ingresos cargados por la extensión del Sistema de Expedientes del Ministerio.
+    pase_ministerio_clave: Mapped[str | None] = mapped_column(String(120), unique=True)
+    expediente_ministerio_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("expedientes_ministerio.id"), index=True
+    )
 
     tipo_documental: Mapped[TipoDocumental | None] = relationship(lazy="joined")
 
@@ -1440,3 +1445,55 @@ class SolicitudPersonal(Base):
     solicitante: Mapped[Usuario | None] = relationship(foreign_keys=[pedido_por], lazy="joined")
     decisor: Mapped[Usuario | None] = relationship(foreign_keys=[decidido_por], lazy="joined")
     registrador: Mapped[Usuario | None] = relationship(foreign_keys=[registrado_por], lazy="joined")
+
+
+# ---------------------------------------------------------------------------
+# Integración con el Sistema de Expedientes del Ministerio de Desarrollo Social
+# ---------------------------------------------------------------------------
+
+
+class TokenIntegracion(Base):
+    """Clave personal para la extensión de Chrome. Solo se guarda su SHA-256."""
+
+    __tablename__ = "tokens_integracion"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    usuario_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("usuarios.id"), index=True)
+    nombre: Mapped[str] = mapped_column(String(100))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    prefijo: Mapped[str] = mapped_column(String(16))
+    creado_en: Mapped[datetime] = _ts()
+    ultimo_uso_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revocado_en: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    usuario: Mapped[Usuario] = relationship(lazy="joined")
+
+
+class ExpedienteMinisterio(Base):
+    """Lo último que la extensión leyó de un expediente del Sistema de Expedientes del Ministerio."""
+
+    __tablename__ = "expedientes_ministerio"
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    clave: Mapped[str] = mapped_column(String(40), unique=True)  # 21768/425-AM-2026
+    numero: Mapped[int] = mapped_column(Integer)
+    codigo: Mapped[int] = mapped_column(Integer)
+    letra: Mapped[str] = mapped_column(String(10))
+    anio: Mapped[int] = mapped_column(Integer)
+    url: Mapped[str | None] = mapped_column(String(500))
+    formato: Mapped[str | None] = mapped_column(String(30))
+    nomenclador: Mapped[str | None] = mapped_column(String(200))
+    asunto: Mapped[str | None] = mapped_column(Text)
+    causante: Mapped[str | None] = mapped_column(String(300))
+    beneficiario: Mapped[str | None] = mapped_column(String(300))
+    documento_beneficiario: Mapped[str | None] = mapped_column(String(30), index=True)
+    prioridad: Mapped[str | None] = mapped_column(String(60))
+    oficina_origen: Mapped[str | None] = mapped_column(String(300))
+    fecha_ingreso_ministerio: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    asignado_a: Mapped[str | None] = mapped_column(String(100))
+    fecha_asignacion: Mapped[date | None] = mapped_column(Date)
+    estado: Mapped[str | None] = mapped_column(String(60))
+    oficina_actual: Mapped[str | None] = mapped_column(String(300))
+    en_bandeja: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    movimientos: Mapped[list] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    primera_sincronizacion_en: Mapped[datetime] = _ts()
+    ultima_sincronizacion_en: Mapped[datetime] = _ts()
+    sincronizado_por: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("usuarios.id"))

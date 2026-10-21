@@ -48,6 +48,7 @@ Reglas que el sistema **implementa hoy**. Lo que falta definir está en [DECISIO
 3. El sistema **sugiere legajos** por el documento mencionado o por coincidencia de apellidos.
 4. Al **vincular** el ingreso a un legajo (y opcionalmente a un caso o expediente), sus documentos pasan al legajo. **Los datos originales del ingreso no se modifican**: se conserva el registro de origen. Si se corrige una vinculación, la anterior queda en la auditoría.
 5. Desde un ingreso vinculado se puede abrir un caso nuevo, que queda asociado al ingreso.
+6. **Pases del Sistema de Expedientes del Ministerio (D-049).** La extensión de Chrome «SULAM · Expedientes del Ministerio» lee la Bandeja de Entrada de la Dirección y registra cada pase que llegó a la Dirección como ingreso, una sola vez: asunto, oficina de origen como remitente, fojas, beneficiario y DNI, número de expediente y, en observaciones, nomenclador, prioridad y nota del pase. El ingreso muestra los datos y los pases del expediente. *Mesa y expedientes › Expedientes del Ministerio* lista lo sincronizado (con filtro «solo los que están hoy en la Dirección») y permite generar o revocar la clave de la extensión.
 
 ## 5. Casos
 

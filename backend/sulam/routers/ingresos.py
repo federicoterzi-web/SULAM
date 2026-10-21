@@ -120,6 +120,16 @@ def ver_ingreso(ingreso_id: uuid.UUID, ctx: Contexto = Depends(contexto), db: Se
     )
     r["documentos"] = [documento_out(d, u) for d, u in db.execute(q).all()]
 
+    # Ingreso cargado desde el Sistema de Expedientes del Ministerio: datos y pases del expediente.
+    r["expediente_ministerio"] = None
+    if ingreso.expediente_ministerio_id:
+        from ..models import ExpedienteMinisterio
+        from .ministerio import expediente_ministerio_out
+
+        em = db.get(ExpedienteMinisterio, ingreso.expediente_ministerio_id)
+        if em is not None:
+            r["expediente_ministerio"] = {**expediente_ministerio_out(em), "movimientos": em.movimientos}
+
     # Legajos sugeridos para vincular, según los datos mencionados en el ingreso.
     r["sugerencias"] = []
     if ingreso.persona_id is None and ctx.tiene("personas", "consultar"):
